@@ -22,7 +22,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+    clientId:
+        '691792195248-1sls4qqetckejg30eicgqosn24q0o7oj.apps.googleusercontent.com', // 🔻 เปลี่ยนเป็นของคุณ
+  );
+
   GoogleSignInAccount? _user;
   String _errorMessage = '';
 
@@ -36,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = '';
       });
 
-      // SEND TO BACKEND
+      // ส่งข้อมูลไปยัง Backend
       final response = await http.post(
         Uri.parse('https://mfu-food-guide-review.onrender.com/user'),
         headers: {'Content-Type': 'application/json'},
@@ -47,11 +52,12 @@ class _LoginScreenState extends State<LoginScreen> {
           'google_id': googleUser.id,
         }),
       );
-      print(response.body);
+
+      print("📡 Response from backend: ${response.body}");
     } catch (error) {
-      print("Login Error: $error");
+      print("❌ Login Error: $error");
       setState(() {
-        _errorMessage = 'Login failed';
+        _errorMessage = 'Login failed: ${error.toString()}';
       });
     }
   }
@@ -88,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text("Hello, ${_user!.displayName}"),
+                  Text("Email: ${_user!.email}"),
                   ElevatedButton(onPressed: signOut, child: Text("Sign Out")),
                 ],
               ),
