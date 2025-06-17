@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/home.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -47,7 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // POST data to backend login route
       final response = await http.post(
         Uri.parse('https://mfu-food-guide-review.onrender.com/user/login'),
         headers: {'Content-Type': 'application/json'},
@@ -64,14 +64,40 @@ class _LoginScreenState extends State<LoginScreen> {
         final token = data['token'];
         final userId = data['userId'];
 
-        // เก็บ token และ userId ไว้ใน SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('jwt_token', token);
-        await prefs.setInt('user_id', userId);
+        // ดึงข้อมูล user เพิ่มเติมจาก API (เช่น role, bio, etc.)
+        final userInfoResponse = await http.get(
+          Uri.parse(
+            'https://mfu-food-guide-review.onrender.com/user/info/$userId',
+          ),
+          headers: {'Authorization': 'Bearer $token'},
+        );
 
-        setState(() => _user = googleUser);
+        if (userInfoResponse.statusCode == 200) {
+          final userInfo = jsonDecode(userInfoResponse.body);
+          final role = userInfo['role'] ?? 'User';
 
-        print('Login success. User ID: $userId');
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('jwt_token', token);
+          await prefs.setInt('user_id', userId);
+          await prefs.setString('user_photo', googleUser.photoUrl ?? '');
+          await prefs.setString('user_role', role);
+          await prefs.setString('user_name', googleUser.displayName ?? '');
+          await prefs.setString('user_email', googleUser.email);
+
+          setState(() => _user = googleUser);
+
+          // ไปหน้า HomePage ตาม role
+          if (role == 'User') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => HomePage()),
+            );
+          } else if (role == 'Admin') {
+            // ถ้ามีหน้า admin สามารถทำได้ตรงนี้
+          }
+        } else {
+          throw Exception('Failed to get user info');
+        }
       } else {
         throw Exception('Failed to login');
       }
