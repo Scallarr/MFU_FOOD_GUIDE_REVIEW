@@ -43,7 +43,7 @@ db.query(`
 // ✅ Login Route (POST)
 app.post('/user/login', (req, res) => {
   const { fullname, username, email, google_id } = req.body;
-
+console.log(req.body);
   const insertOrUpdate = `
     INSERT INTO User (fullname, username, email, google_id)
     VALUES (?, ?, ?, ?)
