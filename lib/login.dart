@@ -23,7 +23,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
-
   GoogleSignInAccount? _user;
   String _errorMessage = '';
 
@@ -37,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = '';
       });
 
-      // ส่งข้อมูลไปยัง Backend
+      // ส่งข้อมูลไป backend
       final response = await http.post(
         Uri.parse('https://mfu-food-guide-review.onrender.com/user'),
         headers: {'Content-Type': 'application/json'},
@@ -45,14 +44,16 @@ class _LoginScreenState extends State<LoginScreen> {
           'fullname': googleUser.displayName,
           'username': googleUser.email.split('@')[0],
           'email': googleUser.email,
-          'google_id': googleUser.id, // ส่งเป็น String ตรงๆ
+          'google_id': googleUser.id,
         }),
       );
 
-      print(
-        "Sending data to backend: fullname=${googleUser.displayName}, username=${googleUser.email.split('@')[0]}, email=${googleUser.email}, google_id=${googleUser.id}",
-      );
-      print("📡 Response from backend: ${response.body}");
+      print("✅ Data sent to backend:");
+      print("fullname: ${googleUser.displayName}");
+      print("username: ${googleUser.email.split('@')[0]}");
+      print("email: ${googleUser.email}");
+      print("google_id: ${googleUser.id}");
+      print("📡 Backend response: ${response.body}");
     } catch (error) {
       print("❌ Login Error: $error");
       setState(() {
@@ -92,9 +93,16 @@ class _LoginScreenState extends State<LoginScreen> {
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  if (_user!.photoUrl != null)
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundImage: NetworkImage(_user!.photoUrl!),
+                    ),
+                  SizedBox(height: 10),
                   Text("Hello, ${_user!.displayName}"),
                   Text("Email: ${_user!.email}"),
                   ElevatedButton(onPressed: signOut, child: Text("Sign Out")),
+                  if (_user!.photoUrl == null) Text('fg'),
                 ],
               ),
       ),
