@@ -22,11 +22,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email'],
-    clientId:
-        '691792195248-1sls4qqetckejg30eicgqosn24q0o7oj.apps.googleusercontent.com', // 🔻 เปลี่ยนเป็นของคุณ
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email']);
 
   GoogleSignInAccount? _user;
   String _errorMessage = '';
@@ -49,10 +45,13 @@ class _LoginScreenState extends State<LoginScreen> {
           'fullname': googleUser.displayName,
           'username': googleUser.email.split('@')[0],
           'email': googleUser.email,
-          'google_id': googleUser.id,
+          'google_id': googleUser.id, // ส่งเป็น String ตรงๆ
         }),
       );
 
+      print(
+        "Sending data to backend: fullname=${googleUser.displayName}, username=${googleUser.email.split('@')[0]}, email=${googleUser.email}, google_id=${googleUser.id}",
+      );
       print("📡 Response from backend: ${response.body}");
     } catch (error) {
       print("❌ Login Error: $error");

@@ -18,7 +18,7 @@ db.query(`CREATE TABLE IF NOT EXISTS User (
   fullname VARCHAR(50) NOT NULL UNIQUE,
   username VARCHAR(50) NOT NULL UNIQUE,
   email VARCHAR(50) NOT NULL,
-  google_id BIGINT NOT NULL,
+  google_id VARCHAR(50) NOT NULL,
   bio TEXT,
   total_likes INT DEFAULT 0,
   total_reviews INT DEFAULT 0,
@@ -34,6 +34,8 @@ db.query(`CREATE TABLE IF NOT EXISTS User (
 });
 
 app.post('/user', (req, res) => {
+  console.log("Received data:", req.body); // ดูข้อมูลจาก Flutter จริงๆ
+
   const { fullname, username, email, google_id } = req.body;
 
   const q = `INSERT INTO User (fullname, username, email, google_id)
