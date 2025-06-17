@@ -1,0 +1,45 @@
+# Dart
+.dart_tool/
+.packages
+build/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.melody/
+pubspec.lock
+
+# Android
+android/.gradle/
+android/build/
+
+# iOS
+ios/Flutter/
+ios/Pods/
+ios/Runner.xcworkspace/
+
+# macOS
+macos/Flutter/
+macos/Pods/
+
+# Windows
+windows/runner/Debug/
+windows/runner/Release/
+
+# Linux
+linux/Debug/
+linux/Release/
+
+# Web
+web/.dart_tool/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Others
+*.iml
+*.log
