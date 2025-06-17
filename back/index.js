@@ -1,10 +1,14 @@
+// backend/index.js
 const express = require('express');
 const cors = require('cors');
 const mysql = require('mysql2');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const SECRET_KEY = 'your_secret_key_here';  // เปลี่ยนเป็นคีย์ลับของคุณ
 
 const db = mysql.createConnection({
   host: 'byjsmg8vfii8dqlflpwy-mysql.services.clever-cloud.com',
@@ -33,23 +37,37 @@ db.query(`CREATE TABLE IF NOT EXISTS User (
   }
 });
 
-app.post('/user', (req, res) => {
-  console.log("Received data:", req.body); // ดูข้อมูลจาก Flutter จริงๆ
-
+// Route login + upsert user, ส่งกลับ token + userId
+app.post('/user/login', (req, res) => {
   const { fullname, username, email, google_id } = req.body;
 
   const q = `INSERT INTO User (fullname, username, email, google_id)
              VALUES (?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE 
-               email = VALUES(email),
-               google_id = VALUES(google_id)`;
+               fullname = VALUES(fullname),
+               email = VALUES(email)`;
 
   db.query(q, [fullname, username, email, google_id], (err) => {
     if (err) {
-      console.error('❌ Error inserting user:', err);
-      return res.status(500).send('Error saving user');
+      console.error(err);
+      return res.status(500).send('Database error');
     }
-    res.send('✅ User saved');
+
+    const selectQuery = 'SELECT User_ID FROM User WHERE google_id = ?';
+    db.query(selectQuery, [google_id], (err, results) => {
+      if (err) return res.status(500).send('DB error');
+      if (results.length === 0) return res.status(404).send('User not found');
+
+      const userId = results[0].User_ID;
+
+      const token = jwt.sign(
+        { userId, google_id, username, email },
+        SECRET_KEY,
+        { expiresIn: '7d' }
+      );
+
+      res.json({ message: 'Login successful', token, userId });
+    });
   });
 });
 
