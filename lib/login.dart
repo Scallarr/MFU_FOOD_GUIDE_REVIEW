@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // SEND TO BACKEND
       final response = await http.post(
-        Uri.parse('https://your-backend.cleverapps.io/user'),
+        Uri.parse('https://mfu-food-guide-review.onrender.com/user'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'fullname': googleUser.displayName,
