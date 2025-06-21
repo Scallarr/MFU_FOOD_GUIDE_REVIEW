@@ -264,7 +264,7 @@
     });
   });
 });
-app.post('/review/:reviewId/like', async (req, res) => {
+app.post('/review/:reviewId/like', (req, res) => {
   const reviewId = parseInt(req.params.reviewId);
   const userId = req.body.user_id;
 
@@ -272,51 +272,38 @@ app.post('/review/:reviewId/like', async (req, res) => {
     return res.status(400).json({ message: 'user_id is required' });
   }
 
-  try {
-    const connection = await mysql.createConnection(dbConfig);
-
-    // เช็คว่า user เคยกดไลค์รีวิวนี้หรือยัง
-    const [rows] = await connection.execute(
-      `SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
-      [reviewId, userId]
-    );
+  const checkLikeQuery = `SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`;
+  db.query(checkLikeQuery, [reviewId, userId], (err, rows) => {
+    if (err) return res.status(500).json({ message: 'DB error' });
 
     if (rows.length > 0) {
-      // เคยกดไลค์แล้ว -> ลบไลค์ (unlike)
-      await connection.execute(
-        `DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
-        [reviewId, userId]
-      );
+      // Unlike
+      db.query(`DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
+        [reviewId, userId], (err) => {
+          if (err) return res.status(500).json({ message: 'DB error on unlike' });
 
-      await connection.execute(
-        `UPDATE Review SET total_likes = total_likes - 1 WHERE Review_ID = ? AND total_likes > 0`,
-        [reviewId]
-      );
-
-      await connection.end();
-
-      return res.status(200).json({ message: 'Review unliked successfully', liked: false });
+          db.query(`UPDATE Review SET total_likes = GREATEST(total_likes - 1, 0) WHERE Review_ID = ?`,
+            [reviewId], (err) => {
+              if (err) return res.status(500).json({ message: 'DB error on update' });
+              return res.status(200).json({ message: 'Review unliked', liked: false });
+            });
+        });
     } else {
-      // ยังไม่เคยกดไลค์ -> เพิ่มไลค์
-      await connection.execute(
-        `INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?, ?)`,
-        [reviewId, userId]
-      );
+      // Like
+      db.query(`INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?, ?)`,
+        [reviewId, userId], (err) => {
+          if (err) return res.status(500).json({ message: 'DB error on like' });
 
-      await connection.execute(
-        `UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?`,
-        [reviewId]
-      );
-
-      await connection.end();
-
-      return res.status(200).json({ message: 'Review liked successfully', liked: true });
+          db.query(`UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?`,
+            [reviewId], (err) => {
+              if (err) return res.status(500).json({ message: 'DB error on update' });
+              return res.status(200).json({ message: 'Review liked', liked: true });
+            });
+        });
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
+  });
 });
+
 
 
 
