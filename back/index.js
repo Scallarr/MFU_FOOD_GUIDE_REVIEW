@@ -257,61 +257,14 @@
         restaurant.menus = menuResults;
 
         res.json(restaurant);
+        console.log(restaurant);
       });
     });
   });
 });
 
 
-app.get('/restaurant/:id/full-info', (req, res) => {
-  const restaurantId = parseInt(req.params.id, 10);
 
-  if (!restaurantId) {
-    return res.status(400).json({ error: 'Invalid Restaurant ID' });
-  }
-
-  const restaurantSql = `
-    SELECT * FROM Restaurant WHERE Restaurant_ID = ?
-  `;
-
-  const menuSql = `
-    SELECT * FROM Menu WHERE Restaurant_ID = ?
-  `;
-
-  const reviewSql = `
-    SELECT 
-      R.*, 
-      U.fullname,
-      (SELECT COUNT(*) FROM Review_Likes RL WHERE RL.Review_ID = R.Review_ID) AS like_count
-    FROM Review R
-    JOIN User U ON R.User_ID = U.User_ID
-    WHERE R.Restaurant_ID = ?
-    ORDER BY R.created_at DESC
-  `;
-
-  // Execute all queries in parallel
-  pool.query(restaurantSql, [restaurantId], (err, restaurantResults) => {
-    if (err) return res.status(500).json({ error: 'Error fetching restaurant' });
-    if (restaurantResults.length === 0) return res.status(404).json({ error: 'Restaurant not found' });
-
-    const restaurant = restaurantResults[0];
-
-    pool.query(menuSql, [restaurantId], (err, menuResults) => {
-      if (err) return res.status(500).json({ error: 'Error fetching menu' });
-
-      pool.query(reviewSql, [restaurantId], (err, reviewResults) => {
-        if (err) return res.status(500).json({ error: 'Error fetching reviews' });
-
-        // ✅ Return combined result
-        res.json({
-          restaurant,
-          menu: menuResults,
-          reviews: reviewResults
-        });
-      });
-    });
-  });
-});
 
 
   // ✅ Start Server
