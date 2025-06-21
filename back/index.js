@@ -144,7 +144,7 @@ app.get('/user-profile/:id', (req, res) => {
     LIMIT 1
   `;
 
-  pool.query(sql, [userId], (error, results) => {
+  db.query(sql, [userId], (error, results) => {
     if (error) {
       console.error('Database error:', error);
       return res.status(500).json({ error: 'Database error' });
@@ -157,6 +157,7 @@ app.get('/user-profile/:id', (req, res) => {
     }
   });
 });
+
 
 
 // ✅ Start Server
