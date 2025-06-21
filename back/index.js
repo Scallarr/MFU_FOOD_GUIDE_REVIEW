@@ -101,12 +101,33 @@ console.log(req.body);
 app.get('/user/info/:id', (req, res) => {
   const userId = req.params.id;
 
-  const q = `SELECT fullname, username, email, bio, total_likes, total_reviews, coins, role, status 
-             FROM User WHERE User_ID = ?`;
+  const query = `
+    SELECT 
+      u.fullname, 
+      u.username, 
+      u.email, 
+      u.bio, 
+      u.total_likes, 
+      u.total_reviews, 
+      u.coins, 
+      u.role, 
+      u.status,
+      p.picture_url
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+    WHERE u.User_ID = ?
+  `;
 
-  db.query(q, [userId], (err, results) => {
-    if (err) return res.status(500).json({ error: 'DB error' });
-    if (results.length === 0) return res.status(404).json({ error: 'User not found' });
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('❌ DB Error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     res.json(results[0]);
   });

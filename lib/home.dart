@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/Dashboard.dart';
+import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -208,15 +209,26 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: profileImageUrl == null
-                ? CircleAvatar(
-                    backgroundColor: Colors.grey[300],
-                    child: Icon(Icons.person, color: Colors.white),
-                  )
-                : CircleAvatar(
-                    backgroundImage: NetworkImage(profileImageUrl!),
-                    backgroundColor: Colors.grey[300],
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ProfilePage(), // ← เปลี่ยนตามชื่อหน้าของคุณ
                   ),
+                );
+              },
+              child: profileImageUrl == null
+                  ? CircleAvatar(
+                      backgroundColor: Colors.grey[300],
+                      child: Icon(Icons.person, color: Colors.white),
+                    )
+                  : CircleAvatar(
+                      backgroundImage: NetworkImage(profileImageUrl!),
+                      backgroundColor: Colors.grey[300],
+                    ),
+            ),
           ),
         ],
       ),
