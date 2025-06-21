@@ -185,7 +185,7 @@
 
   const restaurantQuery = `
     SELECT 
-      restaurant_id,
+      Restaurant_ID,
       restaurant_name,
       location,
       operating_hours,
@@ -202,12 +202,13 @@
 
   const reviewQuery = `
     SELECT 
-      review_id,
-      rating_overall_avg,
+      Review_ID,
+      rating_overall,
       rating_hygiene,
       rating_flavor,
       rating_service,
-      review_text,
+      comment,
+      total_likes
       created_at
     FROM Review
     WHERE restaurant_id = ?
@@ -216,11 +217,11 @@
 
   const menuQuery = `
     SELECT 
-      menu_id,
-      menu_name,
+      Menu_ID,
+      menu_thai_name,
+      menu_english_name,
       price,
-      description,
-      photo_url
+      menu_img
     FROM Menu
     WHERE restaurant_id = ?
   `;
@@ -228,6 +229,7 @@
   db.query(restaurantQuery, [restaurantId], (err, restaurantResults) => {
     if (err) {
       console.error('❌ Restaurant Query Error:', err);
+     
       return res.status(500).json({ error: 'Database error' });
     }
 
