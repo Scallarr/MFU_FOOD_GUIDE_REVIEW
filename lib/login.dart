@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (role == 'User') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => HomePage()),
+              MaterialPageRoute(builder: (_) => RestaurantListPage()),
             );
           } else if (role == 'Admin') {
             // ถ้ามีหน้า admin สามารถทำได้ตรงนี้

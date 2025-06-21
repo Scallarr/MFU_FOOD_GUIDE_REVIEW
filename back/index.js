@@ -43,7 +43,7 @@ db.query(`
 // ✅ Login Route (POST)
 app.post('/user/login', (req, res) => {
   const { fullname, username, email, google_id, picture_url } = req.body;
-
+console.log(req.body);
   const insertOrUpdateUser = `
     INSERT INTO User (fullname, username, email, google_id)
     VALUES (?, ?, ?, ?)
@@ -109,6 +109,19 @@ app.get('/user/info/:id', (req, res) => {
     if (results.length === 0) return res.status(404).json({ error: 'User not found' });
 
     res.json(results[0]);
+  });
+});
+app.get('/restaurants', (req, res) => {
+  const sql = `SELECT restaurant_name, location, operating_hours, phone_number, photos, 
+                      rating_overall_avg, rating_hygiene_avg, rating_flavor_avg, rating_service_avg, category 
+               FROM Restaurant`;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching restaurants:', err);
+      return res.status(500).json({ error: 'Database query error' });
+    }
+    res.json(results);
   });
 });
 
