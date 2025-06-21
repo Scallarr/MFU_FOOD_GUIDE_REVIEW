@@ -126,6 +126,39 @@ app.get('/restaurants', (req, res) => {
 });
 
 
+
+
+
+
+app.get('/user-profile/:id', (req, res) => {
+  const userId = parseInt(req.params.id, 10);
+
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing or invalid userId' });
+  }
+
+  const sql = `
+    SELECT picture_url 
+    FROM user_Profile_Picture 
+    WHERE User_ID = ? AND is_active = 1 
+    LIMIT 1
+  `;
+
+  pool.query(sql, [userId], (error, results) => {
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (results.length > 0) {
+      res.json({ picture_url: results[0].picture_url });
+    } else {
+      res.json({ picture_url: null });
+    }
+  });
+});
+
+
 // ✅ Start Server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));
