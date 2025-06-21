@@ -96,7 +96,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
 
   Future<void> loadUserIdAndFetchProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    final storedUserId = prefs.getInt('userId');
+    final storedUserId = prefs.getInt('user_id');
 
     if (storedUserId != null) {
       setState(() {
