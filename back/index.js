@@ -202,17 +202,22 @@
 
   const reviewQuery = `
     SELECT 
-      Review_ID,
-      rating_overall,
-      rating_hygiene,
-      rating_flavor,
-      rating_service,
-      comment,
-      total_likes
-      created_at
-    FROM Review
-    WHERE restaurant_id = ?
-    ORDER BY created_at DESC
+      r.Review_ID,
+      r.rating_overall,
+      r.rating_hygiene,
+      r.rating_flavor,
+      r.rating_service,
+      r.comment,
+      r.total_likes,
+      r.created_at,
+      u.username,
+      p.picture_url
+    FROM Review r
+    JOIN User u ON r.User_ID = u.User_ID
+    LEFT JOIN user_Profile_Picture p 
+      ON r.User_ID = p.User_ID AND p.is_active = 1
+    WHERE r.restaurant_id = ?
+    ORDER BY r.created_at DESC
   `;
 
   const menuQuery = `
@@ -229,7 +234,6 @@
   db.query(restaurantQuery, [restaurantId], (err, restaurantResults) => {
     if (err) {
       console.error('❌ Restaurant Query Error:', err);
-     
       return res.status(500).json({ error: 'Database error' });
     }
 
@@ -239,7 +243,6 @@
 
     const restaurant = restaurantResults[0];
 
-    // คิวรีเมนูและรีวิวพร้อมกัน
     db.query(reviewQuery, [restaurantId], (err, reviewResults) => {
       if (err) {
         console.error('❌ Review Query Error:', err);
@@ -252,12 +255,11 @@
           return res.status(500).json({ error: 'Database error' });
         }
 
-        // รวมข้อมูลทั้งหมดส่งกลับ
         restaurant.reviews = reviewResults;
         restaurant.menus = menuResults;
 
         res.json(restaurant);
-        console.log(restaurant);
+        console.log('✅ Sent restaurant with reviews and menus:', restaurant);
       });
     });
   });
