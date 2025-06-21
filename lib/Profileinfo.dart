@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,6 +17,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? userData;
   bool isLoading = true;
   String error = '';
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
   void initState() {
@@ -142,6 +144,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
             onPressed: () async {
+              await _googleSignIn.signOut();
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear(); // ล้างข้อมูล
               // TODO: กลับไปหน้า login

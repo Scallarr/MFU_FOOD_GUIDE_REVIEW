@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'restaurant_model.dart'; // <-- Model class ที่คุณสร้างไว้
+import 'restaurant_model.dart';
 
 class RestaurantDetailPage extends StatefulWidget {
   final int restaurantId;
@@ -17,14 +17,18 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   Restaurant? restaurant;
   bool isLoading = true;
 
-  int? userId; // เก็บ user id จาก SharedPreferences
-  Map<int, bool> likedReviews = {}; // เก็บสถานะไลค์ของแต่ละรีวิว
+  int? userId;
+  Map<int, bool> likedReviews = {};
 
   @override
   void initState() {
     super.initState();
-    _loadUserId();
-    fetchRestaurant();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadUserId();
+    await fetchRestaurant();
   }
 
   Future<void> _loadUserId() async {
@@ -37,20 +41,22 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
 
   Future<void> fetchRestaurant() async {
     try {
-      final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/restaurant/${widget.restaurantId}',
-        ),
+      final uri = Uri.parse(
+        'https://mfu-food-guide-review.onrender.com/restaurant/${widget.restaurantId}'
+        '${userId != null ? '?user_id=$userId' : ''}',
       );
+
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
           restaurant = Restaurant.fromJson(data);
+          likedReviews = {for (var r in restaurant!.reviews) r.id: r.isLiked};
           isLoading = false;
         });
       } else {
-        print('Failed to load restaurant');
+        print('Failed to load restaurant. Status code: ${response.statusCode}');
       }
     } catch (e) {
       print('Error: $e');
@@ -65,6 +71,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
     final url = Uri.parse(
       'https://mfu-food-guide-review.onrender.com/review/$reviewId/like',
     );
+
     try {
       final response = await http.post(
         url,
@@ -94,6 +101,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
               pictureUrl: oldReview.pictureUrl,
               totalLikes: updatedLikes,
               createdAt: oldReview.createdAt,
+              isLiked: likedNow,
             );
 
             restaurant!.reviews[index] = updatedReview;
@@ -110,6 +118,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   }
 
   @override
+  @override
+  @override
+  @override
   Widget build(BuildContext context) {
     if (isLoading || restaurant == null) {
       return Scaffold(
@@ -119,107 +130,176 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(restaurant!.name)),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                restaurant!.photoUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            title: Text(restaurant!.name),
+            backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+            floating: true, // ทำให้เลื่อนขึ้นมาได้ทันที
+            snap: true, // เลื่อนลงซ่อนทันที
+            elevation: 4,
+          ),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  restaurant!.name,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(0),
+                  child: Image.network(
+                    restaurant!.photoUrl,
+                    height: 250,
+                    width: MediaQuery.of(context).size.width,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                Spacer(),
-                Icon(Icons.favorite, color: Colors.red),
+                SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              restaurant!.name,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.favorite, color: Colors.red, size: 28),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Chip(
+                        label: Text(restaurant!.category),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                      ),
+                      SizedBox(height: 12),
+                      _infoRow(
+                        Icons.location_on,
+                        '${restaurant!.location}   MAH FAH LUANG UNIVERSITY',
+                      ),
+                      SizedBox(height: 12),
+                      _infoRow(
+                        Icons.access_time,
+                        'Open Time :${restaurant!.operatingHours}',
+                      ),
+                      SizedBox(height: 12),
+                      _infoRow(Icons.phone, restaurant!.phoneNumber),
+                      Divider(height: 32),
+                      _buildRatingSection(),
+                      Divider(height: 32),
+                      _buildMenuSection(),
+                      Divider(height: 32),
+                      _buildReviewSection(),
+                      SizedBox(height: 5),
+                      Center(
+                        child: SizedBox(
+                          width: double.infinity, // เต็มความกว้าง
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // TODO: เขียนรีวิว
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              padding: EdgeInsets.symmetric(
+                                vertical:
+                                    14, // ไม่ต้องกำหนด horizontal เพราะกว้างเต็มแล้ว
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: Text(
+                              'Write a Review',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: 20),
+                    ],
+                  ),
+                ),
               ],
             ),
-            SizedBox(height: 6),
-            Chip(label: Text(restaurant!.category)),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.location_on, size: 16),
-                SizedBox(width: 5),
-                Text(restaurant!.location),
-              ],
-            ),
-            Row(
-              children: [
-                Icon(Icons.access_time, size: 16),
-                SizedBox(width: 5),
-                Text('Open ${restaurant!.operatingHours}'),
-              ],
-            ),
-            Row(
-              children: [
-                Icon(Icons.phone, size: 16),
-                SizedBox(width: 5),
-                Text(restaurant!.phoneNumber),
-              ],
-            ),
-            Divider(height: 30),
-            _buildRatingSection(),
-            Divider(height: 30),
-            _buildMenuSection(),
-            Divider(height: 30),
-            _buildReviewSection(),
-            SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  // TODO: เขียนรีวิว
-                },
-                child: Text('Write a Review'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[700]),
+        SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[800],
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildRatingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               "Overall Rating",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                height: 1.2,
+              ),
             ),
-            SizedBox(width: 10),
+            SizedBox(width: 12),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: const Color.fromARGB(255, 255, 0, 0),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 children: [
                   Text(
-                    '${restaurant!.ratingOverall}',
-                    style: TextStyle(fontSize: 16),
+                    '${restaurant!.ratingOverall.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
-                  Icon(Icons.star, color: Colors.amber, size: 18),
+                  SizedBox(width: 6),
+                  Icon(Icons.star, color: Colors.amber, size: 22),
                 ],
               ),
             ),
           ],
         ),
-        SizedBox(height: 8),
+        SizedBox(height: 16),
         _buildRatingRow("Hygiene", restaurant!.ratingHygiene),
         _buildRatingRow("Flavor", restaurant!.ratingFlavor),
         _buildRatingRow("Service", restaurant!.ratingService),
@@ -230,17 +310,24 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   Widget _buildRatingRow(String label, double value) {
     int rounded = value.round();
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Text('$label'),
-          SizedBox(width: 10),
-          ...List.generate(
-            5,
-            (index) => Icon(
-              index < rounded ? Icons.star : Icons.star_border,
-              color: Colors.amber,
-              size: 18,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              5,
+              (index) => Icon(
+                index < rounded ? Icons.star : Icons.star_border,
+                color: Colors.amber,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -254,37 +341,93 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
       children: [
         Text(
           "Menu",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
-        SizedBox(height: 8),
+        SizedBox(height: 12),
         ...restaurant!.menus.map(
           (menu) => Card(
+            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: ListTile(
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  menu.imageUrl,
-                  width: 50,
-                  height: 50,
-                  fit: BoxFit.cover,
-                ),
+            elevation: 4,
+            child: Container(
+              height: 80, // ปรับความสูงของ Card ตามต้องการ
+              padding: EdgeInsets.all(0),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: Image.network(
+                      menu.imageUrl,
+                      width: 120, // ปรับขนาดรูปภาพให้ใหญ่ขึ้น
+                      height: 110,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          menu.nameTH,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "Price ${menu.price} Baht",
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(right: 18), // ขยับเข้ามาจากขอบขวา
+                    child: Icon(
+                      Icons.restaurant,
+                      size: 25,
+                      color: const Color.fromARGB(255, 0, 0, 0),
+                    ),
+                  ),
+                ],
               ),
-              title: Text(menu.nameTH),
-              subtitle: Text("Price ${menu.price} Bath"),
-              trailing: Icon(Icons.clear, color: Colors.black54),
             ),
           ),
         ),
         SizedBox(height: 8),
-        Center(
+        SizedBox(
+          width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
               // TODO: View full menu
             },
-            child: Text("View Full Menu"),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.black,
+              padding: EdgeInsets.symmetric(vertical: 0), // ลบ horizontal ออก
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              side: BorderSide(
+                color: const Color.fromARGB(255, 0, 0, 0),
+                width: 2,
+              ),
+            ),
+            child: Text(
+              "View Full Menu",
+              style: TextStyle(
+                color: const Color.fromARGB(255, 253, 253, 253),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
           ),
         ),
       ],
@@ -297,80 +440,119 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
       children: [
         Text(
           "Reviews",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
-        SizedBox(height: 8),
+        SizedBox(height: 16),
         ...restaurant!.reviews.map((review) {
           final isLiked = likedReviews[review.id] ?? false;
           return Card(
-            child: Padding(
-              padding: EdgeInsets.all(10),
+            margin: EdgeInsets.symmetric(vertical: 10), // เพิ่มระยะระหว่าง Card
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Container(
+              constraints: BoxConstraints(
+                minHeight: 100,
+              ), // เพิ่มความสูงขั้นต่ำ
+              padding: EdgeInsets.all(15), // เพิ่ม padding ภายใน
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
                     backgroundImage: NetworkImage(review.pictureUrl),
-                    radius: 25,
+                    radius: 30, // ขยาย Avatar ให้ใหญ่ขึ้นเล็กน้อย
+                    backgroundColor: Colors.grey[200],
                   ),
-                  SizedBox(width: 10),
+                  SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Stack(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: 0,
+                            right: 80,
+                          ), // เพิ่มระยะด้านขวา
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
                                 review.username,
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
                               ),
-                            ),
-                            Text(
-                              _formatDate(review.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                              SizedBox(height: 6),
+                              Row(
+                                children: List.generate(5, (i) {
+                                  if (i < review.ratingOverall.floor()) {
+                                    return Icon(
+                                      Icons.star,
+                                      size: 20,
+                                      color: Colors.amber,
+                                    ); // เต็ม
+                                  } else if (i < review.ratingOverall &&
+                                      review.ratingOverall - i >= 0.5) {
+                                    return Icon(
+                                      Icons.star_half,
+                                      size: 20,
+                                      color: Colors.amber,
+                                    ); // ครึ่ง
+                                  } else {
+                                    return Icon(
+                                      Icons.star_border,
+                                      size: 20,
+                                      color: Colors.amber,
+                                    ); // ว่าง
+                                  }
+                                }),
                               ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          children: List.generate(
-                            5,
-                            (i) => Icon(
-                              i < review.ratingOverall.round()
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              size: 16,
-                              color: Colors.amber,
-                            ),
+
+                              SizedBox(height: 10),
+                              Text(
+                                review.comment,
+                                style: TextStyle(fontSize: 15.5, height: 1.4),
+                              ),
+                            ],
                           ),
                         ),
-                        SizedBox(height: 4),
-                        Text(review.comment),
-                        SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              "${review.totalLikes} Likes",
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            SizedBox(width: 4),
-                            GestureDetector(
-                              onTap: () {
-                                if (!isLiked && userId != null) {
-                                  likeReview(review.id);
-                                }
-                              },
-                              child: Icon(
-                                Icons.favorite,
-                                color: isLiked ? Colors.red : Colors.grey,
-                                size: 18,
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                _formatDate(review.createdAt),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: () {
+                                  if (userId != null) {
+                                    likeReview(review.id);
+                                  }
+                                },
+                                child: Icon(
+                                  Icons.favorite,
+                                  color: isLiked ? Colors.red : Colors.grey,
+                                  size: 30,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                "${review.totalLikes} Likes",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -379,7 +561,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
               ),
             ),
           );
-        }),
+        }).toList(),
       ],
     );
   }

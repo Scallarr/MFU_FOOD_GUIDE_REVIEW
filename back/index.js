@@ -179,39 +179,26 @@
       }
     });
   });
-
- app.get('/restaurant/:id', (req, res) => {
-  const restaurantId = req.params.id;
+app.get('/restaurant/:id', (req, res) => {
+  const restaurantId = parseInt(req.params.id);
+  const userId = parseInt(req.query.user_id); // รับ user_id จาก Flutter
 
   const restaurantQuery = `
-    SELECT 
-      Restaurant_ID,
-      restaurant_name,
-      location,
-      operating_hours,
-      phone_number,
-      photos,
-      category,
-      rating_overall_avg,
-      rating_hygiene_avg,
-      rating_flavor_avg,
-      rating_service_avg
+    SELECT Restaurant_ID, restaurant_name, location, operating_hours,
+           phone_number, photos, category, rating_overall_avg,
+           rating_hygiene_avg, rating_flavor_avg, rating_service_avg
     FROM Restaurant
-    WHERE restaurant_id = ?
+    WHERE Restaurant_ID = ?
   `;
 
   const reviewQuery = `
-    SELECT 
-      r.Review_ID,
-      r.rating_overall,
-      r.rating_hygiene,
-      r.rating_flavor,
-      r.rating_service,
-      r.comment,
-      r.total_likes,
-      r.created_at,
-      u.username,
-      p.picture_url
+    SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
+           r.rating_service, r.comment, r.total_likes, r.created_at,
+           u.username, p.picture_url,
+           EXISTS (
+             SELECT 1 FROM Review_Likes rl
+             WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
+           ) AS isLiked
     FROM Review r
     JOIN User u ON r.User_ID = u.User_ID
     LEFT JOIN user_Profile_Picture p 
@@ -221,88 +208,193 @@
   `;
 
   const menuQuery = `
-    SELECT 
-      Menu_ID,
-      menu_thai_name,
-      menu_english_name,
-      price,
-      menu_img
+    SELECT Menu_ID, menu_thai_name, menu_english_name, price, menu_img
     FROM Menu
     WHERE restaurant_id = ?
   `;
 
-  db.query(restaurantQuery, [restaurantId], (err, restaurantResults) => {
-    if (err) {
-      console.error('❌ Restaurant Query Error:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
+  db.query(restaurantQuery, [restaurantId], (err, restRes) => {
+    if (err || restRes.length === 0) return res.status(500).json({ error: 'Error fetching restaurant' });
 
-    if (restaurantResults.length === 0) {
-      return res.status(404).json({ error: 'Restaurant not found' });
-    }
+    const restaurant = restRes[0];
+    db.query(reviewQuery, [userId, restaurantId], (err2, revRes) => {
+      if (err2) return res.status(500).json({ error: 'Error fetching reviews' });
 
-    const restaurant = restaurantResults[0];
+      db.query(menuQuery, [restaurantId], (err3, menuRes) => {
+        if (err3) return res.status(500).json({ error: 'Error fetching menu' });
 
-    db.query(reviewQuery, [restaurantId], (err, reviewResults) => {
-      if (err) {
-        console.error('❌ Review Query Error:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      db.query(menuQuery, [restaurantId], (err, menuResults) => {
-        if (err) {
-          console.error('❌ Menu Query Error:', err);
-          return res.status(500).json({ error: 'Database error' });
-        }
-
-        restaurant.reviews = reviewResults;
-        restaurant.menus = menuResults;
+        restaurant.reviews = revRes.map(r => ({
+          ...r,
+          isLiked: !!r.isLiked
+        }));
+        restaurant.menus = menuRes;
 
         res.json(restaurant);
-        console.log('✅ Sent restaurant with reviews and menus:', restaurant);
       });
     });
   });
 });
+
+// Like/Unlike route (toggle)
 app.post('/review/:reviewId/like', (req, res) => {
   const reviewId = parseInt(req.params.reviewId);
-  const userId = req.body.user_id;
+  const userId = parseInt(req.body.user_id);
+  if (!userId) return res.status(400).json({ message: 'user_id is required' });
 
-  if (!userId) {
-    return res.status(400).json({ message: 'user_id is required' });
-  }
-
-  const checkLikeQuery = `SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`;
-  db.query(checkLikeQuery, [reviewId, userId], (err, rows) => {
-    if (err) return res.status(500).json({ message: 'DB error' });
-
+  const check = 'SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?';
+  db.query(check, [reviewId, userId], (e1, rows) => {
+    if (e1) return res.status(500).json({ message: 'DB error' });
     if (rows.length > 0) {
-      // Unlike
-      db.query(`DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
-        [reviewId, userId], (err) => {
-          if (err) return res.status(500).json({ message: 'DB error on unlike' });
-
-          db.query(`UPDATE Review SET total_likes = GREATEST(total_likes - 1, 0) WHERE Review_ID = ?`,
-            [reviewId], (err) => {
-              if (err) return res.status(500).json({ message: 'DB error on update' });
-              return res.status(200).json({ message: 'Review unliked', liked: false });
-            });
+      db.query('DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?', [reviewId,userId], (e2) => {
+        if (e2) return res.status(500).json({ message: 'DB error on unlike' });
+        db.query('UPDATE Review SET total_likes = GREATEST(total_likes - 1,0) WHERE Review_ID = ?', [reviewId], () => {
+          res.status(200).json({ message: 'Review unliked', liked: false });
         });
+      });
     } else {
-      // Like
-      db.query(`INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?, ?)`,
-        [reviewId, userId], (err) => {
-          if (err) return res.status(500).json({ message: 'DB error on like' });
-
-          db.query(`UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?`,
-            [reviewId], (err) => {
-              if (err) return res.status(500).json({ message: 'DB error on update' });
-              return res.status(200).json({ message: 'Review liked', liked: true });
-            });
+      db.query('INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?,?)', [reviewId,userId], (e2) => {
+        if (e2) return res.status(500).json({ message: 'DB error on like' });
+        db.query('UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?', [reviewId], () => {
+          res.status(200).json({ message: 'Review liked', liked: true });
         });
+      });
     }
   });
 });
+// app.get('/restaurant/:id', (req, res) => {
+//   const restaurantId = req.params.id;
+//   const userId = parseInt(req.query.user_id); // 👈 รับ user_id จาก query param
+
+//   const restaurantQuery = `
+//     SELECT 
+//       Restaurant_ID,
+//       restaurant_name,
+//       location,
+//       operating_hours,
+//       phone_number,
+//       photos,
+//       category,
+//       rating_overall_avg,
+//       rating_hygiene_avg,
+//       rating_flavor_avg,
+//       rating_service_avg
+//     FROM Restaurant
+//     WHERE restaurant_id = ?
+//   `;
+
+//   // ✅ เพิ่มเช็ค isLiked เข้าใน reviewQuery
+//   const reviewQuery = `
+//     SELECT 
+//   r.Review_ID,
+//   r.rating_overall,
+//   r.comment,
+//   r.total_likes,
+//   r.created_at,
+//   u.username,
+//   p.picture_url,
+//   EXISTS (
+//     SELECT 1 FROM Review_Likes rl 
+//     WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
+//   ) AS is_liked
+// FROM Review r
+// JOIN User u ON r.User_ID = u.User_ID
+// LEFT JOIN user_Profile_Picture p 
+//   ON r.User_ID = p.User_ID AND p.is_active = 1
+// WHERE r.restaurant_id = ?
+// ORDER BY r.created_at DESC
+//   `;
+
+//   const menuQuery = `
+//     SELECT 
+//       Menu_ID,
+//       menu_thai_name,
+//       menu_english_name,
+//       price,
+//       menu_img
+//     FROM Menu
+//     WHERE restaurant_id = ?
+//   `;
+
+//   db.query(restaurantQuery, [restaurantId], (err, restaurantResults) => {
+//     if (err) {
+//       console.error('❌ Restaurant Query Error:', err);
+//       return res.status(500).json({ error: 'Database error' });
+//     }
+
+//     if (restaurantResults.length === 0) {
+//       return res.status(404).json({ error: 'Restaurant not found' });
+//     }
+
+//     const restaurant = restaurantResults[0];
+
+//     // ✅ ใส่ userId และ restaurantId เป็นพารามิเตอร์
+//     db.query(reviewQuery, [userId, restaurantId], (err, reviewResults) => {
+//       if (err) {
+//         console.error('❌ Review Query Error:', err);
+//         return res.status(500).json({ error: 'Database error' });
+//       }
+
+//       db.query(menuQuery, [restaurantId], (err, menuResults) => {
+//         if (err) {
+//           console.error('❌ Menu Query Error:', err);
+//           return res.status(500).json({ error: 'Database error' });
+//         }
+
+//         // ✅ แปลง isLiked จาก 0/1 หรือ 0/null → เป็น Boolean
+//         const reviewsWithLikeStatus = reviewResults.map(r => ({
+//           ...r,
+//           isLiked: !!r.isLiked
+//         }));
+
+//         restaurant.reviews = reviewsWithLikeStatus;
+//         restaurant.menus = menuResults;
+
+//         res.json(restaurant);
+//         console.log('✅ Sent restaurant with reviews and menus:', restaurant);
+//       });
+//     });
+//   });
+// });
+
+// app.post('/review/:reviewId/like', (req, res) => {
+//   const reviewId = parseInt(req.params.reviewId);
+//   const userId = req.body.user_id;
+
+//   if (!userId) {
+//     return res.status(400).json({ message: 'user_id is required' });
+//   }
+
+//   const checkLikeQuery = `SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`;
+//   db.query(checkLikeQuery, [reviewId, userId], (err, rows) => {
+//     if (err) return res.status(500).json({ message: 'DB error' });
+
+//     if (rows.length > 0) {
+//       // Unlike
+//       db.query(`DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
+//         [reviewId, userId], (err) => {
+//           if (err) return res.status(500).json({ message: 'DB error on unlike' });
+
+//           db.query(`UPDATE Review SET total_likes = GREATEST(total_likes - 1, 0) WHERE Review_ID = ?`,
+//             [reviewId], (err) => {
+//               if (err) return res.status(500).json({ message: 'DB error on update' });
+//               return res.status(200).json({ message: 'Review unliked', liked: false });
+//             });
+//         });
+//     } else {
+//       // Like
+//       db.query(`INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?, ?)`,
+//         [reviewId, userId], (err) => {
+//           if (err) return res.status(500).json({ message: 'DB error on like' });
+
+//           db.query(`UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?`,
+//             [reviewId], (err) => {
+//               if (err) return res.status(500).json({ message: 'DB error on update' });
+//               return res.status(200).json({ message: 'Review liked', liked: true });
+//             });
+//         });
+//     }
+//   });
+// });
 
 
 

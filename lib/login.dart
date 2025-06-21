@@ -134,53 +134,54 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      SizedBox(height: isMobile ? 20 : 40),
-                      Text(
-                        "MFU Food Guide",
-                        style: TextStyle(
-                          fontSize: isMobile ? 28 : 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(height: isMobile ? 16 : 24),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.asset(
-                          "assets/food.png",
-                          height: isMobile ? 140 : 200,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      SizedBox(height: isMobile ? 20 : 32),
-                      Text(
-                        "MFU Food Guide & Review",
-                        style: TextStyle(
-                          fontSize: isMobile ? 22 : 26,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        "Discover and review delicious campus food",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: isMobile ? 14 : 16,
-                          color: Colors.grey[700],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      SizedBox(height: isMobile ? 28 : 36),
-                      if (_user == null) ...[
+            return Column(
+              // ❌ เปลี่ยนจาก SingleChildScrollView เป็น Column ธรรมดา
+              children: [
+                SizedBox(height: isMobile ? 45 : 40),
+                Text(
+                  "MFU Food Guide",
+                  style: TextStyle(
+                    fontSize: isMobile ? 28 : 36,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                SizedBox(height: isMobile ? 20 : 24),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    "assets/food.png",
+                    height: isMobile ? 170 : 200,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                SizedBox(height: isMobile ? 20 : 32),
+                Text(
+                  "MFU Food Guide & Review",
+                  style: TextStyle(
+                    fontSize: isMobile ? 22 : 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  "Discover and review delicious campus food",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: isMobile ? 14 : 16,
+                    color: Colors.grey[700],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                SizedBox(height: isMobile ? 30 : 36),
+
+                if (_user == null) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -252,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 20),
+                        SizedBox(height: 18),
                         Text(
                           "Only @lamduan.mfu.ac.th email accounts are allowed to login\nNo sign-up option available",
                           textAlign: TextAlign.center,
@@ -262,59 +263,57 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ] else ...[
-                        if (_user!.photoUrl != null)
-                          CircleAvatar(
-                            radius: isMobile ? 40 : 50,
-                            backgroundImage: NetworkImage(_user!.photoUrl!),
-                          ),
-                        SizedBox(height: 16),
-                        Text(
-                          "Hello, ${_user!.displayName}",
-                          style: TextStyle(
-                            fontSize: isMobile ? 20 : 24,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          "Email: ${_user!.email}",
-                          style: TextStyle(
-                            fontSize: isMobile ? 14 : 16,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: signOut,
-                          child: Text(
-                            "Sign Out",
-                            style: TextStyle(fontSize: 18),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 14,
-                              horizontal: 40,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            backgroundColor: Colors.deepOrange,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
                       ],
-                      Spacer(),
-                      Text(
-                        "©2025 MFU Food Guide\nMae Fah Luang University",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                      ),
-                      SizedBox(height: 16),
-                    ],
+                    ),
                   ),
+                ] else ...[
+                  if (_user!.photoUrl != null)
+                    CircleAvatar(
+                      radius: isMobile ? 40 : 50,
+                      backgroundImage: NetworkImage(_user!.photoUrl!),
+                    ),
+                  SizedBox(height: 16),
+                  Text(
+                    "Hello, ${_user!.displayName}",
+                    style: TextStyle(
+                      fontSize: isMobile ? 20 : 24,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    "Email: ${_user!.email}",
+                    style: TextStyle(
+                      fontSize: isMobile ? 14 : 16,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: signOut,
+                    child: Text("Sign Out", style: TextStyle(fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 40,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      backgroundColor: Colors.deepOrange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+
+                Spacer(), // ดันให้ footer อยู่ด้านล่าง
+                Text(
+                  "©2025 MFU Food Guide\nMae Fah Luang University",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
                 ),
-              ),
+                SizedBox(height: 20),
+              ],
             );
           },
         ),

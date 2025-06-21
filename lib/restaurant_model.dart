@@ -60,7 +60,7 @@ class Review {
   final String pictureUrl;
   final int totalLikes;
   final String createdAt;
-
+  final bool isLiked;
   Review({
     required this.id,
     required this.ratingOverall,
@@ -69,6 +69,7 @@ class Review {
     required this.pictureUrl,
     required this.totalLikes,
     required this.createdAt,
+    required this.isLiked,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -82,6 +83,7 @@ class Review {
           'https://www.gravatar.com/avatar/placeholder?d=mp',
       totalLikes: json['total_likes'] ?? 0,
       createdAt: json['created_at'] ?? '',
+      isLiked: json['isLiked'] ?? false,
     );
   }
 }

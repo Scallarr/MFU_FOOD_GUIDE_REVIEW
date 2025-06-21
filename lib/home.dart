@@ -207,7 +207,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MFU Food Guide'),
-        backgroundColor: Colors.white,
+        backgroundColor: const Color.fromARGB(255, 221, 187, 136),
         foregroundColor: Colors.black,
         elevation: 1,
         actions: [
