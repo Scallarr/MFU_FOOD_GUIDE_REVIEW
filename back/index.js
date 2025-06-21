@@ -179,6 +179,43 @@ app.get('/user-profile/:id', (req, res) => {
   });
 });
 
+app.get('/restaurant/:id', (req, res) => {
+  const restaurantId = req.params.id;
+
+  const query = `
+    SELECT 
+      r.restaurant_id,
+      r.restaurant_name,
+      r.location,
+      r.operating_hours,
+      r.phone_number,
+      r.photos,
+      r.category,
+      -- คำนวณคะแนนเฉลี่ย
+      ROUND(AVG(rv.rating_overall), 1) AS rating_overall_avg,
+      ROUND(AVG(rv.rating_hygiene), 1) AS rating_hygiene_avg,
+      ROUND(AVG(rv.rating_flavor), 1) AS rating_flavor_avg,
+      ROUND(AVG(rv.rating_service), 1) AS rating_service_avg
+    FROM Restaurant r
+    LEFT JOIN Review rv ON r.restaurant_id = rv.restaurant_id
+    WHERE r.restaurant_id = ?
+    GROUP BY r.restaurant_id
+  `;
+
+  db.query(query, [restaurantId], (err, results) => {
+    if (err) {
+      console.error('❌ Database Error:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    res.json(results[0]);
+  });
+});
+
 
 
 // ✅ Start Server

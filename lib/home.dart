@@ -3,12 +3,14 @@ import 'package:http/http.dart' as http;
 import 'package:myapp/Dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
+import 'package:myapp/restaurantDetail.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/threads.dart';
 
 // Model ร้านอาหาร
 class Restaurant {
+  final int id;
   final String name;
   final String location;
   final String operatingHours;
@@ -21,6 +23,7 @@ class Restaurant {
   final String category;
 
   Restaurant({
+    required this.id,
     required this.name,
     required this.location,
     required this.operatingHours,
@@ -35,6 +38,7 @@ class Restaurant {
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
+      id: json['restaurant_id'],
       name: json['restaurant_name'],
       location: json['location'],
       operatingHours: json['operating_hours'],
@@ -269,16 +273,18 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                 // Row รวม dropdown และปุ่ม sort
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 9,
                     vertical: 8,
                   ),
                   child: Row(
                     children: [
                       // ปุ่ม sort Rating (กดวน 3 ครั้ง)
                       SizedBox(
-                        width: buttonWidth,
+                        width: 101,
                         child: SortButton(
                           label: 'Rating',
+
+                          // 👈 เพิ่มแบบนี้ถ้าคุณปรับ SortButton ได้
                           selected: sortBy == 'rating',
                           icon: sortBy == 'rating'
                               ? Icon(
@@ -319,7 +325,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                           height: buttonHeight,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: filterLocation == null
                                   ? const Color.fromARGB(255, 43, 43, 43)
@@ -417,12 +423,12 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
 
                       // Dropdown Food Type (category)
                       SizedBox(
-                        width: buttonWidth,
+                        width: 120,
                         child: Container(
                           height: buttonHeight,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: filterCategory == null
                                   ? const Color.fromARGB(255, 0, 0, 0)
@@ -455,7 +461,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                     children: [
                                       Icon(
                                         Icons.restaurant_menu,
-                                        size: 18,
+                                        size: 17,
                                         color: filterCategory == null
                                             ? const Color.fromARGB(
                                                 136,
@@ -465,8 +471,8 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                               )
                                             : Colors.white,
                                       ),
-                                      SizedBox(width: 6),
-                                      Text('All Types'),
+                                      SizedBox(width: 5),
+                                      Text('All Type'),
                                     ],
                                   ),
                                   value: '',
@@ -477,12 +483,17 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                       children: [
                                         Icon(
                                           Icons.restaurant_menu,
-                                          size: 18,
+                                          size: 17,
                                           color: filterCategory == null
-                                              ? Colors.black54
+                                              ? const Color.fromARGB(
+                                                  137,
+                                                  0,
+                                                  0,
+                                                  0,
+                                                )
                                               : Colors.white,
                                         ),
-                                        SizedBox(width: 6),
+                                        SizedBox(width: 4),
                                         Text(cat.replaceAll('_', ' ')),
                                       ],
                                     ),
@@ -496,7 +507,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                 });
                               },
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 color: filterCategory == null
                                     ? const Color.fromARGB(221, 3, 3, 3)
                                     : Colors.white,
@@ -516,167 +527,182 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                           itemCount: restaurantsToShow.length,
                           itemBuilder: (context, index) {
                             final res = restaurantsToShow[index];
-                            return Card(
-                              margin: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              elevation: 4,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(16),
-                                    ),
-                                    child: Image.network(
-                                      res.photoUrl,
-                                      height: 180,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                height: 180,
-                                                color: Colors.grey[300],
-                                              ),
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => RestaurantDetailPage(
+                                      restaurantId: res.id,
                                     ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                res.name,
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
+                                );
+                              },
+                              child: Card(
+                                margin: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(16),
+                                      ),
+                                      child: Image.network(
+                                        res.photoUrl,
+                                        height: 180,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                                  height: 180,
+                                                  color: Colors.grey[300],
+                                                ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  res.name,
+                                                  style: TextStyle(
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.green.shade100,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.star,
-                                                    color:
-                                                        Colors.green.shade700,
-                                                    size: 18,
-                                                  ),
-                                                  SizedBox(width: 4),
-                                                  Text(
-                                                    res.ratingOverall
-                                                        .toStringAsFixed(1),
-                                                    style: TextStyle(
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green.shade100,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.star,
                                                       color:
-                                                          Colors.green.shade900,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                          Colors.green.shade700,
+                                                      size: 18,
                                                     ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      res.ratingOverall
+                                                          .toStringAsFixed(1),
+                                                      style: TextStyle(
+                                                        color: Colors
+                                                            .green
+                                                            .shade900,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.location_on,
+                                                color: Colors.redAccent,
+                                                size: 20,
+                                              ),
+                                              SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  '${res.location}, MFU',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
                                                   ),
-                                                ],
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-
-                                        SizedBox(height: 8),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.location_on,
-                                              color: Colors.redAccent,
-                                              size: 20,
-                                            ),
-                                            SizedBox(width: 6),
-                                            Expanded(
-                                              child: Text(
-                                                '${res.location}, MFU',
-                                                style: TextStyle(fontSize: 14),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 10),
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 5,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.orange.shade100,
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    _getCategoryIcon(
-                                                      res.category,
-                                                    ),
-                                                    size: 18,
-                                                    color: Colors.orange[800],
-                                                  ),
-                                                  SizedBox(width: 6),
-                                                  Text(
-                                                    res.category.replaceAll(
-                                                      '_',
-                                                      ' ',
-                                                    ),
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
+                                            ],
+                                          ),
+                                          SizedBox(height: 10),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 5,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.orange.shade100,
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.fastfood,
+                                                      size: 18,
                                                       color: Colors.orange[800],
                                                     ),
-                                                  ),
-                                                ],
+                                                    SizedBox(width: 6),
+                                                    Text(
+                                                      res.category.replaceAll(
+                                                        '_',
+                                                        ' ',
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            Colors.orange[800],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 12),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            _buildRatingItem(
-                                              'Hygiene',
-                                              res.ratingHygiene,
-                                            ),
-                                            _buildRatingItem(
-                                              'Flavor',
-                                              res.ratingFlavor,
-                                            ),
-                                            _buildRatingItem(
-                                              'Service',
-                                              res.ratingService,
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                            ],
+                                          ),
+                                          SizedBox(height: 12),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              _buildRatingItem(
+                                                'Hygiene',
+                                                res.ratingHygiene,
+                                              ),
+                                              _buildRatingItem(
+                                                'Flavor',
+                                                res.ratingFlavor,
+                                              ),
+                                              _buildRatingItem(
+                                                'Service',
+                                                res.ratingService,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -741,12 +767,14 @@ class SortButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final Widget? icon;
+  final double fontSize;
 
   const SortButton({
     required this.label,
     required this.selected,
     required this.onTap,
     this.icon,
+    this.fontSize = 3,
   });
 
   @override
@@ -754,12 +782,12 @@ class SortButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: icon ?? const SizedBox.shrink(),
-      label: Text(label),
+      label: Text(label, style: TextStyle(fontSize: 11)),
       style: OutlinedButton.styleFrom(
         minimumSize: Size.fromHeight(36),
         backgroundColor: selected ? Colors.black : Colors.white,
         foregroundColor: selected ? Colors.white : Colors.black,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
