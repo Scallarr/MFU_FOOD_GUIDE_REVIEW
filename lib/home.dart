@@ -38,7 +38,7 @@ class Restaurant {
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
     return Restaurant(
-      id: json['restaurant_id'],
+      id: json['Restaurant_ID'],
       name: json['restaurant_name'],
       location: json['location'],
       operatingHours: json['operating_hours'],
