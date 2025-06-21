@@ -264,7 +264,59 @@
     });
   });
 });
+app.post('/review/:reviewId/like', async (req, res) => {
+  const reviewId = parseInt(req.params.reviewId);
+  const userId = req.body.user_id;
 
+  if (!userId) {
+    return res.status(400).json({ message: 'user_id is required' });
+  }
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+
+    // เช็คว่า user เคยกดไลค์รีวิวนี้หรือยัง
+    const [rows] = await connection.execute(
+      `SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
+      [reviewId, userId]
+    );
+
+    if (rows.length > 0) {
+      // เคยกดไลค์แล้ว -> ลบไลค์ (unlike)
+      await connection.execute(
+        `DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?`,
+        [reviewId, userId]
+      );
+
+      await connection.execute(
+        `UPDATE Review SET total_likes = total_likes - 1 WHERE Review_ID = ? AND total_likes > 0`,
+        [reviewId]
+      );
+
+      await connection.end();
+
+      return res.status(200).json({ message: 'Review unliked successfully', liked: false });
+    } else {
+      // ยังไม่เคยกดไลค์ -> เพิ่มไลค์
+      await connection.execute(
+        `INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?, ?)`,
+        [reviewId, userId]
+      );
+
+      await connection.execute(
+        `UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?`,
+        [reviewId]
+      );
+
+      await connection.end();
+
+      return res.status(200).json({ message: 'Review liked successfully', liked: true });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 
 

@@ -6,6 +6,7 @@ class Restaurant {
   final String phoneNumber;
   final String photoUrl;
   final String category;
+  // final int totalLikes;
   final double ratingOverall;
   final double ratingHygiene;
   final double ratingFlavor;
@@ -21,6 +22,7 @@ class Restaurant {
     required this.phoneNumber,
     required this.photoUrl,
     required this.category,
+    // required this.totalLikes,
     required this.ratingOverall,
     required this.ratingHygiene,
     required this.ratingFlavor,
@@ -56,6 +58,8 @@ class Review {
   final String comment;
   final String username;
   final String pictureUrl;
+  final int totalLikes;
+  final String createdAt;
 
   Review({
     required this.id,
@@ -63,6 +67,8 @@ class Review {
     required this.comment,
     required this.username,
     required this.pictureUrl,
+    required this.totalLikes,
+    required this.createdAt,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -74,6 +80,8 @@ class Review {
       pictureUrl:
           json['picture_url'] ??
           'https://www.gravatar.com/avatar/placeholder?d=mp',
+      totalLikes: json['total_likes'] ?? 0,
+      createdAt: json['created_at'] ?? '',
     );
   }
 }
