@@ -145,9 +145,10 @@ class _ProfilePageState extends State<ProfilePage> {
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear(); // ล้างข้อมูล
               // TODO: กลับไปหน้า login
-              Navigator.pushReplacement(
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => LoginScreen()),
+                (route) => false, // ลบหน้าเก่าออกหมด
               );
             },
             child: const Text('Log Out', style: TextStyle(color: Colors.white)),
