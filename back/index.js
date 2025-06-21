@@ -143,6 +143,7 @@ app.get('/restaurants', (req, res) => {
       return res.status(500).json({ error: 'Database query error' });
     }
     res.json(results);
+    console.log(results);
   });
 });
 
