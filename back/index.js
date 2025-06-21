@@ -133,7 +133,7 @@ app.get('/user/info/:id', (req, res) => {
   });
 });
 app.get('/restaurants', (req, res) => {
-  const sql = `SELECT restaurant_name, location, operating_hours, phone_number, photos, 
+  const sql = `SELECT Restaurant_ID,restaurant_name, location, operating_hours, phone_number, photos, 
                       rating_overall_avg, rating_hygiene_avg, rating_flavor_avg, rating_service_avg, category 
                FROM Restaurant`;
 
