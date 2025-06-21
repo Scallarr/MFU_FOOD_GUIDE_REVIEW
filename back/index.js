@@ -60,22 +60,30 @@ app.post('/user/login', (req, res) => {
 
       const userId = results[0].User_ID;
 
-      // Reset all old pictures to is_active = 0
-      const resetOldPictures = `UPDATE user_Profile_Picture SET is_active = 0 WHERE User_ID = ?`;
-      db.query(resetOldPictures, [userId], (err) => {
-        if (err) console.error('Reset old pictures error:', err);
-      });
-
-      // Insert new picture as active
-      const insertPicture = `
-        INSERT INTO user_Profile_Picture (User_ID, picture_url, is_active)
-        VALUES (?, ?, 1)
+      // ✅ เช็คว่ามีรูปอยู่แล้วหรือยัง
+      const checkPictureQuery = `
+        SELECT * FROM user_Profile_Picture WHERE User_ID = ? LIMIT 1
       `;
-      db.query(insertPicture, [userId, picture_url], (err) => {
-        if (err) console.error('Insert picture error:', err);
+      db.query(checkPictureQuery, [userId], (err, picResults) => {
+        if (err) {
+          console.error('Error checking profile picture:', err);
+        }
+
+        if (picResults.length === 0) {
+          // ❇️ ถ้ายังไม่มีรูป ให้ insert
+          const insertPicture = `
+            INSERT INTO user_Profile_Picture (User_ID, picture_url, is_active)
+            VALUES (?, ?, 1)
+          `;
+          db.query(insertPicture, [userId, picture_url], (err) => {
+            if (err) console.error('Insert picture error:', err);
+          });
+        } else {
+          // 🔕 มีรูปแล้ว ไม่ต้องทำอะไร
+        }
       });
 
-      // Create token
+      // ✅ สร้าง token ส่งกลับ
       const token = jwt.sign(
         { userId, google_id, username, email },
         SECRET_KEY,
