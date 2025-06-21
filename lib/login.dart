@@ -56,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'username': googleUser.email.split('@')[0],
           'email': googleUser.email,
           'google_id': googleUser.id,
+          'picture_url': googleUser.photoUrl ?? '', // ✅ เพิ่มตรงนี้
         }),
       );
 
