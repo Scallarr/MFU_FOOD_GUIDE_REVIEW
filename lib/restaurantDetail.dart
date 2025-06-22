@@ -534,16 +534,21 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             elevation: 3,
             margin: EdgeInsets.symmetric(vertical: 10),
             child: Padding(
-              padding: const EdgeInsets.all(2.0),
+              padding: const EdgeInsets.all(0.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(0),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(10),
+                      topRight: Radius.circular(0),
+                      bottomLeft: Radius.circular(10),
+                      bottomRight: Radius.circular(0),
+                    ),
                     child: Image.network(
                       menu.imageUrl,
                       width: 140,
-                      height: 70,
+                      height: 72,
                       fit: BoxFit.cover,
                     ),
                   ),
