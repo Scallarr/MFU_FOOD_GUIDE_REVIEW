@@ -244,23 +244,44 @@ app.post('/review/:reviewId/like', (req, res) => {
   const check = 'SELECT * FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?';
   db.query(check, [reviewId, userId], (e1, rows) => {
     if (e1) return res.status(500).json({ message: 'DB error' });
-    if (rows.length > 0) {
-      db.query('DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?', [reviewId,userId], (e2) => {
-        if (e2) return res.status(500).json({ message: 'DB error on unlike' });
-        db.query('UPDATE Review SET total_likes = GREATEST(total_likes - 1,0) WHERE Review_ID = ?', [reviewId], () => {
+
+    // ดึง User_ID เจ้าของรีวิวก่อน
+    const getOwner = 'SELECT User_ID FROM Review WHERE Review_ID = ?';
+    db.query(getOwner, [reviewId], (e3, ownerRows) => {
+      if (e3 || ownerRows.length === 0) return res.status(500).json({ message: 'DB error (owner)' });
+      const ownerId = ownerRows[0].User_ID;
+
+      if (rows.length > 0) {
+        // ถ้ามีอยู่แล้ว = กำลังจะ unlike
+        db.query('DELETE FROM Review_Likes WHERE Review_ID = ? AND User_ID = ?', [reviewId, userId], (e2) => {
+          if (e2) return res.status(500).json({ message: 'DB error on unlike' });
+
+          // ลด like ใน Review
+          db.query('UPDATE Review SET total_likes = GREATEST(total_likes - 1, 0) WHERE Review_ID = ?', [reviewId]);
+
+          // ลด like ใน User (เจ้าของรีวิว)
+          db.query('UPDATE User SET total_likes = GREATEST(total_likes - 1, 0) WHERE User_ID = ?', [ownerId]);
+
           res.status(200).json({ message: 'Review unliked', liked: false });
         });
-      });
-    } else {
-      db.query('INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?,?)', [reviewId,userId], (e2) => {
-        if (e2) return res.status(500).json({ message: 'DB error on like' });
-        db.query('UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?', [reviewId], () => {
+      } else {
+        // ยังไม่เคยกด like
+        db.query('INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?,?)', [reviewId, userId], (e2) => {
+          if (e2) return res.status(500).json({ message: 'DB error on like' });
+
+          // เพิ่ม like ใน Review
+          db.query('UPDATE Review SET total_likes = total_likes + 1 WHERE Review_ID = ?', [reviewId]);
+
+          // เพิ่ม like ใน User (เจ้าของรีวิว)
+          db.query('UPDATE User SET total_likes = total_likes + 1 WHERE User_ID = ?', [ownerId]);
+
           res.status(200).json({ message: 'Review liked', liked: true });
         });
-      });
-    }
+      }
+    });
   });
 });
+
 // app.get('/restaurant/:id', (req, res) => {
 //   const restaurantId = req.params.id;
 //   const userId = parseInt(req.query.user_id); // 👈 รับ user_id จาก query param

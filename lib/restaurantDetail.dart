@@ -63,11 +63,15 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
     }
   }
 
+  bool isProcessing = false;
   Future<void> likeReview(int reviewId) async {
     if (userId == null) {
       print("User not logged in");
       return;
     }
+    if (isProcessing) return;
+    isProcessing = true;
+
     final url = Uri.parse(
       'https://mfu-food-guide-review.onrender.com/review/$reviewId/like',
     );
@@ -107,6 +111,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             restaurant!.reviews[index] = updatedReview;
           }
         });
+        isProcessing = false;
       } else {
         print('Failed to like/unlike review');
         print('Status code: ${response.statusCode}');
@@ -279,7 +284,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 255, 0, 0),
+                color: const Color.fromARGB(255, 119, 170, 123),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -289,7 +294,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: const Color.fromARGB(255, 255, 255, 255),
                     ),
                   ),
                   SizedBox(width: 6),
