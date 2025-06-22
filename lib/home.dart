@@ -591,7 +591,12 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                   vertical: 4,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.green.shade100,
+                                                  color: const Color.fromARGB(
+                                                    255,
+                                                    175,
+                                                    128,
+                                                    52,
+                                                  ),
                                                   borderRadius:
                                                       BorderRadius.circular(8),
                                                 ),
@@ -600,7 +605,12 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                     Icon(
                                                       Icons.star,
                                                       color:
-                                                          Colors.green.shade700,
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            234,
+                                                            234,
+                                                            234,
+                                                          ),
                                                       size: 18,
                                                     ),
                                                     SizedBox(width: 4),
@@ -608,11 +618,16 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                       res.ratingOverall
                                                           .toStringAsFixed(1),
                                                       style: TextStyle(
-                                                        color: Colors
-                                                            .green
-                                                            .shade900,
+                                                        color:
+                                                            const Color.fromARGB(
+                                                              255,
+                                                              250,
+                                                              250,
+                                                              250,
+                                                            ),
                                                         fontWeight:
                                                             FontWeight.bold,
+                                                        fontSize: 16,
                                                       ),
                                                     ),
                                                   ],
@@ -717,7 +732,8 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: Colors.blueAccent,
+        selectedItemColor: const Color.fromARGB(255, 175, 128, 52),
+        backgroundColor: Colors.white,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,

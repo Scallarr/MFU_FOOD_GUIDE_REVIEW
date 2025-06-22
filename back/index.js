@@ -146,7 +146,37 @@
       console.log(results);
     });
   });
+app.get('/user-profile-pictures/:userId', (req, res) => {
+  const userId = parseInt(req.params.userId);
+  const sql = `SELECT Picture_ID, picture_url, is_active 
+               FROM user_Profile_Picture 
+               WHERE User_ID = ?`;
+  db.query(sql, [userId], (err, results) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    res.json(results);
+  });
+});
+app.post('/user-profile-pictures/set-active', (req, res) => {
+  const { userId, pictureId } = req.body;
 
+  const deactivate = `UPDATE user_Profile_Picture 
+                      SET is_active = 0 
+                      WHERE User_ID = ?`;
+
+  const activate = `UPDATE user_Profile_Picture 
+                    SET is_active = 1 
+                    WHERE Picture_ID = ? AND User_ID = ?`;
+
+  db.query(deactivate, [userId], (err1) => {
+    if (err1) return res.status(500).json({ error: 'Deactivate error' });
+
+    db.query(activate, [pictureId, userId], (err2) => {
+      if (err2) return res.status(500).json({ error: 'Activate error' });
+      res.json({ message: 'Profile picture updated' });
+    });
+  });
+});
+  
 
 
 

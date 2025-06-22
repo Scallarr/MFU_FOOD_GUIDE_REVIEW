@@ -16,6 +16,8 @@ class RestaurantDetailPage extends StatefulWidget {
 class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   Restaurant? restaurant;
   bool isLoading = true;
+  bool isExpanded = false;
+  bool isReviewExpanded = false;
 
   int? userId;
   Map<int, bool> likedReviews = {};
@@ -180,12 +182,31 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                       ),
                       SizedBox(height: 12),
                       Chip(
-                        label: Text(restaurant!.category),
+                        avatar: Icon(
+                          Icons.local_offer_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        label: Text(
+                          restaurant!.category,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 17,
+                          ),
+                        ),
+                        backgroundColor: Color(
+                          0xFF6D4C41,
+                        ), // สีน้ำตาลโกโก้ดูหรู
                         padding: EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 7,
+                          vertical: 6,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
+
                       SizedBox(height: 12),
                       _infoRow(
                         Icons.location_on,
@@ -204,7 +225,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                       _buildMenuSection(),
                       Divider(height: 32),
                       _buildReviewSection(),
-                      SizedBox(height: 5),
+                      SizedBox(height: 20),
                       Center(
                         child: SizedBox(
                           width: double.infinity, // เต็มความกว้าง
@@ -213,7 +234,12 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                               // TODO: เขียนรีวิว
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                75,
+                                73,
+                                73,
+                              ),
                               padding: EdgeInsets.symmetric(
                                 vertical:
                                     14, // ไม่ต้องกำหนด horizontal เพราะกว้างเต็มแล้ว
@@ -246,21 +272,36 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   }
 
   Widget _infoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[700]),
-        SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[800],
-              height: 1.4,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Color(0xFFFCE4EC), // พื้นหลังชมพูอ่อน
+              shape: BoxShape.circle,
+            ),
+            padding: EdgeInsets.all(6),
+            child: Icon(
+              icon,
+              size: 18,
+              color: Color.fromARGB(255, 162, 95, 7), // ชมพูเข้ม
             ),
           ),
-        ),
-      ],
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 15.5,
+                color: Colors.grey[900],
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -284,7 +325,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 119, 170, 123),
+                color: const Color.fromARGB(255, 175, 128, 52),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -294,11 +335,15 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: const Color.fromARGB(255, 255, 255, 255),
+                      color: const Color.fromARGB(255, 244, 244, 244),
                     ),
                   ),
                   SizedBox(width: 6),
-                  Icon(Icons.star, color: Colors.amber, size: 22),
+                  Icon(
+                    Icons.star,
+                    color: Color.fromARGB(255, 255, 255, 255),
+                    size: 22,
+                  ),
                 ],
               ),
             ),
@@ -341,32 +386,59 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   }
 
   Widget _buildMenuSection() {
+    final menusToShow = isExpanded
+        ? restaurant!.menus
+        : restaurant!.menus.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          "Menu",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '📋 Menu ',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  color: Colors.black87,
+                ),
+              ),
+
+              TextSpan(
+                text: '(${restaurant!.menus.length} items)',
+                style: TextStyle(
+                  fontWeight: FontWeight.normal, // ✅ ตัวบาง
+                  fontSize: 20,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
         ),
+
         SizedBox(height: 12),
-        ...restaurant!.menus.map(
+
+        // แสดงเมนู
+        ...menusToShow.map(
           (menu) => Card(
-            margin: EdgeInsets.symmetric(vertical: 8, horizontal: 0),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
             ),
-            elevation: 4,
-            child: Container(
-              height: 80, // ปรับความสูงของ Card ตามต้องการ
-              padding: EdgeInsets.all(0),
+            elevation: 3,
+            margin: EdgeInsets.symmetric(vertical: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(2.0),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(0),
                     child: Image.network(
                       menu.imageUrl,
-                      width: 120, // ปรับขนาดรูปภาพให้ใหญ่ขึ้น
-                      height: 110,
+                      width: 160,
+                      height: 90,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -374,99 +446,121 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           menu.nameTH,
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             fontSize: 18,
+                            color: Colors.black87,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 6),
                         Text(
-                          "Price ${menu.price} Baht",
+                          "฿ ${menu.price}",
                           style: TextStyle(
-                            color: Colors.grey[700],
+                            color: Color.fromARGB(255, 94, 66, 31), // ชมพูเข้ม
                             fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.only(right: 18), // ขยับเข้ามาจากขอบขวา
-                    child: Icon(
-                      Icons.restaurant,
-                      size: 25,
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                    ),
+                  Icon(
+                    Icons.local_dining_rounded,
+                    color: Color.fromARGB(255, 162, 95, 7), // ชมพูเข้ม,
+                    size: 28,
                   ),
                 ],
               ),
             ),
           ),
         ),
+
         SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () {
-              // TODO: View full menu
-            },
-            style: OutlinedButton.styleFrom(
-              backgroundColor: Colors.black,
-              padding: EdgeInsets.symmetric(vertical: 0), // ลบ horizontal ออก
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              side: BorderSide(
-                color: const Color.fromARGB(255, 0, 0, 0),
-                width: 2,
-              ),
-            ),
-            child: Text(
-              "View Full Menu",
-              style: TextStyle(
-                color: const Color.fromARGB(255, 253, 253, 253),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+
+        // ปุ่ม View Full Menu / Show Less
+        if (restaurant!.menus.length > 3)
+          Padding(
+            padding: EdgeInsets.all(0),
+            child: SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    isExpanded = !isExpanded;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color.fromARGB(255, 165, 116, 36),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  isExpanded ? "Show Less ▲" : "View Full Menu ▼",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
 
   Widget _buildReviewSection() {
+    final reviewsToShow = isReviewExpanded
+        ? restaurant!.reviews
+        : restaurant!.reviews.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Reviews",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '📝 Reviews ',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.black,
+                ),
+              ),
+              TextSpan(
+                text: '(${restaurant!.reviews.length} items)',
+                style: TextStyle(
+                  fontWeight: FontWeight.normal,
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ),
         SizedBox(height: 16),
-        ...restaurant!.reviews.map((review) {
+
+        ...reviewsToShow.map((review) {
           final isLiked = likedReviews[review.id] ?? false;
+
           return Card(
-            margin: EdgeInsets.symmetric(vertical: 10), // เพิ่มระยะระหว่าง Card
+            margin: EdgeInsets.symmetric(vertical: 10),
             elevation: 4,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             child: Container(
-              constraints: BoxConstraints(
-                minHeight: 100,
-              ), // เพิ่มความสูงขั้นต่ำ
-              padding: EdgeInsets.all(15), // เพิ่ม padding ภายใน
+              constraints: BoxConstraints(minHeight: 100),
+              padding: EdgeInsets.all(15),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
                     backgroundImage: NetworkImage(review.pictureUrl),
-                    radius: 30, // ขยาย Avatar ให้ใหญ่ขึ้นเล็กน้อย
+                    radius: 30,
                     backgroundColor: Colors.grey[200],
                   ),
                   SizedBox(width: 16),
@@ -474,10 +568,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                     child: Stack(
                       children: [
                         Padding(
-                          padding: EdgeInsets.only(
-                            top: 0,
-                            right: 80,
-                          ), // เพิ่มระยะด้านขวา
+                          padding: EdgeInsets.only(right: 80),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -496,24 +587,23 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                       Icons.star,
                                       size: 20,
                                       color: Colors.amber,
-                                    ); // เต็ม
+                                    );
                                   } else if (i < review.ratingOverall &&
                                       review.ratingOverall - i >= 0.5) {
                                     return Icon(
                                       Icons.star_half,
                                       size: 20,
                                       color: Colors.amber,
-                                    ); // ครึ่ง
+                                    );
                                   } else {
                                     return Icon(
                                       Icons.star_border,
                                       size: 20,
                                       color: Colors.amber,
-                                    ); // ว่าง
+                                    );
                                   }
                                 }),
                               ),
-
                               SizedBox(height: 10),
                               Text(
                                 review.comment,
@@ -567,6 +657,31 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             ),
           );
         }).toList(),
+
+        // ปุ่ม View Full Review / Show Less
+        if (restaurant!.reviews.length > 3)
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () {
+                setState(() {
+                  isReviewExpanded = !isReviewExpanded;
+                });
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 165, 116, 36),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                isReviewExpanded ? "Show Less ▲" : "View Full Reviews ▼",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ),
       ],
     );
   }

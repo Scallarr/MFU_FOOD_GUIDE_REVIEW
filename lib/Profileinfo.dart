@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/login.dart';
@@ -31,7 +30,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (userId == null) {
       setState(() {
-        error = 'User ID not found in SharedPreferences';
+        error = 'User ID not found';
         isLoading = false;
       });
       return;
@@ -66,6 +65,77 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchProfilePictures(int userId) async {
+    final url = Uri.parse(
+      'https://mfu-food-guide-review.onrender.com/user-profile-pictures/$userId',
+    );
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      return data.cast<Map<String, dynamic>>();
+    } else {
+      throw Exception('Failed to load pictures');
+    }
+  }
+
+  Future<void> setActiveProfilePicture(int userId, int pictureId) async {
+    final url = Uri.parse(
+      'https://mfu-food-guide-review.onrender.com/user-profile-pictures/set-active',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'userId': userId, 'pictureId': pictureId}),
+    );
+    if (response.statusCode == 200) {
+      await fetchUserData(userId);
+    }
+  }
+
+  Widget buildPictureSelector(List<Map<String, dynamic>> pictures, int userId) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: GridView.count(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        shrinkWrap: true,
+        children: pictures.map((pic) {
+          final isActive = pic['is_active'] == 1;
+          return GestureDetector(
+            onTap: () async {
+              Navigator.pop(context);
+              await setActiveProfilePicture(userId, pic['Picture_ID']);
+            },
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    pic['picture_url'],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                  ),
+                ),
+                if (isActive)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 20,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -98,12 +168,25 @@ class _ProfilePageState extends State<ProfilePage> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: pictureUrl != null
-                ? NetworkImage(pictureUrl)
-                : const AssetImage('assets/default_avatar.png')
-                      as ImageProvider,
+          GestureDetector(
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final userId = prefs.getInt('user_id');
+              if (userId != null) {
+                final pictures = await fetchProfilePictures(userId);
+                showModalBottomSheet(
+                  context: context,
+                  builder: (_) => buildPictureSelector(pictures, userId),
+                );
+              }
+            },
+            child: CircleAvatar(
+              radius: 50,
+              backgroundImage: pictureUrl != null
+                  ? NetworkImage(pictureUrl)
+                  : const AssetImage('assets/default_avatar.png')
+                        as ImageProvider,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
@@ -121,7 +204,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 10),
           ElevatedButton(
             onPressed: () {
-              // TODO: ไปหน้า Profile Shop
+              // ไปหน้า Profile Shop
             },
             child: const Text('Profile Shop'),
           ),
@@ -146,12 +229,11 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () async {
               await _googleSignIn.signOut();
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear(); // ล้างข้อมูล
-              // TODO: กลับไปหน้า login
+              await prefs.clear();
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => LoginScreen()),
-                (route) => false, // ลบหน้าเก่าออกหมด
+                (route) => false,
               );
             },
             child: const Text('Log Out', style: TextStyle(color: Colors.white)),
