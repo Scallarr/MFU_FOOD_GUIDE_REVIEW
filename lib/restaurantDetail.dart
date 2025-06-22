@@ -185,18 +185,21 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                         avatar: Icon(
                           Icons.local_offer_rounded,
                           size: 18,
-                          color: Colors.white,
+                          color: const Color.fromARGB(255, 83, 83, 83),
                         ),
                         label: Text(
                           restaurant!.category,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: const Color.fromARGB(255, 95, 94, 94),
                             fontWeight: FontWeight.w500,
                             fontSize: 17,
                           ),
                         ),
-                        backgroundColor: Color(
-                          0xFF6D4C41,
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          228,
+                          192,
+                          135,
                         ), // สีน้ำตาลโกโก้ดูหรู
                         padding: EdgeInsets.symmetric(
                           horizontal: 12,
@@ -219,11 +222,105 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                       ),
                       SizedBox(height: 12),
                       _infoRow(Icons.phone, restaurant!.phoneNumber),
-                      Divider(height: 32),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1.5,
+                              endIndent: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.star,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                          ),
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1.5,
+                              indent: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
                       _buildRatingSection(),
-                      Divider(height: 32),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1.5,
+                              endIndent: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.star,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                          ),
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1.5,
+                              indent: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
                       _buildMenuSection(),
-                      Divider(height: 32),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1.5,
+                              endIndent: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.star,
+                              color: Colors.orange,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(height: 50),
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1.5,
+                              indent: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
                       _buildReviewSection(),
                       SizedBox(height: 20),
                       Center(
@@ -358,7 +455,6 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   }
 
   Widget _buildRatingRow(String label, double value) {
-    int rounded = value.round();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -366,19 +462,28 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
           ),
           Row(
             mainAxisSize: MainAxisSize.min,
-            children: List.generate(
-              5,
-              (index) => Icon(
-                index < rounded ? Icons.star : Icons.star_border,
-                color: Colors.amber,
-                size: 22,
-              ),
-            ),
+            children: List.generate(5, (index) {
+              if (value >= index + 1) {
+                return const Icon(Icons.star, color: Colors.amber, size: 22);
+              } else if (value > index && value < index + 1) {
+                return const Icon(
+                  Icons.star_half,
+                  color: Colors.amber,
+                  size: 22,
+                );
+              } else {
+                return const Icon(
+                  Icons.star_border,
+                  color: Colors.amber,
+                  size: 22,
+                );
+              }
+            }),
           ),
         ],
       ),
@@ -493,9 +598,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                   });
                 },
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 165, 116, 36),
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  backgroundColor: const Color.fromARGB(255, 220, 193, 149),
+                  foregroundColor: const Color.fromARGB(255, 51, 50, 50),
+                  padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -669,9 +774,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                 });
               },
               style: TextButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 165, 116, 36),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: const Color.fromARGB(255, 220, 193, 149),
+                foregroundColor: const Color.fromARGB(255, 51, 50, 50),
+                padding: EdgeInsets.symmetric(vertical: 0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),

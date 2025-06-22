@@ -488,9 +488,9 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     final data = userData!;
-    final pictureUrl = data['picture_url'];
     final fullname = data['fullname'] ?? '';
     final email = data['email'] ?? '';
+    final pictureUrl = data['picture_url'];
     final coins = data['coins'] ?? 0;
     final status = data['status'] ?? 'Active';
     final totalLikes = data['total_likes'] ?? 0;
@@ -502,37 +502,28 @@ class _ProfilePageState extends State<ProfilePage> {
         : '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RestaurantListPage(reload: true),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+            floating: true,
+            snap: true,
+            title: const Text('My Profile'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RestaurantListPage(reload: true),
+                ),
+                (route) => false,
+              ),
             ),
-            (route) => false,
           ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: () async {
-                final prefs = await SharedPreferences.getInstance();
-                final userId = prefs.getInt('user_id');
-                if (userId != null) {
-                  final pictures = await fetchProfilePictures(userId);
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (_) => buildPictureSelector(pictures, userId),
-                  );
-                }
-              },
-              child: Stack(
-                alignment: Alignment.center,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 children: [
                   CircleAvatar(
                     radius: 70,
@@ -541,210 +532,189 @@ class _ProfilePageState extends State<ProfilePage> {
                         : const AssetImage('assets/default_avatar.png')
                               as ImageProvider,
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4),
-                        ],
+                  const SizedBox(height: 12),
+                  Text(
+                    fullname,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.monetization_on, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text('$coins coins'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          220,
+                          193,
+                          149,
+                        ),
+                        foregroundColor: const Color.fromARGB(255, 94, 85, 85),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            12,
+                          ), // ปรับค่าตรงนี้ให้โค้งตามต้องการ
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 0,
+                        ), // ความสูงของปุ่ม
                       ),
-                      child: const Icon(
-                        Icons.edit,
-                        size: 20,
-                        color: Colors.blue,
+                      onPressed: () {},
+                      child: const Text(
+                        'Profile Shop',
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 25),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatCard(Icons.thumb_up, 'Likes', totalLikes),
+                      const SizedBox(width: 16),
+                      _buildStatCard(
+                        Icons.rate_review,
+                        'Reviews',
+                        totalReviews,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  buildReadonlyField(Icons.person, 'First Name', firstName),
+                  buildReadonlyField(
+                    Icons.person_outline,
+                    'Last Name',
+                    lastName,
+                  ),
+                  buildReadonlyField(Icons.email, 'Email', email),
+                  buildReadonlyField(Icons.verified_user, 'Status', status),
+                  buildEditableField(
+                    Icons.account_circle,
+                    'Username',
+                    usernameController,
+                    isEditingUsername,
+                    () async {
+                      if (isEditingUsername) {
+                        await updateProfile();
+                        setState(() {
+                          isEditingUsername = false;
+                        });
+                      } else {
+                        setState(() {
+                          isEditingUsername = true;
+                        });
+                      }
+                    },
+                    () {
+                      setState(() {
+                        isEditingUsername = false;
+                        usernameController.text = userData?['username'] ?? '';
+                      });
+                    },
+                  ),
+                  buildEditableField(
+                    Icons.info_outline,
+                    'Bio',
+                    bioController,
+                    isEditingBio,
+                    () async {
+                      if (isEditingBio) {
+                        await updateProfile();
+                        setState(() {
+                          isEditingBio = false;
+                        });
+                      } else {
+                        setState(() {
+                          isEditingBio = true;
+                        });
+                      }
+                    },
+                    () {
+                      setState(() {
+                        isEditingBio = false;
+                        bioController.text = userData?['bio'] ?? '';
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            12,
+                          ), // ปรับค่าตรงนี้ให้โค้งตามต้องการ
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 0,
+                        ), // ความสูงของปุ่ม
+                      ),
+                      onPressed: () async {
+                        await _googleSignIn.signOut();
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.clear();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => LoginScreen()),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text(
+                        'Log Out',
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              fullname,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.monetization_on, color: Colors.orange),
-                const SizedBox(width: 4),
-                Text('$coins coins'),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Card Likes & Reviews
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 3,
-                    color: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.thumb_up,
-                            color: Colors.red,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '$totalLikes',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Likes',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 3,
-                    color: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.rate_review,
-                            color: Colors.blue,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '$totalReviews',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Reviews',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // Readonly fields
-            buildReadonlyField(Icons.person, 'First Name', firstName),
-            buildReadonlyField(Icons.person_outline, 'Last Name', lastName),
-            buildReadonlyField(Icons.email, 'Email', email),
-            buildReadonlyField(Icons.verified_user, 'Status', status),
-
-            // Editable fields
-            buildEditableField(
-              Icons.account_circle,
-              'Username',
-              usernameController,
-              isEditingUsername,
-              () async {
-                // onEditPressed: บันทึกหรือเปิดโหมดแก้ไข
-                if (isEditingUsername) {
-                  await updateProfile();
-                  setState(() {
-                    isEditingUsername = false;
-                  });
-                } else {
-                  setState(() {
-                    isEditingUsername = true;
-                  });
-                }
-              },
-              () {
-                // onCancelPressed: ยกเลิกแก้ไข รีเซ็ตค่า และปิดโหมดแก้ไข
-                setState(() {
-                  isEditingUsername = false;
-                  usernameController.text = userData?['username'] ?? '';
-                });
-              },
-            ),
-            buildEditableField(
-              Icons.info_outline,
-              'Bio',
-              bioController,
-              isEditingBio,
-              () async {
-                if (isEditingBio) {
-                  await updateProfile();
-                  setState(() {
-                    isEditingBio = false;
-                  });
-                } else {
-                  setState(() {
-                    isEditingBio = true;
-                  });
-                }
-              },
-              () {
-                setState(() {
-                  isEditingBio = false;
-                  bioController.text = userData?['bio'] ?? '';
-                });
-              },
-            ),
-
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                // ไปหน้า Profile Shop
-              },
-              child: const Text('Profile Shop'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-              onPressed: () async {
-                await _googleSignIn.signOut();
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => LoginScreen()),
-                  (route) => false,
-                );
-              },
-              child: const Text(
-                'Log Out',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
+
+Widget _buildStatCard(IconData icon, String label, int value) {
+  return Expanded(
+    child: Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 3,
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: icon == Icons.thumb_up ? Colors.red : Colors.blue,
+              size: 32,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$value',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(color: Colors.black54)),
+          ],
+        ),
+      ),
+    ),
+  );
 }

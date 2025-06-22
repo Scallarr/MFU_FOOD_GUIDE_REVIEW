@@ -598,9 +598,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                 decoration: BoxDecoration(
                                                   color: const Color.fromARGB(
                                                     255,
-                                                    175,
-                                                    128,
-                                                    52,
+                                                    220,
+                                                    193,
+                                                    149,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(8),
@@ -612,9 +612,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                       color:
                                                           const Color.fromARGB(
                                                             255,
-                                                            234,
-                                                            234,
-                                                            234,
+                                                            81,
+                                                            79,
+                                                            79,
                                                           ),
                                                       size: 18,
                                                     ),
@@ -626,9 +626,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                         color:
                                                             const Color.fromARGB(
                                                               255,
-                                                              250,
-                                                              250,
-                                                              250,
+                                                              91,
+                                                              86,
+                                                              86,
                                                             ),
                                                         fontWeight:
                                                             FontWeight.bold,
