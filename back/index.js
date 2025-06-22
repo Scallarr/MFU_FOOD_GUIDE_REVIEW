@@ -156,6 +156,8 @@ app.get('/user-profile-pictures/:userId', (req, res) => {
     res.json(results);
   });
 });
+
+
 app.post('/user-profile-pictures/set-active', (req, res) => {
   const { userId, pictureId } = req.body;
 
@@ -176,39 +178,55 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
     });
   });
 });
-  
+
 
 
 
 
 
   app.get('/user-profile/:id', (req, res) => {
-    const userId = parseInt(req.params.id, 10);
+  const userId = parseInt(req.params.id, 10);
 
-    if (!userId) {
-      return res.status(400).json({ error: 'Missing or invalid userId' });
+  if (!userId) {
+    return res.status(400).json({ error: 'Missing or invalid userId' });
+  }
+
+  const sql = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.google_id,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url
+    FROM User u
+    LEFT JOIN user_Profile_Picture p
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+    WHERE u.User_ID = ?
+    LIMIT 1
+  `;
+
+  db.query(sql, [userId], (error, results) => {
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ error: 'Database error' });
     }
 
-    const sql = `
-      SELECT picture_url 
-      FROM user_Profile_Picture 
-      WHERE User_ID = ? AND is_active = 1 
-      LIMIT 1
-    `;
-
-    db.query(sql, [userId], (error, results) => {
-      if (error) {
-        console.error('Database error:', error);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      if (results.length > 0) {
-        res.json({ picture_url: results[0].picture_url });
-      } else {
-        res.json({ picture_url: null });
-      }
-    });
+    if (results.length > 0) {
+      res.json(results[0]);
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
   });
+  console.log(results);
+});
+
 app.get('/restaurant/:id', (req, res) => {
   const restaurantId = parseInt(req.params.id);
   const userId = parseInt(req.query.user_id); // รับ user_id จาก Flutter

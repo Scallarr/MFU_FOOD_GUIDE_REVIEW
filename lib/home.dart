@@ -56,6 +56,9 @@ class Restaurant {
 class RestaurantListPage extends StatefulWidget {
   @override
   _RestaurantListPageState createState() => _RestaurantListPageState();
+  final bool reload;
+
+  const RestaurantListPage({super.key, this.reload = false});
 }
 
 class _RestaurantListPageState extends State<RestaurantListPage> {
@@ -90,6 +93,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
   @override
   void initState() {
     super.initState();
+
     loadUserIdAndFetchProfile();
     futureRestaurants = fetchRestaurants();
     futureRestaurants.then((list) {
@@ -107,6 +111,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
       setState(() {
         userId = storedUserId;
       });
+
       await fetchProfilePicture(userId!);
     }
   }
