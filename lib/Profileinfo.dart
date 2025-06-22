@@ -525,12 +525,50 @@ class _ProfilePageState extends State<ProfilePage> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 70,
-                    backgroundImage: pictureUrl != null
-                        ? NetworkImage(pictureUrl)
-                        : const AssetImage('assets/default_avatar.png')
-                              as ImageProvider,
+                  GestureDetector(
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      final userId = prefs.getInt('user_id');
+                      if (userId != null) {
+                        final pictures = await fetchProfilePictures(userId);
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (_) =>
+                              buildPictureSelector(pictures, userId),
+                        );
+                      }
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 70,
+                          backgroundImage: pictureUrl != null
+                              ? NetworkImage(pictureUrl)
+                              : const AssetImage('assets/default_avatar.png')
+                                    as ImageProvider,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.black26, blurRadius: 4),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 20,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
