@@ -220,11 +220,12 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
 
     if (results.length > 0) {
       res.json(results[0]);
+      console.log(results);
     } else {
       res.status(404).json({ error: 'User not found' });
     }
   });
-  console.log(results);
+  
 });
 
 app.get('/restaurant/:id', (req, res) => {
