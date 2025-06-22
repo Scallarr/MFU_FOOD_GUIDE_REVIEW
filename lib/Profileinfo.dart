@@ -120,14 +120,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/update-profile',
+      'https://mfu-food-guide-review.onrender.com/user-profile/update/$userId',
     );
 
-    final response = await http.post(
+    final response = await http.put(
       url,
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
-        'userId': userId,
         'username': usernameController.text.trim(),
         'bio': bioController.text.trim(),
       }),
@@ -137,7 +136,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully')),
       );
-      await fetchUserData(userId); // reload data
+      await fetchUserData(userId);
       setState(() {
         isEditingUsername = false;
         isEditingBio = false;

@@ -335,6 +335,8 @@ app.post('/review/:reviewId/like', (req, res) => {
 app.put('/user-profile/update/:id', (req, res) => {
   const { id } = req.params;
   const { username, bio } = req.body;
+   console.log("PUT /user-profile/update/:id", req.body); // ✅ ตรวจข้อมูลที่รับ
+
 
   const sql = `
     UPDATE User 
