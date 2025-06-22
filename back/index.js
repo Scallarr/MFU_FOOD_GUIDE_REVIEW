@@ -344,7 +344,7 @@ app.put('/user-profile/update/:id', (req, res) => {
     WHERE User_ID = ?
   `;
 
-  pool.query(sql, [username, bio, id], (err, result) => {
+  db.query(sql, [username, bio, id], (err, result) => {
     if (err) return res.status(500).json({ error: err });
     res.status(200).json({ message: 'Updated successfully' });
   });
