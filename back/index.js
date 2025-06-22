@@ -331,6 +331,24 @@ app.post('/review/:reviewId/like', (req, res) => {
   });
 });
 
+// Express.js route example
+app.put('/user-profile/update/:id', (req, res) => {
+  const { id } = req.params;
+  const { username, bio } = req.body;
+
+  const sql = `
+    UPDATE User 
+    SET username = ?, bio = ?
+    WHERE User_ID = ?
+  `;
+
+  pool.query(sql, [username, bio, id], (err, result) => {
+    if (err) return res.status(500).json({ error: err });
+    res.status(200).json({ message: 'Updated successfully' });
+  });
+});
+
+
 // app.get('/restaurant/:id', (req, res) => {
 //   const restaurantId = req.params.id;
 //   const userId = parseInt(req.query.user_id); // 👈 รับ user_id จาก query param
