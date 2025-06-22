@@ -542,8 +542,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                     borderRadius: BorderRadius.circular(0),
                     child: Image.network(
                       menu.imageUrl,
-                      width: 160,
-                      height: 90,
+                      width: 140,
+                      height: 70,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -665,7 +665,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                 children: [
                   CircleAvatar(
                     backgroundImage: NetworkImage(review.pictureUrl),
-                    radius: 30,
+                    radius: 25,
                     backgroundColor: Colors.grey[200],
                   ),
                   SizedBox(width: 16),
@@ -712,7 +712,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                               SizedBox(height: 10),
                               Text(
                                 review.comment,
-                                style: TextStyle(fontSize: 15.5, height: 1.4),
+                                style: TextStyle(fontSize: 14.5),
                               ),
                             ],
                           ),
