@@ -253,6 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
     TextEditingController controller,
     bool isEditing,
     VoidCallback onEditPressed,
+    VoidCallback onCancelPressed, // เพิ่ม callback สำหรับ discard
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -261,26 +262,176 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18),
-              const SizedBox(width: 6),
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
               Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
               const Spacer(),
-              IconButton(
-                icon: Icon(
-                  isEditing ? Icons.check : Icons.edit,
-                  size: 18,
-                  color: isEditing ? Colors.green : Colors.blue,
+              GestureDetector(
+                onTap: () async {
+                  if (isEditing) {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Confirm Save'),
+                        content: const Text('Do you want to save changes?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color.fromARGB(
+                                255,
+                                255,
+                                255,
+                                255,
+                              ), // สีข้อความปุ่ม Cancel
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ), // สีพื้นหลังปุ่ม Cancel (ถ้าต้องการ)
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                220,
+                                4,
+                                4,
+                              ), // สีพื้นหลังปุ่ม Save
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Save',
+                              style: TextStyle(
+                                color: Colors.white,
+                              ), // สีข้อความปุ่ม Save
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      onEditPressed(); // บันทึก
+                    }
+                  } else {
+                    onEditPressed(); // เข้าสู่โหมดแก้ไข
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: isEditing
+                        ? Colors.green.shade100
+                        : Colors.blue.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isEditing ? Icons.check : Icons.edit,
+                    size: 20,
+                    color: isEditing ? Colors.green : Colors.blue,
+                  ),
                 ),
-                onPressed: onEditPressed,
               ),
+              if (isEditing) const SizedBox(width: 8),
+              if (isEditing)
+                GestureDetector(
+                  onTap: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Discard Changes?'),
+                        content: const Text(
+                          'Are you sure you want to cancel and discard your changes?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color.fromARGB(
+                                255,
+                                245,
+                                248,
+                                251,
+                              ),
+                              backgroundColor: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Keep Editing'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Discard',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      onCancelPressed(); // เรียกฟังก์ชันยกเลิก ไม่บันทึก
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close, size: 20, color: Colors.red),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           TextField(
             controller: controller,
             readOnly: !isEditing,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              filled: isEditing,
+              fillColor: Colors.yellow[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               isDense: true,
             ),
           ),
@@ -520,14 +671,25 @@ class _ProfilePageState extends State<ProfilePage> {
               'Username',
               usernameController,
               isEditingUsername,
-              () {
+              () async {
+                // onEditPressed: บันทึกหรือเปิดโหมดแก้ไข
                 if (isEditingUsername) {
-                  updateProfile();
+                  await updateProfile();
+                  setState(() {
+                    isEditingUsername = false;
+                  });
                 } else {
                   setState(() {
                     isEditingUsername = true;
                   });
                 }
+              },
+              () {
+                // onCancelPressed: ยกเลิกแก้ไข รีเซ็ตค่า และปิดโหมดแก้ไข
+                setState(() {
+                  isEditingUsername = false;
+                  usernameController.text = userData?['username'] ?? '';
+                });
               },
             ),
             buildEditableField(
@@ -535,14 +697,23 @@ class _ProfilePageState extends State<ProfilePage> {
               'Bio',
               bioController,
               isEditingBio,
-              () {
+              () async {
                 if (isEditingBio) {
-                  updateProfile();
+                  await updateProfile();
+                  setState(() {
+                    isEditingBio = false;
+                  });
                 } else {
                   setState(() {
                     isEditingBio = true;
                   });
                 }
+              },
+              () {
+                setState(() {
+                  isEditingBio = false;
+                  bioController.text = userData?['bio'] ?? '';
+                });
               },
             ),
 
