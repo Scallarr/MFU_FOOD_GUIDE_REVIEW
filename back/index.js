@@ -10,7 +10,8 @@
   const SECRET_KEY = 'your_secret_key_here'; // 🔐 เปลี่ยนให้ปลอดภัย
 
   // ✅ เชื่อมต่อ MySQL
-  const db = mysql.createConnection({
+  const db = mysql.createPool({
+    connectionLimit:10,
     host: 'byjsmg8vfii8dqlflpwy-mysql.services.clever-cloud.com',
     user: 'u6lkh5gfkkvbxdij',
     password: 'lunYpL9EDowPHBA02vkE',
