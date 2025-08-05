@@ -519,7 +519,7 @@ app.get('/leaderboard', async (req, res) => {
         ri.photos AS restaurant_image
       FROM Leaderboard_restaurant l
       JOIN Restaurant r ON l.Restaurant_ID = r.Restaurant_ID
-      LEFT JOIN Restaurant_Image ri ON ri.Restaurant_ID = r.Restaurant_ID AND ri.is_primary = 1
+      LEFT JOIN Restaurant ri ON ri.Restaurant_ID = r.Restaurant_ID AND ri.is_primary = 1
       WHERE l.month_year = ?
       ORDER BY l.rank ASC
       LIMIT 3
