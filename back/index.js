@@ -569,11 +569,11 @@ LIMIT 3;
       // Insert leaderboard user ใหม่
       let rank = 1;
       for (const user of topUsers) {
-        await conn.query(`
-          INSERT INTO Leaderboard_user_total_like
-            (rank, User_ID, month_year, total_likes, total_reviews)
-          VALUES (?, ?, ?, ?, ?)
-        `, [rank, user.User_ID, month_year, user.total_likes, user.total_reviews]);
+       await conn.query(`
+  INSERT INTO Leaderboard_user_total_like
+    (\`rank\`, User_ID, month_year, total_likes, total_reviews)
+  VALUES (?, ?, ?, ?, ?)
+`, [rank, user.User_ID, month_year, user.total_likes, user.total_reviews]);
         rank++;
       }
 
@@ -601,11 +601,12 @@ LIMIT 3;
       // Insert leaderboard restaurant ใหม่
       rank = 1;
       for (const restaurant of topRestaurants) {
-        await conn.query(`
-          INSERT INTO Leaderboard_restaurant
-            (rank, Restaurant_ID, month_year, overall_rating, total_reviews)
-          VALUES (?, ?, ?, ?, ?)
-        `, [rank, restaurant.Restaurant_ID, month_year, restaurant.rating_overall_avg, restaurant.total_reviews]);
+       await conn.query(`
+  INSERT INTO Leaderboard_restaurant
+    (\`rank\`, Restaurant_ID, month_year, overall_rating, total_reviews)
+  VALUES (?, ?, ?, ?, ?)
+`, [rank, restaurant.Restaurant_ID, month_year, restaurant.rating_overall_avg, restaurant.total_reviews]);
+
         rank++;
       }
 
