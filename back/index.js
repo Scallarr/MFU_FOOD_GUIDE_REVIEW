@@ -487,6 +487,51 @@ app.put('/user-profile/update/:id', (req, res) => {
 // });
 
 
+app.get('/leaderboard', async (req, res) => {
+  try {
+    const monthYear = req.query.month_year || '2025-08';
+
+    const [topUsers] = await db.promise().query(`
+      SELECT 
+        l.rank,
+        u.User_ID,
+        u.username,
+        u.coins,
+        l.total_likes,
+        l.total_reviews,
+        upp.image_url AS profile_image
+      FROM Leaderboard_user_total_like l
+      JOIN User u ON l.User_ID = u.User_ID
+      LEFT JOIN User_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
+      WHERE l.month_year = ?
+      ORDER BY l.rank ASC
+      LIMIT 3
+    `, [monthYear]);
+
+    const [topRestaurants] = await db.promise().query(`
+      SELECT 
+        l.rank,
+        r.Restaurant_ID,
+        r.name AS restaurant_name,
+        l.overall_rating,
+        l.total_reviews,
+        ri.image_url AS restaurant_image
+      FROM Leaderboard_restaurant l
+      JOIN Restaurant r ON l.Restaurant_ID = r.Restaurant_ID
+      LEFT JOIN Restaurant_Image ri ON ri.Restaurant_ID = r.Restaurant_ID AND ri.is_primary = 1
+      WHERE l.month_year = ?
+      ORDER BY l.rank ASC
+      LIMIT 3
+    `, [monthYear]);
+
+    res.json({ topUsers, topRestaurants });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 
 
 

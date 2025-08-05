@@ -10,11 +10,15 @@ void main() => runApp(MyApp());
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MFU Food Guide',
-      theme: ThemeData(fontFamily: 'Arial'),
-      home: LoginScreen(),
-      debugShowCheckedModeBanner: false,
+    final screenWidth = MediaQuery.of(context).size.width;
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+      child: MaterialApp(
+        title: 'MFU Food Guide',
+        theme: ThemeData(fontFamily: 'Arial'),
+        home: LoginScreen(),
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }
@@ -31,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> signInWithGoogle() async {
     try {
       final googleUser = await _googleSignIn.signIn();
+      final userPhotoUrl = googleUser?.photoUrl;
       if (googleUser == null) return;
 
       if (!googleUser.email.endsWith('@lamduan.mfu.ac.th')) {
@@ -64,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = jsonDecode(response.body);
         final token = data['token'];
         final userId = data['userId'];
-
+        print('dg' + userPhotoUrl.toString());
         // ดึงข้อมูล user เพิ่มเติมจาก API (เช่น role, bio, etc.)
         final userInfoResponse = await http.get(
           Uri.parse(

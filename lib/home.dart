@@ -128,6 +128,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
         final data = json.decode(response.body);
         setState(() {
           profileImageUrl = data['picture_url'];
+          print(profileImageUrl);
         });
       } else {
         print('Failed to load profile picture');
@@ -278,14 +279,15 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                 // Row รวม dropdown และปุ่ม sort
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
+                    horizontal: 7,
                     vertical: 8,
                   ),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       // ปุ่ม sort Rating (กดวน 3 ครั้ง)
                       SizedBox(
-                        width: 101,
+                        width: 105,
                         child: SortButton(
                           label: 'Rating',
 
@@ -328,7 +330,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                         width: buttonWidth,
                         child: Container(
                           height: buttonHeight,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
@@ -374,7 +376,10 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                               ),
                                       ),
                                       SizedBox(width: 2),
-                                      Text('All Location'),
+                                      Text(
+                                        'All location',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ],
                                   ),
                                   value: '',
@@ -414,7 +419,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                 });
                               },
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 12,
                                 color: filterLocation == null
                                     ? const Color.fromARGB(221, 3, 3, 3)
                                     : Colors.white,
@@ -477,7 +482,10 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                             : Colors.white,
                                       ),
                                       SizedBox(width: 5),
-                                      Text('All Type'),
+                                      Text(
+                                        'All Type',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ],
                                   ),
                                   value: '',

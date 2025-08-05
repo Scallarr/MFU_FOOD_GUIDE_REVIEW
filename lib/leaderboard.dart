@@ -1,73 +1,110 @@
 import 'package:flutter/material.dart';
-
-import 'home.dart';
-import 'dashboard.dart';
-import 'threads.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LeaderboardPage extends StatefulWidget {
+  const LeaderboardPage({super.key});
+
   @override
-  _LeaderboardPageState createState() => _LeaderboardPageState();
+  State<LeaderboardPage> createState() => _LeaderboardPageState();
 }
 
 class _LeaderboardPageState extends State<LeaderboardPage> {
-  int _selectedIndex = 1;
+  List<dynamic> topUsers = [];
+  List<dynamic> topRestaurants = [];
 
-  void _onItemTapped(int index) {
-    if (index == _selectedIndex) return;
+  @override
+  void initState() {
+    super.initState();
+    fetchLeaderboard();
+  }
 
-    switch (index) {
-      case 0:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => RestaurantListPage()),
-        );
-        break;
-      case 1:
-        // Already leaderboard
-        break;
-      case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => DashboardPage()),
-        );
-        break;
-      case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ThreadsPage()),
-        );
-        break;
+  Future<void> fetchLeaderboard() async {
+    final response = await http.get(
+      Uri.parse('https://mfu-food-guide-review.onrender.com/leaderboard'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        topUsers = data['topUsers'];
+        topRestaurants = data['topRestaurants'];
+      });
+    } else {
+      print('Failed to load leaderboard');
     }
+  }
+
+  Widget buildUserCard(Map<String, dynamic> user, int rank) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: ListTile(
+        leading: CircleAvatar(
+          radius: 30,
+          backgroundImage: NetworkImage(user['profile_image_url']),
+        ),
+        title: Text('${user['username']} (Rank ${rank + 1})'),
+        subtitle: Text(
+          'Likes: ${user['total_likes']} | Reviews: ${user['total_reviews']}',
+        ),
+        trailing: Icon(Icons.star, color: Colors.amber),
+      ),
+    );
+  }
+
+  Widget buildRestaurantCard(Map<String, dynamic> restaurant, int rank) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            restaurant['restaurant_image_url'],
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+          ),
+        ),
+        title: Text('${restaurant['restaurant_name']} (Rank ${rank + 1})'),
+        subtitle: Text(
+          'Rating: ${restaurant['overall_rating']} | Reviews: ${restaurant['total_reviews']}',
+        ),
+        trailing: Icon(Icons.restaurant, color: Colors.green),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Leaderboard')),
-      body: Center(
-        child: Text(
-          'This is the Leaderboard page',
-          style: TextStyle(fontSize: 24),
-        ),
+      appBar: AppBar(
+        title: const Text('Leaderboard'),
+        backgroundColor: Colors.deepPurple,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blueAccent,
-        unselectedItemColor: Colors.grey,
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Leaderboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
-        ],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            const Text(
+              '🏆 Top Users',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            ...topUsers.asMap().entries.map(
+              (entry) => buildUserCard(entry.value, entry.key),
+            ),
+            const Divider(thickness: 2),
+            const Text(
+              '🍽️ Top Restaurants',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            ...topRestaurants.asMap().entries.map(
+              (entry) => buildRestaurantCard(entry.value, entry.key),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
