@@ -534,6 +534,7 @@ app.get('/leaderboard', async (req, res) => {
 app.post('/leaderboard/update-auto', async (req, res) => {
   try {
     const { month_year } = req.body;
+    console.log(month_year);
     if (!month_year) return res.status(400).json({ error: 'Missing month_year' });
 
     const conn = await db.promise().getConnection();
