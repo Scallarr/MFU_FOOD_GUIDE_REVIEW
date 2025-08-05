@@ -549,7 +549,7 @@ app.post('/leaderboard/update-auto', async (req, res) => {
           u.email,
           u.google_id,
           u.bio,
-          COALESCE(COUNT(rl.ID), 0) AS total_likes,
+          COALESCE(COUNT(rl.Review_ID), 0) AS total_likes
           COALESCE(COUNT(DISTINCT r.Review_ID), 0) AS total_reviews
         FROM User u
         LEFT JOIN Review r ON u.User_ID = r.User_ID
