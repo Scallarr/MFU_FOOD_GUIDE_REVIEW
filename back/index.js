@@ -554,15 +554,16 @@ app.post('/leaderboard/update-auto', async (req, res) => {
   COALESCE(COUNT(DISTINCT r.Review_ID), 0) AS total_reviews
 FROM User u
 LEFT JOIN Review r ON u.User_ID = r.User_ID
+AND DATE_FORMAT(r.created_at, '%Y-%m') = ?   
 LEFT JOIN Review_Likes rl ON r.Review_ID = rl.Review_ID
-  AND DATE_FORMAT(rl.Liked_At, '%Y-%m') = '2025-08'
+  AND DATE_FORMAT(rl.Liked_At, '%Y-%m') = ?
 WHERE u.status = 'Active'
 GROUP BY
   u.User_ID, u.fullname, u.username, u.email, u.google_id, u.bio
 ORDER BY total_likes DESC
 LIMIT 3;
 
-      `, [month_year]);
+      `, [month_year, month_year]);
 
       // ลบข้อมูล leaderboard user เดือนนั้นก่อน
       await conn.query('DELETE FROM Leaderboard_user_total_like WHERE month_year = ?', [month_year]);
