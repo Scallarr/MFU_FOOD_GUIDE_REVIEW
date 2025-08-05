@@ -37,6 +37,8 @@ dependencies:
   google_sign_in: ^5.4.2
   http: ^0.13.5
   shared_preferences: ^2.1.1
+  image_picker: ^1.0.4
+  intl: ^0.18.1 
 
 dev_dependencies:
   flutter_test:

@@ -113,14 +113,49 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             restaurant!.reviews[index] = updatedReview;
           }
         });
+
+        // **เพิ่มตรงนี้** เรียก API อัพเดต leaderboard
+        await updateLeaderboard();
+
         isProcessing = false;
       } else {
         print('Failed to like/unlike review');
         print('Status code: ${response.statusCode}');
         print('Response body: ${response.body}');
+        isProcessing = false;
       }
     } catch (e) {
       print('Error liking/unliking review: $e');
+      isProcessing = false;
+    }
+  }
+
+  Future<void> updateLeaderboard() async {
+    try {
+      final url = Uri.parse(
+        'https://mfu-food-guide-review.onrender.com/leaderboard/update-auto',
+      );
+      // สมมติว่า backend ต้องการเดือนปีใน body (format 'YYYY-MM')
+      // คุณอาจจะเก็บเดือนปีที่เหมาะสมไว้ในตัวแปร เช่น currentMonthYear
+      final currentMonthYear = DateTime.now();
+      final formattedMonth =
+          "${currentMonthYear.year.toString()}-${currentMonthYear.month.toString().padLeft(2, '0')}";
+
+      final response = await http.post(
+        url,
+        body: json.encode({'month_year': formattedMonth}),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        print('Leaderboard updated successfully');
+      } else {
+        print('Failed to update leaderboard');
+        print('Status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating leaderboard: $e');
     }
   }
 

@@ -4,12 +4,12 @@ import 'home.dart';
 import 'dashboard.dart';
 import 'threads.dart';
 
-class LeaderboardPage extends StatefulWidget {
+class LeaderboardPage2 extends StatefulWidget {
   @override
   _LeaderboardPageState createState() => _LeaderboardPageState();
 }
 
-class _LeaderboardPageState extends State<LeaderboardPage> {
+class _LeaderboardPageState extends State<LeaderboardPage2> {
   int _selectedIndex = 1;
 
   void _onItemTapped(int index) {

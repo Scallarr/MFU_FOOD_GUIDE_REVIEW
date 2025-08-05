@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/1.dart';
+import 'package:myapp/leaderboard.dart';
 import 'home.dart';
-import 'leaderboard.dart';
 import 'threads.dart';
 
 class DashboardPage extends StatefulWidget {

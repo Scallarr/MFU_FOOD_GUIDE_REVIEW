@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/1.dart';
 import 'package:myapp/Dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
+
 import 'package:myapp/restaurantDetail.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -606,9 +608,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                 decoration: BoxDecoration(
                                                   color: const Color.fromARGB(
                                                     255,
-                                                    220,
-                                                    193,
-                                                    149,
+                                                    215,
+                                                    197,
+                                                    57,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(8),
@@ -620,9 +622,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                       color:
                                                           const Color.fromARGB(
                                                             255,
-                                                            81,
-                                                            79,
-                                                            79,
+                                                            255,
+                                                            255,
+                                                            255,
                                                           ),
                                                       size: 18,
                                                     ),
@@ -632,11 +634,11 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                           .toStringAsFixed(1),
                                                       style: TextStyle(
                                                         color:
-                                                            const Color.fromARGB(
-                                                              255,
-                                                              91,
-                                                              86,
-                                                              86,
+                                                            const Color.fromRGBO(
+                                                              248,
+                                                              248,
+                                                              248,
+                                                              1,
                                                             ),
                                                         fontWeight:
                                                             FontWeight.bold,
