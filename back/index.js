@@ -531,6 +531,101 @@ app.get('/leaderboard', async (req, res) => {
   }
 });
 
+app.post('/leaderboard/update-auto', async (req, res) => {
+  try {
+    const { month_year } = req.body;
+    if (!month_year) return res.status(400).json({ error: 'Missing month_year' });
+
+    const conn = await db.promise().getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // 1. ดึง top 3 user ที่ได้ไลค์เยอะสุดในเดือนนั้น
+      const [topUsers] = await conn.query(`
+        SELECT
+          u.User_ID,
+          u.fullname,
+          u.username,
+          u.email,
+          u.google_id,
+          u.bio,
+          COALESCE(COUNT(rl.ID), 0) AS total_likes,
+          COALESCE(COUNT(DISTINCT r.Review_ID), 0) AS total_reviews
+        FROM User u
+        LEFT JOIN Review r ON u.User_ID = r.User_ID
+        LEFT JOIN Review_Likes rl ON r.Review_ID = rl.Review_ID
+          AND DATE_FORMAT(rl.Created_At, '%Y-%m') = ?
+        WHERE u.status = 'Active'
+        GROUP BY u.User_ID
+        ORDER BY total_likes DESC
+        LIMIT 3
+      `, [month_year]);
+
+      // ลบข้อมูล leaderboard user เดือนนั้นก่อน
+      await conn.query('DELETE FROM Leaderboard_user_total_like WHERE month_year = ?', [month_year]);
+
+      // Insert leaderboard user ใหม่
+      let rank = 1;
+      for (const user of topUsers) {
+        await conn.query(`
+          INSERT INTO Leaderboard_user_total_like
+            (rank, User_ID, month_year, total_likes, total_reviews)
+          VALUES (?, ?, ?, ?, ?)
+        `, [rank, user.User_ID, month_year, user.total_likes, user.total_reviews]);
+        rank++;
+      }
+
+      // 2. ดึง top 3 restaurant ที่คะแนนเฉลี่ยรวมดีที่สุดในเดือนนั้น (ใช้ rating_overall_avg)
+      // สมมติ rating_overall_avg มาจากตาราง Restaurant ตรงๆ (ไม่ต่อกับเดือน เพราะ rating คือค่าเฉลี่ยสะสม)
+      // หากต้องการเฉพาะร้านที่มีรีวิวในเดือนนั้น ต้อง join กับรีวิวในเดือนนั้นด้วย (ปรับ SQL ตามต้องการ)
+      const [topRestaurants] = await conn.query(`
+        SELECT
+          r.Restaurant_ID,
+          r.restaurant_name,
+          r.photos,
+          r.rating_overall_avg,
+          COALESCE(COUNT(rv.Review_ID), 0) AS total_reviews
+        FROM Restaurant r
+        LEFT JOIN Review rv ON r.Restaurant_ID = rv.Restaurant_ID
+          AND DATE_FORMAT(rv.created_at, '%Y-%m') = ?
+        GROUP BY r.Restaurant_ID
+        ORDER BY r.rating_overall_avg DESC
+        LIMIT 3
+      `, [month_year]);
+
+      // ลบข้อมูล leaderboard restaurant เดือนนั้นก่อน
+      await conn.query('DELETE FROM Leaderboard_restaurant WHERE month_year = ?', [month_year]);
+
+      // Insert leaderboard restaurant ใหม่
+      rank = 1;
+      for (const restaurant of topRestaurants) {
+        await conn.query(`
+          INSERT INTO Leaderboard_restaurant
+            (rank, Restaurant_ID, month_year, overall_rating, total_reviews)
+          VALUES (?, ?, ?, ?, ?)
+        `, [rank, restaurant.Restaurant_ID, month_year, restaurant.rating_overall_avg, restaurant.total_reviews]);
+        rank++;
+      }
+
+      await conn.commit();
+      res.json({
+        message: 'Leaderboard updated successfully',
+        topUsers,
+        topRestaurants
+      });
+
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
