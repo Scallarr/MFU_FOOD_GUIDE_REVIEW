@@ -509,21 +509,20 @@ app.get('/leaderboard', async (req, res) => {
       LIMIT 3
     `, [monthYear]);
 
-    const [topRestaurants] = await db.promise().query(`
-      SELECT 
-        l.rank,
-        r.Restaurant_ID,
-        r.restaurant_name AS restaurant_name,
-        l.overall_rating,
-        l.total_reviews,
-        ri.photos AS restaurant_image
-      FROM Leaderboard_restaurant l
-      JOIN Restaurant r ON l.Restaurant_ID = r.Restaurant_ID
-      LEFT JOIN Restaurant ri ON ri.Restaurant_ID = r.Restaurant_ID AND ri.is_primary = 1
-      WHERE l.month_year = ?
-      ORDER BY l.rank ASC
-      LIMIT 3
-    `, [monthYear]);
+  const [topRestaurants] = await db.promise().query(`
+  SELECT 
+    l.rank,
+    r.Restaurant_ID,
+    r.restaurant_name,
+    l.overall_rating,
+    l.total_reviews,
+    r.photos AS restaurant_image
+  FROM Leaderboard_restaurant l
+  JOIN Restaurant r ON l.Restaurant_ID = r.Restaurant_ID
+  WHERE l.month_year = ?
+  ORDER BY l.rank ASC
+  LIMIT 3
+`, [monthYear]);
 
     res.json({ topUsers, topRestaurants });
   } catch (err) {
