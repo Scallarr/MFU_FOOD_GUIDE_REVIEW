@@ -503,7 +503,7 @@ app.get('/leaderboard', async (req, res) => {
         upp.image_url AS profile_image
       FROM Leaderboard_user_total_like l
       JOIN User u ON l.User_ID = u.User_ID
-      LEFT JOIN User_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
+      LEFT JOIN user_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
       WHERE l.month_year = ?
       ORDER BY l.rank ASC
       LIMIT 3
