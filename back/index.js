@@ -500,7 +500,7 @@ app.get('/leaderboard', async (req, res) => {
         u.coins,
         l.total_likes,
         l.total_reviews,
-        upp.image_url AS profile_image
+        upp.picture_url AS profile_image
       FROM Leaderboard_user_total_like l
       JOIN User u ON l.User_ID = u.User_ID
       LEFT JOIN user_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
@@ -513,10 +513,10 @@ app.get('/leaderboard', async (req, res) => {
       SELECT 
         l.rank,
         r.Restaurant_ID,
-        r.name AS restaurant_name,
+        r.restaurant_name AS restaurant_name,
         l.overall_rating,
         l.total_reviews,
-        ri.image_url AS restaurant_image
+        ri.photos AS restaurant_image
       FROM Leaderboard_restaurant l
       JOIN Restaurant r ON l.Restaurant_ID = r.Restaurant_ID
       LEFT JOIN Restaurant_Image ri ON ri.Restaurant_ID = r.Restaurant_ID AND ri.is_primary = 1
