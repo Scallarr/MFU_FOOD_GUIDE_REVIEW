@@ -231,6 +231,7 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
 
 app.get('/restaurant/:id', (req, res) => {
   const restaurantId = parseInt(req.params.id);
+  console.log("restaurantId from params:", restaurantId);
   const userId = parseInt(req.query.user_id); // รับ user_id จาก Flutter
 
   const restaurantQuery = `

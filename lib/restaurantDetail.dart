@@ -58,6 +58,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
           likedReviews = {for (var r in restaurant!.reviews) r.id: r.isLiked};
           isLoading = false;
         });
+        print(data);
       } else {
         print('Failed to load restaurant. Status code: ${response.statusCode}');
       }
@@ -373,7 +374,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                       'category': restaurant!.category,
                                       'location': restaurant!.location,
                                       'imageUrl': restaurant!.photoUrl,
-                                      'RestaurantID': widget.restaurantId,
+                                      'RestaurantID': restaurant!.id,
                                     },
                                   ),
                                 ),
