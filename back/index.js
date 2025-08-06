@@ -742,11 +742,46 @@ app.post('/purchase_profile', (req, res) => {
   });
 });
 
-// --- AI Mock Function ---
 const PERSPECTIVE_API_KEY = 'AIzaSyDKHBzVBCLpeBbPlz18w2bM5eWkw-Kgne4'; // แทนที่ด้วย API Key ของคุณ
+
+// เพิ่ม list คำหยาบภาษาไทย
+const thaiBadWords = [
+  'เหี้ย',
+  'สัส',
+  'ควย',
+  'หี',
+  'ควาย',
+  'ตูด',
+  'กรู',
+  'แม่ง',
+  'มึง',
+  'บ้า',
+  'โง่',
+  'ซวย',
+  'แดก',
+  'ตาย',
+  'ตีน',
+  'ชิบหาย',
+  'มึง',
+  'กู',
+  'ขยะ'
+,
+];
+
+function checkThaiBadWords(comment) {
+  if (!comment) return false;
+  const text = comment.toLowerCase();
+  return thaiBadWords.some(badword => text.includes(badword));
+}
 
 async function checkCommentAI(comment) {
   if (!comment) return 'Safe';
+
+  // ตรวจคำหยาบภาษาไทยก่อน
+  if (checkThaiBadWords(comment)) {
+    console.log('พบคำหยาบภาษาไทย');
+    return 'Inappropriate';
+  }
 
   try {
     const url = `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${PERSPECTIVE_API_KEY}`;
@@ -770,9 +805,10 @@ async function checkCommentAI(comment) {
     const profanityScore = scores.PROFANITY ? scores.PROFANITY.summaryScore.value : 0;
 
     // ตั้งเกณฑ์คะแนนที่พิจารณาว่า "ไม่เหมาะสม"
-   const threshold = 0.3;
+    const threshold = 0.4;
 
-console.log('Toxicity:', toxicityScore, 'Profanity:', profanityScore);
+    console.log('Toxicity:', toxicityScore, 'Profanity:', profanityScore);
+
     if (toxicityScore >= threshold || profanityScore >= threshold) {
       return 'Inappropriate';
     }
