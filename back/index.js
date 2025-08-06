@@ -243,21 +243,22 @@ app.get('/restaurant/:id', (req, res) => {
   `;
 
   const reviewQuery = `
-    SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
-           r.rating_service, r.comment, r.total_likes, r.created_at,
-           r.message_status,
-           u.username, p.picture_url,
-           EXISTS (
-             SELECT 1 FROM Review_Likes rl
-             WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
-           ) AS isLiked
-    FROM Review r
-    JOIN User u ON r.User_ID = u.User_ID
-    LEFT JOIN user_Profile_Picture p 
-      ON r.User_ID = p.User_ID AND p.is_active = 1
-    WHERE r.restaurant_id = ?
-    ORDER BY r.created_at DESC
-  `;
+  SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
+         r.rating_service, r.comment, r.total_likes, r.created_at,
+         r.message_status,  -- ✅ ดึงสถานะด้วย
+         u.username, p.picture_url,
+         EXISTS (
+           SELECT 1 FROM Review_Likes rl
+           WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
+         ) AS isLiked
+  FROM Review r
+  JOIN User u ON r.User_ID = u.User_ID
+  LEFT JOIN user_Profile_Picture p 
+    ON r.User_ID = p.User_ID AND p.is_active = 1
+  WHERE r.restaurant_id = ? AND r.ai_evaluation = 'Safe'
+  ORDER BY r.created_at DESC
+`;
+
 
   const menuQuery = `
     SELECT Menu_ID, menu_thai_name, menu_english_name, price, menu_img
