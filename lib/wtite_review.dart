@@ -78,7 +78,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
             const SizedBox(height: 10),
             TextField(
               controller: commentController,
-              maxLength: 30,
+              maxLength: 70,
               maxLines: 4,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),

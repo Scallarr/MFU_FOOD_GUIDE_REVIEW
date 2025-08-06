@@ -770,8 +770,9 @@ async function checkCommentAI(comment) {
     const profanityScore = scores.PROFANITY ? scores.PROFANITY.summaryScore.value : 0;
 
     // ตั้งเกณฑ์คะแนนที่พิจารณาว่า "ไม่เหมาะสม"
-    const threshold = 0.7;
+   const threshold = 0.3;
 
+console.log('Toxicity:', toxicityScore, 'Profanity:', profanityScore);
     if (toxicityScore >= threshold || profanityScore >= threshold) {
       return 'Inappropriate';
     }
