@@ -213,37 +213,56 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MFU Food Guide'),
-        backgroundColor: const Color.fromARGB(255, 221, 187, 136),
-        foregroundColor: Colors.black,
-        elevation: 1,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ProfilePage(), // ← เปลี่ยนตามชื่อหน้าของคุณ
-                  ),
-                );
-              },
-              child: profileImageUrl == null
-                  ? CircleAvatar(
-                      backgroundColor: Colors.grey[300],
-                      child: Icon(Icons.person, color: Colors.white),
-                    )
-                  : CircleAvatar(
-                      backgroundImage: NetworkImage(profileImageUrl!),
-                      backgroundColor: Colors.grey[300],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(83), // เพิ่มความสูงของ AppBar
+        child: AppBar(
+          backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+          foregroundColor: Colors.black,
+          elevation: 1,
+          automaticallyImplyLeading: false,
+          flexibleSpace: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 23.0, top: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(left: 20),
+                    child: Text(
+                      'MFU Food Guide',
+                      style: TextStyle(fontSize: 26, color: Colors.black),
                     ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                      );
+                    },
+                    child: profileImageUrl == null
+                        ? CircleAvatar(
+                            backgroundColor: Colors.grey[300],
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                            radius: 33, // ขนาดใหญ่
+                          )
+                        : CircleAvatar(
+                            backgroundImage: NetworkImage(profileImageUrl!),
+                            radius: 33, // ขนาดใหญ่
+                            backgroundColor: Colors.grey[300],
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
+
       body: FutureBuilder<List<Restaurant>>(
         future: futureRestaurants,
         builder: (context, snapshot) {
@@ -357,9 +376,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                               ),
                               dropdownColor: const Color.fromARGB(
                                 255,
-                                191,
-                                98,
-                                51,
+                                203,
+                                166,
+                                136,
                               ),
                               items: [
                                 DropdownMenuItem(
@@ -435,7 +454,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
 
                       // Dropdown Food Type (category)
                       SizedBox(
-                        width: 120,
+                        width: 125,
                         child: Container(
                           height: buttonHeight,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -463,9 +482,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                               ),
                               dropdownColor: const Color.fromARGB(
                                 255,
-                                191,
-                                98,
-                                51,
+                                203,
+                                166,
+                                136,
                               ),
                               items: [
                                 DropdownMenuItem(
@@ -483,7 +502,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                               )
                                             : Colors.white,
                                       ),
-                                      SizedBox(width: 5),
+                                      SizedBox(width: 3),
                                       Text(
                                         'All Type',
                                         style: TextStyle(fontSize: 12),
@@ -498,7 +517,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                       children: [
                                         Icon(
                                           Icons.restaurant_menu,
-                                          size: 17,
+                                          size: 15,
                                           color: filterCategory == null
                                               ? const Color.fromARGB(
                                                   137,
@@ -522,7 +541,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                 });
                               },
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 11,
                                 color: filterCategory == null
                                     ? const Color.fromARGB(221, 3, 3, 3)
                                     : Colors.white,
@@ -608,9 +627,9 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                 decoration: BoxDecoration(
                                                   color: const Color.fromARGB(
                                                     255,
-                                                    215,
-                                                    197,
-                                                    57,
+                                                    83,
+                                                    82,
+                                                    77,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(8),
@@ -689,7 +708,13 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                     Icon(
                                                       Icons.fastfood,
                                                       size: 18,
-                                                      color: Colors.orange[800],
+                                                      color:
+                                                          const Color.fromARGB(
+                                                            255,
+                                                            215,
+                                                            169,
+                                                            131,
+                                                          ),
                                                     ),
                                                     SizedBox(width: 6),
                                                     Text(
@@ -701,7 +726,12 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                                         fontWeight:
                                                             FontWeight.w600,
                                                         color:
-                                                            Colors.orange[800],
+                                                            const Color.fromARGB(
+                                                              255,
+                                                              222,
+                                                              122,
+                                                              122,
+                                                            ),
                                                       ),
                                                     ),
                                                   ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'restaurant_model.dart';
 
@@ -363,7 +364,19 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                           width: double.infinity, // เต็มความกว้าง
                           child: ElevatedButton(
                             onPressed: () {
-                              // TODO: เขียนรีวิว
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => WriteReviewPage(
+                                    restaurant: {
+                                      'name': restaurant!.name,
+                                      'category': restaurant!.category,
+                                      'location': restaurant!.location,
+                                      'imageUrl': restaurant!.photoUrl,
+                                    },
+                                  ),
+                                ),
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color.fromARGB(
@@ -457,7 +470,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 175, 128, 52),
+                color: const Color.fromARGB(255, 83, 82, 77),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -563,11 +576,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
         // แสดงเมนู
         ...menusToShow.map(
           (menu) => Card(
+            // color: const Color.fromARGB(255, 240, 231, 183),
+            color: const Color.fromARGB(255, 251, 236, 224),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(10),
             ),
             elevation: 3,
-            margin: EdgeInsets.symmetric(vertical: 10),
+            margin: EdgeInsets.symmetric(vertical: 15),
             child: Padding(
               padding: const EdgeInsets.all(0.0),
               child: Row(
@@ -582,8 +597,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                     ),
                     child: Image.network(
                       menu.imageUrl,
-                      width: 140,
-                      height: 72,
+                      width: 180,
+                      height: 100,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -594,11 +609,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                       children: [
                         Text(
                           menu.nameTH,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 18,
-                            color: Colors.black87,
-                          ),
+                          style: TextStyle(fontSize: 15, color: Colors.black),
                         ),
                         SizedBox(height: 6),
                         Text(
@@ -612,10 +623,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.local_dining_rounded,
-                    color: Color.fromARGB(255, 162, 95, 7), // ชมพูเข้ม,
-                    size: 28,
+                  Padding(
+                    padding: EdgeInsets.only(right: 25),
+                    child: Icon(
+                      Icons.local_dining_rounded,
+                      color: Color.fromARGB(255, 162, 95, 7), // ชมพูเข้ม,
+                      size: 28,
+                    ),
                   ),
                 ],
               ),
@@ -638,11 +652,20 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                   });
                 },
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 220, 193, 149),
+                  backgroundColor: const Color.fromARGB(255, 250, 235, 223),
                   foregroundColor: const Color.fromARGB(255, 51, 50, 50),
                   padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: const Color.fromARGB(
+                        255,
+                        184,
+                        153,
+                        140,
+                      ), // ← สีเส้นขอบที่ต้องการ
+                      width: 1.5, // ← ความหนาของเส้นขอบ
+                    ),
                   ),
                 ),
                 child: Text(
@@ -692,6 +715,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
           final isLiked = likedReviews[review.id] ?? false;
 
           return Card(
+            // color: const Color.fromARGB(255, 255, 239, 210),
+            color: const Color.fromARGB(255, 247, 235, 216),
             margin: EdgeInsets.symmetric(vertical: 10),
             elevation: 4,
             shape: RoundedRectangleBorder(
@@ -703,10 +728,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(review.pictureUrl),
-                    radius: 25,
-                    backgroundColor: Colors.grey[200],
+                  Padding(
+                    padding: EdgeInsets.only(top: 17),
+                    child: CircleAvatar(
+                      backgroundImage: NetworkImage(review.pictureUrl),
+                      radius: 44,
+                      backgroundColor: Colors.grey[200],
+                    ),
                   ),
                   SizedBox(width: 16),
                   Expanded(
@@ -750,9 +778,14 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                 }),
                               ),
                               SizedBox(height: 10),
-                              Text(
-                                review.comment,
-                                style: TextStyle(fontSize: 14.5),
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  right: 20,
+                                ), // ปรับตามต้องการ
+                                child: Text(
+                                  review.comment,
+                                  style: TextStyle(fontSize: 13),
+                                ),
                               ),
                             ],
                           ),
@@ -777,18 +810,29 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                     likeReview(review.id);
                                   }
                                 },
-                                child: Icon(
-                                  Icons.favorite,
-                                  color: isLiked ? Colors.red : Colors.grey,
-                                  size: 30,
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    left: 18,
+                                    top: 4,
+                                  ), // ปรับตามต้องการ
+                                  child: Icon(
+                                    Icons.favorite,
+                                    color: isLiked ? Colors.red : Colors.grey,
+                                    size: 40,
+                                  ),
                                 ),
                               ),
                               SizedBox(height: 4),
-                              Text(
-                                "${review.totalLikes} Likes",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[700],
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  left: 18,
+                                ), // ปรับตามต้องการ
+                                child: Text(
+                                  "${review.totalLikes} Likes",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[700],
+                                  ),
                                 ),
                               ),
                             ],
@@ -814,11 +858,20 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                 });
               },
               style: TextButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 220, 193, 149),
+                backgroundColor: Color.fromARGB(255, 231, 219, 202),
                 foregroundColor: const Color.fromARGB(255, 51, 50, 50),
                 padding: EdgeInsets.symmetric(vertical: 0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: const Color.fromARGB(
+                      255,
+                      177,
+                      145,
+                      131,
+                    ), // ← สีเส้นขอบที่ต้องการ
+                    width: 1.5, // ← ความหนาของเส้นขอบ
+                  ),
                 ),
               ),
               child: Text(

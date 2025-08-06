@@ -737,6 +737,136 @@ app.post('/purchase_profile', (req, res) => {
   });
 });
 
+// --- AI Mock Function ---
+async function checkCommentAI(comment) {
+  // สมมุติ AI ถ้ามีคำหยาบเช่น badword
+  const badwords = ['badword', 'ugly', 'stupid'];
+  for (const word of badwords) {
+    if (comment.toLowerCase().includes(word)) {
+      return 'Inappropriate';
+    }
+  }
+  return 'Safe';
+}
+
+// --- POST /api/reviews ---
+app.post('/submit_reviews', async (req, res) => {
+  const {
+    User_ID,
+    Restaurant_ID,
+    rating_hygiene,
+    rating_flavor,
+    rating_service,
+    comment,
+  } = req.body;
+
+  // --- Validate input ---
+  if (
+    !User_ID ||
+    !Restaurant_ID ||
+    !rating_hygiene ||
+    !rating_flavor ||
+    !rating_service
+  ) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // --- 1. คำนวณ overall rating ---
+    const rating_overall =
+      (rating_hygiene + rating_flavor + rating_service) / 3;
+
+    // --- 2. AI ตรวจสอบ comment ---
+    const ai_evaluation = await checkCommentAI(comment || '');
+    const message_status = ai_evaluation === 'Safe' ? 'Posted' : 'Pending';
+
+    // --- 3. Insert ลง Review ---
+    const [reviewResult] = await db.execute(
+      `
+      INSERT INTO Review 
+      (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+      [
+        User_ID,
+        Restaurant_ID,
+        rating_overall.toFixed(1),
+        rating_hygiene,
+        rating_flavor,
+        rating_service,
+        comment || '',
+        0, // total_likes = 0
+        ai_evaluation,
+        message_status,
+      ]
+    );
+
+    const reviewId = reviewResult.insertId;
+
+    // --- 4. Update average ใน Restaurant ---
+    // ดึงค่าเฉลี่ยใหม่
+    const [avgRows] = await db.execute(
+      `
+      SELECT 
+        AVG(rating_hygiene) AS hygiene_avg,
+        AVG(rating_flavor) AS flavor_avg,
+        AVG(rating_service) AS service_avg,
+        AVG(rating_overall) AS overall_avg
+      FROM Review
+      WHERE Restaurant_ID = ?
+    `,
+      [Restaurant_ID]
+    );
+
+    const avg = avgRows[0];
+
+    // อัพเดต Restaurant
+    await db.execute(
+      `
+      UPDATE Restaurant SET 
+        rating_overall_avg = ?,
+        rating_hygiene_avg = ?,
+        rating_flavor_avg = ?,
+        rating_service_avg = ?
+      WHERE Restaurant_ID = ?
+    `,
+      [
+        avg.overall_avg?.toFixed(2) || 0,
+        avg.hygiene_avg?.toFixed(2) || 0,
+        avg.flavor_avg?.toFixed(2) || 0,
+        avg.service_avg?.toFixed(2) || 0,
+        Restaurant_ID,
+      ]
+    );
+
+    // --- 5. Insert ลง Admin_check_inappropriate_review ถ้าไม่ Safe ---
+    if (ai_evaluation !== 'Safe') {
+      await db.execute(
+        `
+        INSERT INTO Admin_check_inappropriate_review 
+        (Review_ID, Admin_ID, admin_action_taken)
+        VALUES (?, NULL, 'Pending')
+      `,
+        [reviewId]
+      );
+    }
+
+    return res.json({
+      message: 'Review submitted successfully',
+      review_id: reviewId,
+      ai_evaluation,
+      message_status,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+
+
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
