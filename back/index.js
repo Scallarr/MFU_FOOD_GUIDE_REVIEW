@@ -667,7 +667,7 @@ ORDER BY p.Created_At DESC;
 app.post('/purchase_profile', (req, res) => {
   const { user_id, profile_id, coins_spent } = req.body;
 
-  pool.getConnection((err, connection) => {
+  db.getConnection((err, connection) => {
     if (err) {
       console.error('Error getting connection:', err);
       return res.status(500).json({ error: 'Database connection error' });
