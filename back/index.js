@@ -749,7 +749,7 @@ async function checkCommentAI(comment) {
   if (!comment) return 'Safe';
 
   try {
-    const url = `https://commentanalyzer.googleapis.com/v1/comments:analyze?key=${PERSPECTIVE_API_KEY}`;
+    const url = `https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key=${PERSPECTIVE_API_KEY}`;
 
     const requestBody = {
       comment: { text: comment },
