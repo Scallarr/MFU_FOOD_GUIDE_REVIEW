@@ -664,6 +664,71 @@ ORDER BY p.Created_At DESC;
   });
 });
 
+ app.post('/purchase_profile', (req, res) => {
+  const { user_id, profile_id, coins_spent } = req.body;
+
+  // เช็ค user เหรียญพอไหม (อาจ query coin ของ user)
+  const checkCoinsQuery = 'SELECT coins FROM User WHERE User_ID = ?';
+  db.query(checkCoinsQuery, [user_id], (err, results) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    if (results.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const currentCoins = results[0].coins;
+    if (currentCoins < coins_spent) {
+      return res.status(400).json({ error: 'Insufficient coins' });
+    }
+
+    // เช็คว่าซื้อไปแล้วหรือยัง
+    const checkPurchaseQuery = `
+      SELECT * FROM Profile_Purchase_History
+      WHERE User_ID = ? AND Profile_Shop_ID = ?
+    `;
+    db.query(checkPurchaseQuery, [user_id, profile_id], (err, purchaseResults) => {
+      if (err) return res.status(500).json({ error: 'DB error' });
+      if (purchaseResults.length > 0) {
+        return res.status(400).json({ error: 'Already purchased' });
+      }
+
+      // เริ่ม transaction เพื่ออัพเดตเหรียญและบันทึก purchase history
+      db.beginTransaction((err) => {
+        if (err) return res.status(500).json({ error: 'DB transaction error' });
+
+        const updateCoinsQuery = `
+          UPDATE User SET coins = coins - ? WHERE User_ID = ?
+        `;
+        db.query(updateCoinsQuery, [coins_spent, user_id], (err, result) => {
+          if (err) {
+            return db.rollback(() => {
+              res.status(500).json({ error: 'Failed to update coins' });
+            });
+          }
+
+          const insertPurchaseQuery = `
+            INSERT INTO Profile_Purchase_History (User_ID, Profile_Shop_ID, Coins_Spent)
+            VALUES (?, ?, ?)
+          `;
+          db.query(insertPurchaseQuery, [user_id, profile_id, coins_spent], (err, result) => {
+            if (err) {
+              return db.rollback(() => {
+                res.status(500).json({ error: 'Failed to insert purchase history' });
+              });
+            }
+
+            db.commit((err) => {
+              if (err) {
+                return db.rollback(() => {
+                  res.status(500).json({ error: 'DB commit error' });
+                });
+              }
+
+              res.json({ message: 'Purchase successful' });
+            });
+          });
+        });
+      });
+    });
+  });
+});
 
 
 

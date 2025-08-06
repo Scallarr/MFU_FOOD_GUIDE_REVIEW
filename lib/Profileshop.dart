@@ -38,28 +38,44 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
   }
 
   Future<void> fetchProfiles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+
     final url = Uri.parse(
       'https://mfu-food-guide-review.onrender.com/profile-exchange/$userId',
-    ); // เปลี่ยน URL ตามจริง
+    );
+
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        setState(() {
-          profiles = data
-              .map(
-                (item) => {
-                  "id": item['Profile_Shop_ID'],
-                  "name": item['Profile_Name'],
-                  "description": item['Description'],
-                  "coins": item['Required_Coins'],
-                  "image": item['Image_URL'],
-                  "is_purchased": item['is_purchased'] == 0,
-                },
-              )
-              .toList();
-          isLoading = false;
-        });
+
+        if (data.isNotEmpty) {
+          // ดึง coins จาก record แรก (เพราะ user_coins จะเหมือนกันทุกรายการ)
+          int userCoinsFromApi = data[0]['user_coins'] ?? 0;
+
+          setState(() {
+            currentCoins = userCoinsFromApi; // อัพเดต coins จริง
+            profiles = data
+                .map(
+                  (item) => {
+                    "id": item['Profile_Shop_ID'],
+                    "name": item['Profile_Name'],
+                    "description": item['Description'],
+                    "coins": item['Required_Coins'],
+                    "image": item['Image_URL'],
+                    "is_purchased": item['is_purchased'],
+                  },
+                )
+                .toList();
+            isLoading = false;
+          });
+        } else {
+          setState(() {
+            errorMsg = "No profiles found.";
+            isLoading = false;
+          });
+        }
       } else {
         setState(() {
           errorMsg = "Server error: ${response.statusCode}";
@@ -83,7 +99,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
     }
 
     final url = Uri.parse(
-      'https://your-backend-api.com/api/purchase_profile',
+      'https://mfu-food-guide-review.onrender.com/purchase_profile',
     ); // เปลี่ยน URL
 
     final body = jsonEncode({
@@ -125,42 +141,67 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
   }
 
   Widget buildProfileCard(Map<String, dynamic> profile) {
-    bool isPurchased = profile['is_purchased'] ?? false;
-    return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade400),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            profile['name'],
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          CircleAvatar(
-            radius: 45,
-            backgroundImage: NetworkImage(profile['image']),
-          ),
-          const SizedBox(height: 8),
-          Text(profile['description']),
-          const SizedBox(height: 8),
-          Text("${profile['coins']} Coins"),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isPurchased ? Colors.grey : Colors.red,
+    bool isPurchased = profile['is_purchased'] == 1;
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              profile['name'] ?? '',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
-            onPressed: isPurchased
-                ? null
-                : () {
-                    buyProfile(profile['id'], profile['coins']);
-                  },
-            child: Text(isPurchased ? "Purchased" : "Buy"),
-          ),
-        ],
+            const SizedBox(height: 12),
+            CircleAvatar(
+              radius: 70,
+              backgroundImage: NetworkImage(profile['image'] ?? ''),
+              backgroundColor: Colors.grey[200],
+            ),
+            const SizedBox(height: 12),
+            // Text(
+            //   profile['description'] ?? '',
+            //   style: const TextStyle(fontSize: 14, color: Colors.black87),
+            //   textAlign: TextAlign.center,
+            // ),
+            const SizedBox(height: 12),
+            Text(
+              "${profile['coins'] ?? 0} Coins",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.deepOrange,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: Icon(
+                  isPurchased ? Icons.check_circle : Icons.shopping_cart,
+                ),
+                label: Text(isPurchased ? "Purchased" : "Buy"),
+                onPressed: isPurchased
+                    ? null
+                    : () {
+                        buyProfile(profile['id'], profile['coins']);
+                      },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: isPurchased ? Colors.grey : Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -223,11 +264,19 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
               ),
             ),
             const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
+            GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              children: profiles.map(buildProfileCard).toList(),
+              itemCount: profiles.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.55, // ปรับให้สูงพอดีหน้าจอ
+              ),
+              itemBuilder: (context, index) {
+                return buildProfileCard(profiles[index]);
+              },
             ),
           ],
         ),
