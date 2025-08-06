@@ -2,6 +2,7 @@
   const cors = require('cors');
   const mysql = require('mysql2');
   const jwt = require('jsonwebtoken');
+  const axios = require('axios');
 
   const app = express();
   app.use(cors());
@@ -742,15 +743,46 @@ app.post('/purchase_profile', (req, res) => {
 });
 
 // --- AI Mock Function ---
+const PERSPECTIVE_API_KEY = 'AIzaSyDKHBzVBCLpeBbPlz18w2bM5eWkw-Kgne4'; // แทนที่ด้วย API Key ของคุณ
+
 async function checkCommentAI(comment) {
-  // สมมุติ AI ถ้ามีคำหยาบเช่น badword
-  const badwords = ['badword', 'ugly', 'stupid'];
-  for (const word of badwords) {
-    if (comment.toLowerCase().includes(word)) {
+  if (!comment) return 'Safe';
+
+  try {
+    const url = `https://commentanalyzer.googleapis.com/v1/comments:analyze?key=${PERSPECTIVE_API_KEY}`;
+
+    const requestBody = {
+      comment: { text: comment },
+      languages: ['en'], // ปรับถ้าคอมเมนต์เป็นภาษาอื่น
+      requestedAttributes: {
+        TOXICITY: {},
+        PROFANITY: {},
+        // หรือเพิ่ม attribute อื่นๆ เช่น SEXUALLY_EXPLICIT, INSULT, THREAT ตามที่ต้องการ
+      },
+    };
+
+    const response = await axios.post(url, requestBody);
+
+    const scores = response.data.attributeScores;
+
+    // ดึงคะแนน toxicity และ profanity
+    const toxicityScore = scores.TOXICITY.summaryScore.value;
+    const profanityScore = scores.PROFANITY ? scores.PROFANITY.summaryScore.value : 0;
+
+    // ตั้งเกณฑ์คะแนนที่พิจารณาว่า "ไม่เหมาะสม"
+    const threshold = 0.7;
+
+    if (toxicityScore >= threshold || profanityScore >= threshold) {
       return 'Inappropriate';
     }
+
+    return 'Safe';
+
+  } catch (error) {
+    console.error('Error calling Perspective API:', error);
+    // ถ้า API error, เราอาจปล่อยให้ผ่าน หรือจะตั้งเป็น Pending ก็ได้
+    return 'Safe';
   }
-  return 'Safe';
 }
 
 app.post('/submit_reviews', async (req, res) => {
