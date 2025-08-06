@@ -870,7 +870,17 @@ app.post('/submit_reviews', async (req, res) => {
 
     const reviewId = insertResult.insertId;
 
-    // คำนวณค่าเฉลี่ยใหม่
+    // อัพเดต total_reviews ของ User (นับจำนวนรีวิวทั้งหมดของ user นี้)
+   await db.promise().execute(
+  `UPDATE User SET total_reviews = (
+     SELECT COUNT(*) FROM Review WHERE User_ID = ? AND message_status = 'Posted'
+   )
+   WHERE User_ID = ?`,
+  [User_ID, User_ID]
+);
+
+
+    // คำนวณค่าเฉลี่ยใหม่ของร้านอาหาร
     const [avgRows] = await db.promise().execute(
       `SELECT 
         AVG(rating_hygiene) AS hygiene_avg,
