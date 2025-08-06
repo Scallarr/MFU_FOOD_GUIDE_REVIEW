@@ -524,7 +524,7 @@ app.get('/leaderboard', async (req, res) => {
   LIMIT 3
 `, [monthYear]);
 
-    res.json({ topUsers, topRestaurants });
+    res.json({  month_year: monthYear,  topUsers, topRestaurants });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });

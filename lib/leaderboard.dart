@@ -16,6 +16,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   List<dynamic> topUsers = [];
   List<dynamic> topRestaurants = [];
   int _selectedIndex = 1;
+  String monthYear = '';
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -62,6 +63,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         setState(() {
           topUsers = data['topUsers'] ?? [];
           topRestaurants = data['topRestaurants'] ?? [];
+          monthYear = data['month_year'] ?? 'f';
         });
       } else {
         print('Failed to load leaderboard');
@@ -139,7 +141,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: const Text(
-                                'จำนวน Likes ที่ผู้ใช้ได้รับ',
+                                'Number of likes the user received in this month',
                               ),
                               duration: const Duration(seconds: 2),
                             ),
@@ -169,7 +171,9 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('จำนวนรีวิวที่ผู้ใช้เขียน'),
+                              content: const Text(
+                                'Number of Reviews that User write in this month',
+                              ),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -308,27 +312,59 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.star, size: 18, color: Colors.brown.shade700),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${restaurant['overall_rating']}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.brown.shade700,
+                      GestureDetector(
+                        onTap: () {
+                          final snackBar = SnackBar(
+                            content: Text('Overall Rating of This Restaurant'),
+                            duration: const Duration(seconds: 2),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.star,
+                              size: 20,
+                              color: Colors.brown.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${restaurant['overall_rating']}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.brown.shade700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 18),
-                      Icon(
-                        Icons.rate_review,
-                        size: 18,
-                        color: Colors.brown.shade700,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${restaurant['total_reviews']}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.brown.shade700,
+                      GestureDetector(
+                        onTap: () {
+                          final snackBar = SnackBar(
+                            content: Text(
+                              'Total Reviews of This Restaurant on This Month ',
+                            ),
+                            duration: const Duration(seconds: 2),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.rate_review,
+                              size: 22,
+                              color: Colors.brown.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${restaurant['total_reviews']}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.brown.shade700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -338,6 +374,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             ),
 
             const SizedBox(width: 5),
+
             // รูปภาพร้าน (ย้ายมาขวาถัดจาก rank)
             Container(
               width: 90,
@@ -408,11 +445,28 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
             SliverList(
               delegate: SliverChildListDelegate([
                 const SizedBox(height: 20),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    '🏆 Top Users',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  child: Row(
+                    children: [
+                      const Text(
+                        '🏆 Top Users',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (monthYear.isNotEmpty)
+                        Text(
+                          '($monthYear)',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
