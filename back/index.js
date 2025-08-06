@@ -280,6 +280,7 @@ app.get('/restaurant/:id', (req, res) => {
         restaurant.menus = menuRes;
 
         res.json(restaurant);
+        console.log(restaurant);
       });
     });
   });

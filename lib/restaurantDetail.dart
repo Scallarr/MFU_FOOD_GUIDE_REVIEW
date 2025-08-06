@@ -373,6 +373,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                       'category': restaurant!.category,
                                       'location': restaurant!.location,
                                       'imageUrl': restaurant!.photoUrl,
+                                      'RestaurantID': widget.restaurantId,
                                     },
                                   ),
                                 ),

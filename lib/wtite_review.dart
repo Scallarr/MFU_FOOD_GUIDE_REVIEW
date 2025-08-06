@@ -176,14 +176,19 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'restaurant_id': widget.restaurant['id'], // ใส่ id ของร้าน
-          'hygiene_rating': hygieneRating,
-          'flavor_rating': flavorRating,
-          'service_rating': serviceRating,
+          'Restaurant_ID': widget.restaurant['id'], // ใส่ id ของร้าน
+          'rating_hygiene': hygieneRating,
+          'rating_flavor': flavorRating,
+          'rating_service': serviceRating,
           'comment': commentController.text.trim(),
-          'user_id': userId, // ถ้ามี user id ส่งมาด้วย
+          'User_ID': userId, // ถ้ามี user id ส่งมาด้วย
         }),
       );
+      print('HygieneRating: $hygieneRating');
+      print('FlavorRating: $flavorRating');
+      print('ServiceRating: $serviceRating');
+      print('UserID: $userId');
+      print('RestaurantID: ${widget.restaurant['id']}');
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
