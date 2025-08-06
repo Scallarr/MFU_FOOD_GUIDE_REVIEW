@@ -428,6 +428,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 6),
           TextField(
+            maxLength: 15,
             controller: controller,
             readOnly: !isEditing,
             decoration: InputDecoration(
@@ -579,7 +580,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    fullname,
+                    userData?['username'] ?? '',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -621,7 +622,12 @@ class _ProfilePageState extends State<ProfilePage> {
                           MaterialPageRoute(
                             builder: (context) => ProfileShopPage(),
                           ),
-                        );
+                        ).then((shouldRefresh) {
+                          if (shouldRefresh == true) {
+                            // รีโหลดข้อมูล หรือ setState
+                            loadUserIdAndFetch(); // หรือฟังก์ชันที่ใช้โหลดข้อมูล user
+                          }
+                        });
                       },
 
                       child: const Text(

@@ -367,8 +367,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                         child: SizedBox(
                           width: double.infinity, // เต็มความกว้าง
                           child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
+                            onPressed: () async {
+                              final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => WriteReviewPage(
@@ -382,7 +382,18 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                   ),
                                 ),
                               );
+
+                              // ถ้ามีการ submit review แล้ว result == true
+                              if (result == true) {
+                                // เรียก setState เพื่อรีเฟรชข้อมูล
+                                setState(() {
+                                  // เรียกฟังก์ชันโหลดร้านใหม่ หรือดึงข้อมูลใหม่
+                                  _loadUserId();
+                                  fetchRestaurant(); // ← ถ้ามีฟังก์ชันนี้ในหน้าแรก
+                                });
+                              }
                             },
+
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color.fromARGB(
                                 255,
@@ -729,7 +740,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
             ),
             child: Container(
               constraints: BoxConstraints(minHeight: 100),
-              padding: EdgeInsets.all(15),
+              // padding: EdgeInsets.all(15),
+              padding: EdgeInsets.only(
+                left: 15,
+                top: 15,
+                right: 15,
+                bottom: 13,
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -754,7 +771,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                 review.username,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 17,
+                                  fontSize: 15,
                                 ),
                               ),
                               SizedBox(height: 6),
@@ -792,6 +809,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                   style: TextStyle(fontSize: 13),
                                 ),
                               ),
+                              SizedBox(height: 10),
                             ],
                           ),
                         ),
@@ -818,7 +836,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                 child: Padding(
                                   padding: EdgeInsets.only(
                                     left: 18,
-                                    top: 4,
+                                    top: 3,
                                   ), // ปรับตามต้องการ
                                   child: Icon(
                                     Icons.favorite,
@@ -831,15 +849,17 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                               Padding(
                                 padding: EdgeInsets.only(
                                   left: 18,
+                                  bottom: 20,
                                 ), // ปรับตามต้องการ
                                 child: Text(
                                   "${review.totalLikes} Likes",
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.grey[700],
+                                    fontSize: 11,
+                                    // color: Colors.grey[700],
                                   ),
                                 ),
                               ),
+                              // SizedBox(height: 20),
                             ],
                           ),
                         ),

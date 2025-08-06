@@ -78,6 +78,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
             const SizedBox(height: 10),
             TextField(
               controller: commentController,
+              maxLength: 30,
               maxLines: 4,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
@@ -197,7 +198,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
           const SnackBar(content: Text('Review Submitted Successfully!')),
         );
 
-        Navigator.pop(context); // กลับหน้าก่อนหน้า
+        Navigator.pop(context, true); // ส่งค่า true กลับไป
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

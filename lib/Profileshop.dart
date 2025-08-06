@@ -338,67 +338,73 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile Shop"),
-        backgroundColor: const Color.fromARGB(255, 221, 187, 136),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 255, 255, 255),
-                border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  const Text("Your Current Balance"),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.monetization_on, size: 36),
-                      const SizedBox(width: 8),
-                      Text(
-                        currentCoins.toString(),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, true); // ส่งค่ากลับว่าให้รีโหลด
+        return false; // ปิดการ pop อัตโนมัติ
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Profile Shop"),
+          backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    const Text("Your Current Balance"),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.monetization_on, size: 36),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentCoins.toString(),
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: const Text(
-                "Choose a Profile Image",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              const SizedBox(height: 24),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  "Choose a Profile Image",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: profiles.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.55, // ปรับให้สูงพอดีหน้าจอ
+              const SizedBox(height: 12),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: profiles.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.55, // ปรับให้สูงพอดีหน้าจอ
+                ),
+                itemBuilder: (context, index) {
+                  return buildProfileCard(profiles[index]);
+                },
               ),
-              itemBuilder: (context, index) {
-                return buildProfileCard(profiles[index]);
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
