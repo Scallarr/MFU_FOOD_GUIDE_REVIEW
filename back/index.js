@@ -702,7 +702,21 @@ app.post('/purchase_profile', (req, res) => {
                   return res.status(500).json({ error: 'Insert profile failed' });
                 });
               }
-
+             
+              // 3. เพิ่มข้อมูล History ที่ซื้อ
+connection.query(
+  'INSERT INTO Profile_Purchase_History (User_ID,Profile_Shop_ID,Coin_Spent)VALUES(?,?,?)',
+   [user_id, profile_id, coins_spent],
+   (err) => {
+    if (err){
+      return connection.rollback(()=>{
+        connection.release();
+        return res.status(500).json({error:'insert purchase history failed'})
+      })
+    }
+   }
+)
+// ✅ Commit ถ้าทุกขั้นตอนผ่าน
               connection.commit((err) => {
                 if (err) {
                   return connection.rollback(() => {
