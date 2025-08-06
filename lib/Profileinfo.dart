@@ -173,75 +173,78 @@ class _ProfilePageState extends State<ProfilePage> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: 16),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: pictures.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1,
-            ),
-            itemBuilder: (context, index) {
-              final pic = pictures[index];
-              final isActive = pic['is_active'] == 1;
 
-              return InkWell(
-                onTap: () async {
-                  Navigator.pop(context);
-                  await setActiveProfilePicture(
-                    userData!['User_ID'],
-                    pic['Picture_ID'],
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isActive ? Colors.green : Colors.transparent,
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+          /// ✅ ใช้ Container จำกัดความสูง แล้วให้ GridView scroll ได้
+          Container(
+            height: 410, // 👈 ปรับสูงสุดที่เหมาะกับหน้าจอ
+            child: GridView.builder(
+              itemCount: pictures.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1,
+              ),
+              itemBuilder: (context, index) {
+                final pic = pictures[index];
+                final isActive = pic['is_active'] == 1;
+
+                return InkWell(
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await setActiveProfilePicture(
+                      userData!['User_ID'],
+                      pic['Picture_ID'],
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isActive ? Colors.green : Colors.transparent,
+                            width: 3,
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          pic['picture_url'],
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    if (isActive)
-                      const Positioned(
-                        top: 6,
-                        right: 6,
-                        child: CircleAvatar(
-                          backgroundColor: Colors.white,
-                          radius: 12,
-                          child: Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 24,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            pic['picture_url'],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
                           ),
                         ),
                       ),
-                  ],
-                ),
-              );
-            },
+                      if (isActive)
+                        const Positioned(
+                          top: 6,
+                          right: 6,
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 12,
+                            child: Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -483,7 +486,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (error.isNotEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('My Profile')),
+        appBar: AppBar(
+          title: const Text('My Profile'),
+          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        ),
         body: Center(child: Text(error)),
       );
     }

@@ -120,15 +120,17 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
       );
 
       if (response.statusCode == 200) {
+        await fetchProfiles();
         // อัพเดต UI หลังซื้อสำเร็จ
-        setState(() {
-          currentCoins -= cost;
-          // อัพเดตสถานะ is_purchased ของโปรไฟล์ที่ซื้อ
-          final index = profiles.indexWhere((p) => p['id'] == profileId);
-          if (index != -1) {
-            profiles[index]['is_purchased'] = true;
-          }
-        });
+
+        // setState(() {
+        //   currentCoins -= cost;
+        //   // อัพเดตสถานะ is_purchased ของโปรไฟล์ที่ซื้อ
+        //   final index = profiles.indexWhere((p) => p['id'] == profileId);
+        //   if (index != -1) {
+        //     profiles[index]['is_purchased'] = true;
+        //   }
+        // });
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Purchase successful!")));
@@ -192,15 +194,121 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
                 onPressed: isPurchased
                     ? null
                     : () {
-                        buyProfile(
-                          profile['id'],
-                          profile['coins'],
-                          profile['image'],
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              backgroundColor: Colors.white,
+                              title: Row(
+                                children: [
+                                  Icon(
+                                    Icons.shopping_cart,
+                                    color: Colors.orange,
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    "Confirm Purchase",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.warning,
+                                    size: 90,
+                                    color: const Color.fromARGB(255, 0, 0, 0),
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    "Do you want to buy this profile for ${profile['coins']} coins?",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actionsAlignment: MainAxisAlignment.spaceAround,
+                              actionsPadding: EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 18,
+                              ),
+                              actions: [
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // ปิด dialog
+                                  },
+                                  icon: Icon(Icons.close),
+                                  label: Text("Cancel"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color.fromARGB(
+                                      255,
+                                      78,
+                                      104,
+                                      206,
+                                    ),
+                                    foregroundColor: const Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // ปิด dialog
+                                    buyProfile(
+                                      profile['id'],
+                                      profile['coins'],
+                                      profile['image'],
+                                    );
+                                  },
+                                  icon: Icon(Icons.check_circle),
+                                  label: Text("Confirm"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color.fromARGB(
+                                      255,
+                                      217,
+                                      76,
+                                      76,
+                                    ),
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         );
                       },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: isPurchased ? Colors.grey : Colors.green,
+                  backgroundColor: isPurchased
+                      ? Colors.grey
+                      : const Color.fromARGB(255, 221, 187, 136),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -231,7 +339,10 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Profile Shop")),
+      appBar: AppBar(
+        title: const Text("Profile Shop"),
+        backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -239,7 +350,8 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
+                color: const Color.fromARGB(255, 255, 255, 255),
+                border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

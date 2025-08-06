@@ -75,12 +75,12 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
   Widget buildUserCard(Map<String, dynamic> user, int rank) {
     return Card(
-      color: const Color.fromARGB(255, 208, 186, 153), // สีพื้นหลังธีมนี้
+      color: const Color.fromARGB(255, 221, 187, 136),
       elevation: 6,
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 7),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 0),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -205,15 +205,15 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
             // Rank number
             Container(
-              width: 44,
-              height: 44,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
-                color: Colors.amber.shade200,
+                color: const Color.fromARGB(255, 83, 82, 77),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.brown.shade300.withOpacity(0.4),
-                    offset: const Offset(0, 2),
+                    color: Colors.brown.shade300.withOpacity(0.9),
+                    offset: const Offset(2, 5),
                     blurRadius: 4,
                   ),
                 ],
@@ -244,22 +244,22 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
   Widget buildRestaurantCard(Map<String, dynamic> restaurant, int rank) {
     return Card(
-      color: const Color.fromARGB(255, 203, 189, 168),
+      color: const Color.fromARGB(255, 246, 239, 208),
       elevation: 6,
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 7),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 0),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Rank number (ย้ายมาอยู่ซ้าย)
             Container(
-              width: 44,
-              height: 44,
+              width: 60,
+              height: 60,
               margin: const EdgeInsets.only(left: 16, right: 14),
               decoration: BoxDecoration(
-                color: Colors.amber.shade200,
+                color: const Color.fromARGB(255, 83, 82, 77),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
