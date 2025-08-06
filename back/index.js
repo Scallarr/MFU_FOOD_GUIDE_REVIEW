@@ -630,9 +630,9 @@ app.post('/leaderboard/update-auto', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 app.get('/profile-exchange/:userId', (req, res) => {
   const userId = req.params.userId;
+  console.log("User ID:", userId); // ✅ ดูว่าได้ค่าไหม
 
   const sql = `
     SELECT 
@@ -655,13 +655,15 @@ ORDER BY p.Created_At DESC;
 
   db.query(sql, [userId], (err, results) => {
     if (err) {
-      console.error(err);
+      console.error("DB ERROR:", err);
       return res.status(500).json({ error: 'Database error' });
     }
+
+    console.log("Query Result:", results); // ✅ ดูว่าข้อมูลมาไหม
     res.json(results);
-    console.log(results);
   });
 });
+
 
 
 

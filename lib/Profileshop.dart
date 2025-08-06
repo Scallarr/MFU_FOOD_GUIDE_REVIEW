@@ -54,7 +54,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
                   "description": item['Description'],
                   "coins": item['Required_Coins'],
                   "image": item['Image_URL'],
-                  "is_purchased": item['is_purchased'] == 1,
+                  "is_purchased": item['is_purchased'] == 0,
                 },
               )
               .toList();
