@@ -815,54 +815,80 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                         ),
                         Positioned(
                           top: 0,
-                          right: 0,
+                          right: 5,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                _formatDate(review.createdAt),
+                                getTimeAgo(
+                                      DateTime.parse(
+                                        review.createdAt,
+                                      ).toLocal(), // ✅ แปลงเป็น Local
+                                    ).isNotEmpty
+                                    ? getTimeAgo(
+                                        DateTime.parse(
+                                          review.createdAt,
+                                        ).toLocal(), // ✅
+                                      )
+                                    : _formatDate(review.createdAt),
                                 style: TextStyle(
-                                  color: Colors.grey[600],
+                                  color: const Color.fromARGB(255, 0, 0, 0),
                                   fontSize: 13,
                                 ),
                               ),
-                              SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: () {
-                                  if (userId != null) {
-                                    likeReview(review.id);
-                                  }
-                                },
-                                child: Padding(
-                                  padding: EdgeInsets.only(
-                                    left: 18,
-                                    top: 3,
-                                  ), // ปรับตามต้องการ
-                                  child: Icon(
-                                    Icons.favorite,
-                                    color: isLiked ? Colors.red : Colors.grey,
-                                    size: 40,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  left: 18,
-                                  bottom: 20,
-                                ), // ปรับตามต้องการ
-                                child: Text(
-                                  "${review.totalLikes} Likes",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    // color: Colors.grey[700],
-                                  ),
-                                ),
-                              ),
-                              // SizedBox(height: 20),
                             ],
                           ),
                         ),
+
+                        SizedBox(height: 12),
+                        Padding(
+                          padding: EdgeInsetsGeometry.only(right: 22, top: 30),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Column(
+                                // mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (userId != null) {
+                                        likeReview(review.id);
+                                      }
+                                    },
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 5,
+                                        top: 3,
+                                      ), // ปรับตามต้องการ
+                                      child: Icon(
+                                        Icons.favorite,
+                                        color: isLiked
+                                            ? Colors.red
+                                            : Colors.grey,
+                                        size: 40,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 18,
+                                      bottom: 20,
+                                    ), // ปรับตามต้องการ
+                                    child: Text(
+                                      "${review.totalLikes} Likes",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        // color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // SizedBox(height: 20),
                       ],
                     ),
                   ),
@@ -931,5 +957,25 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
       "Dec",
     ];
     return months[month];
+  }
+}
+
+String getTimeAgo(DateTime dateTimeUtc) {
+  final localDateTime = dateTimeUtc.toLocal(); // ✅ แปลงเป็นเวลา Local
+  final now = DateTime.now();
+  final difference = now.difference(localDateTime);
+
+  if (difference.inSeconds < 10) {
+    return 'Just now';
+  } else if (difference.inMinutes < 60) {
+    return '${difference.inMinutes} minutes ago';
+  } else if (difference.inHours < 24) {
+    return '${difference.inHours} hours ago';
+  } else if (difference.inDays == 1) {
+    return 'Yesterday';
+  } else if (difference.inDays < 7) {
+    return '${difference.inDays} days ago';
+  } else {
+    return ''; // You can use _formatDate() instead later
   }
 }

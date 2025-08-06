@@ -189,8 +189,12 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
               child: ElevatedButton.icon(
                 icon: Icon(
                   isPurchased ? Icons.check_circle : Icons.shopping_cart,
+                  size: 20,
                 ),
-                label: Text(isPurchased ? "Purchased" : "Buy"),
+                label: Text(
+                  isPurchased ? "Purchased" : "Buy",
+                  style: TextStyle(fontSize: 14),
+                ),
                 onPressed: isPurchased
                     ? null
                     : () {
@@ -308,8 +312,10 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   backgroundColor: isPurchased
                       ? Colors.grey
-                      : const Color.fromARGB(255, 221, 187, 136),
-                  foregroundColor: Colors.white,
+                      : const Color.fromARGB(255, 229, 76, 29),
+                  foregroundColor: isPurchased
+                      ? Colors.grey
+                      : const Color.fromARGB(255, 249, 249, 249),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

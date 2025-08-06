@@ -499,42 +499,49 @@ app.get('/leaderboard', async (req, res) => {
 
     const [topUsers] = await db.promise().query(`
       SELECT 
-        l.rank,
         u.User_ID,
         u.username,
         u.coins,
-        l.total_likes,
-        l.total_reviews,
+        COUNT(r.Review_ID) AS total_reviews,
+        SUM(r.total_likes) AS total_likes,
+        ROW_NUMBER() OVER (ORDER BY SUM(r.total_likes) DESC) AS rank,
         upp.picture_url AS profile_image
-      FROM Leaderboard_user_total_like l
-      JOIN User u ON l.User_ID = u.User_ID
+      FROM Review r
+      JOIN User u ON r.User_ID = u.User_ID
       LEFT JOIN user_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
-      WHERE l.month_year = ?
-      ORDER BY l.rank ASC
+      WHERE r.message_status = 'Posted' AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
+      GROUP BY u.User_ID
+      ORDER BY total_likes DESC
       LIMIT 3
     `, [monthYear]);
 
-  const [topRestaurants] = await db.promise().query(`
-  SELECT 
-    l.rank,
-    r.Restaurant_ID,
-    r.restaurant_name,
-    l.overall_rating,
-    l.total_reviews,
-    r.photos AS restaurant_image
-  FROM Leaderboard_restaurant l
-  JOIN Restaurant r ON l.Restaurant_ID = r.Restaurant_ID
-  WHERE l.month_year = ?
-  ORDER BY l.rank ASC
-  LIMIT 3
-`, [monthYear]);
+    const [topRestaurants] = await db.promise().query(`
+      SELECT 
+        r.Restaurant_ID,
+        res.restaurant_name,
+        AVG(r.rating_overall) AS overall_rating,
+        COUNT(r.Review_ID) AS total_reviews,
+        res.photos AS restaurant_image,
+        ROW_NUMBER() OVER (ORDER BY AVG(r.rating_overall) DESC) AS rank
+      FROM Review r
+      JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
+      WHERE r.message_status = 'Posted' AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
+      GROUP BY r.Restaurant_ID
+      ORDER BY overall_rating DESC
+      LIMIT 3
+    `, [monthYear]);
 
-    res.json({  month_year: monthYear,  topUsers, topRestaurants });
+    res.json({
+      month_year: monthYear,
+      topUsers,
+      topRestaurants,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 app.post('/leaderboard/update-auto', async (req, res) => {
   try {
@@ -558,10 +565,10 @@ app.post('/leaderboard/update-auto', async (req, res) => {
     COALESCE(COUNT(DISTINCT rl.Like_ID), 0) AS total_likes,
     COALESCE(COUNT(DISTINCT r.Review_ID), 0) AS total_reviews
   FROM User u
-  LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
+  LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m') = ? AND r.status = 'Post'
   LEFT JOIN Review_Likes rl ON rl.Review_ID IN (
-    SELECT Review_ID FROM Review WHERE User_ID = u.User_ID
-  ) AND DATE_FORMAT(rl.Liked_At, '%Y-%m') = ?
+  SELECT Review_ID FROM Review WHERE User_ID = u.User_ID AND status = 'Post'
+ ) AND DATE_FORMAT(rl.Liked_At, '%Y-%m') = ?
   WHERE u.status = 'Active'
   GROUP BY u.User_ID, u.fullname, u.username, u.email, u.google_id, u.bio
   ORDER BY total_likes DESC
