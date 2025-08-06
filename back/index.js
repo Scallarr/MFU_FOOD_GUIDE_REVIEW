@@ -783,7 +783,7 @@ app.post('/submit_reviews', async (req, res) => {
     const message_status = ai_evaluation === 'Safe' ? 'Posted' : 'Pending';
 
     // --- 3. Insert ลง Review ---
-    const [reviewResult] = await db.execute(
+    const reviewResult = await db.execute(
       `
       INSERT INTO Review 
       (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
@@ -802,8 +802,8 @@ app.post('/submit_reviews', async (req, res) => {
         message_status,
       ]
     );
-
-    const reviewId = reviewResult.insertId;
+console.log('reviewResultRaw:', reviewResultRaw);
+    const reviewId = result.insertId;
 
     // --- 4. Update average ใน Restaurant ---
     // ดึงค่าเฉลี่ยใหม่

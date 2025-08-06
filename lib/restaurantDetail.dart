@@ -55,6 +55,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
         final data = json.decode(response.body);
         setState(() {
           restaurant = Restaurant.fromJson(data);
+          print(
+            'restaurant.id = ${restaurant!.id}',
+          ); // 👈 ต้องได้ค่าที่ไม่ใช่ null
           likedReviews = {for (var r in restaurant!.reviews) r.id: r.isLiked};
           isLoading = false;
         });

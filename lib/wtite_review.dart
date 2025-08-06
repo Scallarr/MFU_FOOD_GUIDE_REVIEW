@@ -32,6 +32,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
               widget.restaurant['name'] ?? 'Restaurant Name',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 10),
             Image.network(
               widget.restaurant['imageUrl'] ??
@@ -150,6 +151,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
 
   // --- Submit Review Function ---
   Future<void> submitReview() async {
+    print(widget.restaurant);
     // --- Validation ก่อน ---
     if (hygieneRating == 0 || flavorRating == 0 || serviceRating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,7 +178,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'Restaurant_ID': widget.restaurant['id'], // ใส่ id ของร้าน
+          'Restaurant_ID': widget.restaurant['RestaurantID'], // ใส่ id ของร้าน
           'rating_hygiene': hygieneRating,
           'rating_flavor': flavorRating,
           'rating_service': serviceRating,
@@ -188,7 +190,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
       print('FlavorRating: $flavorRating');
       print('ServiceRating: $serviceRating');
       print('UserID: $userId');
-      print('RestaurantID: ${widget.restaurant['id']}');
+      print('RestaurantID: ${widget.restaurant['RestaurantID']}');
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
