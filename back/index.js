@@ -664,73 +664,63 @@ ORDER BY p.Created_At DESC;
   });
 });
 
- app.post('/purchase_profile', (req, res) => {
+app.post('/purchase_profile', (req, res) => {
   const { user_id, profile_id, coins_spent } = req.body;
 
-  // เช็ค user เหรียญพอไหม (อาจ query coin ของ user)
-  const checkCoinsQuery = 'SELECT coins FROM User WHERE User_ID = ?';
-  db.query(checkCoinsQuery, [user_id], (err, results) => {
-    if (err) return res.status(500).json({ error: 'DB error' });
-    if (results.length === 0) return res.status(404).json({ error: 'User not found' });
-
-    const currentCoins = results[0].coins;
-    if (currentCoins < coins_spent) {
-      return res.status(400).json({ error: 'Insufficient coins' });
+  pool.getConnection((err, connection) => {
+    if (err) {
+      console.error('Error getting connection:', err);
+      return res.status(500).json({ error: 'Database connection error' });
     }
 
-    // เช็คว่าซื้อไปแล้วหรือยัง
-    const checkPurchaseQuery = `
-      SELECT * FROM Profile_Purchase_History
-      WHERE User_ID = ? AND Profile_Shop_ID = ?
-    `;
-    db.query(checkPurchaseQuery, [user_id, profile_id], (err, purchaseResults) => {
-      if (err) return res.status(500).json({ error: 'DB error' });
-      if (purchaseResults.length > 0) {
-        return res.status(400).json({ error: 'Already purchased' });
+    connection.beginTransaction((err) => {
+      if (err) {
+        connection.release();
+        return res.status(500).json({ error: 'Transaction error' });
       }
 
-      // เริ่ม transaction เพื่ออัพเดตเหรียญและบันทึก purchase history
-      db.beginTransaction((err) => {
-        if (err) return res.status(500).json({ error: 'DB transaction error' });
-
-        const updateCoinsQuery = `
-          UPDATE User SET coins = coins - ? WHERE User_ID = ?
-        `;
-        db.query(updateCoinsQuery, [coins_spent, user_id], (err, result) => {
-          if (err) {
-            return db.rollback(() => {
-              res.status(500).json({ error: 'Failed to update coins' });
+      // 1. ลบ coins จาก user
+      connection.query(
+        'UPDATE User SET coins = coins - ? WHERE User_ID = ? AND coins >= ?',
+        [coins_spent, user_id, coins_spent],
+        (err, result) => {
+          if (err || result.affectedRows === 0) {
+            return connection.rollback(() => {
+              connection.release();
+              return res.status(400).json({ error: 'Not enough coins or update failed' });
             });
           }
 
-          const insertPurchaseQuery = `
-            INSERT INTO Profile_Purchase_History (User_ID, Profile_Shop_ID, Coins_Spent)
-            VALUES (?, ?, ?)
-          `;
-          db.query(insertPurchaseQuery, [user_id, profile_id, coins_spent], (err, result) => {
-            if (err) {
-              return db.rollback(() => {
-                res.status(500).json({ error: 'Failed to insert purchase history' });
-              });
-            }
-
-            db.commit((err) => {
+          // 2. เพิ่มข้อมูล profile ที่ซื้อ
+          connection.query(
+            'INSERT INTO user_Profile_Picture (User_ID, Profile_ID, is_active) VALUES (?, ?, 0)',
+            [user_id, profile_id],
+            (err) => {
               if (err) {
-                return db.rollback(() => {
-                  res.status(500).json({ error: 'DB commit error' });
+                return connection.rollback(() => {
+                  connection.release();
+                  return res.status(500).json({ error: 'Insert profile failed' });
                 });
               }
 
-              res.json({ message: 'Purchase successful' });
-            });
-          });
-        });
-      });
+              connection.commit((err) => {
+                if (err) {
+                  return connection.rollback(() => {
+                    connection.release();
+                    return res.status(500).json({ error: 'Commit failed' });
+                  });
+                }
+
+                connection.release();
+                return res.json({ message: 'Purchase successful' });
+              });
+            }
+          );
+        }
+      );
     });
   });
 });
-
-
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
