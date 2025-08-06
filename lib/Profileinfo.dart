@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/Profileshop.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
@@ -608,7 +609,15 @@ class _ProfilePageState extends State<ProfilePage> {
                           vertical: 0,
                         ), // ความสูงของปุ่ม
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfileShopPage(),
+                          ),
+                        );
+                      },
+
                       child: const Text(
                         'Profile Shop',
                         style: TextStyle(color: Colors.black),

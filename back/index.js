@@ -631,6 +631,37 @@ app.post('/leaderboard/update-auto', async (req, res) => {
   }
 });
 
+app.get('/profile-exchange/:userId', (req, res) => {
+  const userId = req.params.userId;
+
+  const sql = `
+    SELECT 
+  u.coins AS user_coins,
+  p.Profile_Shop_ID,
+  p.Profile_Name,
+  p.Description,
+  p.Image_URL,
+  p.Required_Coins,
+  p.Created_At,
+  CASE WHEN pu.User_ID IS NOT NULL THEN 1 ELSE 0 END AS is_purchased
+FROM User u
+CROSS JOIN Profile_Shop p
+LEFT JOIN Purchase pu 
+  ON p.Profile_Shop_ID = pu.Profile_Shop_ID AND pu.User_ID = u.User_ID
+WHERE u.User_ID = ?
+ORDER BY p.Created_At DESC;
+
+  `;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+    console.log(results);
+  });
+});
 
 
 

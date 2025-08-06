@@ -440,6 +440,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
               floating: true,
               snap: true,
               elevation: 4,
+              centerTitle: true,
               title: const Text('Leaderboard'),
             ),
             SliverList(
@@ -448,6 +449,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         '🏆 Top Users',
@@ -463,7 +465,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                           style: const TextStyle(
                             fontSize: 16,
                             fontStyle: FontStyle.italic,
-                            color: Colors.grey,
+                            color: Color.fromARGB(255, 80, 77, 77),
                           ),
                         ),
                     ],
@@ -474,11 +476,38 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                   (entry) => buildUserCard(entry.value, entry.key),
                 ),
                 const Divider(thickness: 2, height: 32),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    '🍽️ Top Restaurants',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu,
+                            size: 32,
+                            color: Colors.brown.shade700,
+                          ),
+
+                          Text(
+                            ' Top Restaurants',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (monthYear.isNotEmpty)
+                        Text(
+                          '($monthYear)',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontStyle: FontStyle.italic,
+                            color: Color.fromARGB(255, 80, 77, 77),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
