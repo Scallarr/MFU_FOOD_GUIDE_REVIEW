@@ -26,7 +26,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
   Future<void> loadUserAndFetchProfiles() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
-
+    print(profiles); // debug ก่อนว่ามีค่าอะไร
     if (userId == 0) {
       setState(() {
         errorMsg = "User ID not found.";
@@ -40,7 +40,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
   Future<void> fetchProfiles() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
-
+    print(userId);
     final url = Uri.parse(
       'https://mfu-food-guide-review.onrender.com/profile-exchange/$userId',
     );
@@ -69,6 +69,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
                 )
                 .toList();
             isLoading = false;
+            print('f'); // debug ก่อนว่ามีค่าอะไร
           });
         } else {
           setState(() {
@@ -90,7 +91,9 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
     }
   }
 
-  Future<void> buyProfile(int profileId, int cost) async {
+  Future<void> buyProfile(int profileId, int cost, String imageurl) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
     if (currentCoins < cost) {
       ScaffoldMessenger.of(
         context,
@@ -106,6 +109,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
       'user_id': userId,
       'profile_id': profileId,
       'coins_spent': cost,
+      'image_url': imageurl,
     });
 
     try {
@@ -188,7 +192,11 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
                 onPressed: isPurchased
                     ? null
                     : () {
-                        buyProfile(profile['id'], profile['coins']);
+                        buyProfile(
+                          profile['id'],
+                          profile['coins'],
+                          profile['image'],
+                        );
                       },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),

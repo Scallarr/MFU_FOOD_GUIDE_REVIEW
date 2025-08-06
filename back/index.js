@@ -665,7 +665,7 @@ ORDER BY p.Created_At DESC;
 });
 
 app.post('/purchase_profile', (req, res) => {
-  const { user_id, profile_id, coins_spent } = req.body;
+  const { user_id, profile_id, coins_spent ,image_url} = req.body;
 
   db.getConnection((err, connection) => {
     if (err) {
@@ -693,8 +693,8 @@ app.post('/purchase_profile', (req, res) => {
 
           // 2. เพิ่มข้อมูล profile ที่ซื้อ
           connection.query(
-            'INSERT INTO user_Profile_Picture (User_ID, Profile_ID, is_active) VALUES (?, ?, 0)',
-            [user_id, profile_id],
+            'INSERT INTO user_Profile_Picture (User_ID, picture_url, is_active) VALUES (?, ?, 0)',
+            [user_id, image_url],
             (err) => {
               if (err) {
                 return connection.rollback(() => {

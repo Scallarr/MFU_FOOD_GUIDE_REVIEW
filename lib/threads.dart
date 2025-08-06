@@ -12,10 +12,9 @@ class ThreadsPage extends StatefulWidget {
 
 class _ThreadsPageState extends State<ThreadsPage> {
   int _selectedIndex = 3;
-
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-
+    print('ff');
     switch (index) {
       case 0:
         Navigator.pushReplacement(
