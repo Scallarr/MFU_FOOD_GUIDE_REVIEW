@@ -504,7 +504,7 @@ app.get('/leaderboard', async (req, res) => {
         u.coins,
         COUNT(r.Review_ID) AS total_reviews,
         SUM(r.total_likes) AS total_likes,
-        ROW_NUMBER() OVER (ORDER BY SUM(r.total_likes) DESC) AS rank,
+        ROW_NUMBER() OVER (ORDER BY SUM(r.total_likes) DESC) AS \`rank\`,
         upp.picture_url AS profile_image
       FROM Review r
       JOIN User u ON r.User_ID = u.User_ID
@@ -522,7 +522,7 @@ app.get('/leaderboard', async (req, res) => {
         AVG(r.rating_overall) AS overall_rating,
         COUNT(r.Review_ID) AS total_reviews,
         res.photos AS restaurant_image,
-        ROW_NUMBER() OVER (ORDER BY AVG(r.rating_overall) DESC) AS rank
+        ROW_NUMBER() OVER (ORDER BY AVG(r.rating_overall) DESC) AS \`rank\`
       FROM Review r
       JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
       WHERE r.message_status = 'Posted' AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
@@ -565,9 +565,9 @@ app.post('/leaderboard/update-auto', async (req, res) => {
     COALESCE(COUNT(DISTINCT rl.Like_ID), 0) AS total_likes,
     COALESCE(COUNT(DISTINCT r.Review_ID), 0) AS total_reviews
   FROM User u
-  LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m') = ? AND r.status = 'Post'
+LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m') = ? AND r.status = 'Post'
   LEFT JOIN Review_Likes rl ON rl.Review_ID IN (
-  SELECT Review_ID FROM Review WHERE User_ID = u.User_ID AND status = 'Post'
+   SELECT Review_ID FROM Review WHERE User_ID = u.User_ID AND status = 'Post'
  ) AND DATE_FORMAT(rl.Liked_At, '%Y-%m') = ?
   WHERE u.status = 'Active'
   GROUP BY u.User_ID, u.fullname, u.username, u.email, u.google_id, u.bio
