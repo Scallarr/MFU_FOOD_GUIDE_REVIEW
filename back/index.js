@@ -783,27 +783,30 @@ app.post('/submit_reviews', async (req, res) => {
     const message_status = ai_evaluation === 'Safe' ? 'Posted' : 'Pending';
 
     // --- 3. Insert ลง Review ---
-    const reviewResult = await db.execute(
-      `
-      INSERT INTO Review 
-      (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      [
-        User_ID,
-        Restaurant_ID,
-        rating_overall.toFixed(1),
-        rating_hygiene,
-        rating_flavor,
-        rating_service,
-        comment || '',
-        0, // total_likes = 0
-        ai_evaluation,
-        message_status,
-      ]
-    );
-console.log('reviewResultRaw:', reviewResultRaw);
-    const reviewId = result.insertId;
+   // ✅ Execute insert
+const reviewResult = await db.execute(
+  `INSERT INTO Review 
+  (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    User_ID,
+    Restaurant_ID,
+    rating_overall.toFixed(1),
+    rating_hygiene,
+    rating_flavor,
+    rating_service,
+    comment || '',
+    0,
+    ai_evaluation,
+    message_status,
+  ]
+);
+
+// ✅ แยก result ออกมาเพื่อใช้ insertId
+const [insertResult] = reviewResult;
+console.log('Insert Result:', insertResult);
+
+const reviewId = insertResult.insertId;
 
     // --- 4. Update average ใน Restaurant ---
     // ดึงค่าเฉลี่ยใหม่
