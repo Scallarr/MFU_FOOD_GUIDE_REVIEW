@@ -645,8 +645,8 @@ app.get('/profile-exchange/:userId', (req, res) => {
   p.Created_At,
   CASE WHEN pu.User_ID IS NOT NULL THEN 1 ELSE 0 END AS is_purchased
 FROM User u
-CROSS JOIN Profile_Shop p
-LEFT JOIN Purchase pu 
+CROSS JOIN exchange_coin_Shop p
+LEFT JOIN Profile_Purchase_History pu 
   ON p.Profile_Shop_ID = pu.Profile_Shop_ID AND pu.User_ID = u.User_ID
 WHERE u.User_ID = ?
 ORDER BY p.Created_At DESC;
