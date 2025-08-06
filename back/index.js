@@ -665,7 +665,7 @@ ORDER BY p.Created_At DESC;
 });
 
 app.post('/purchase_profile', (req, res) => {
-  const { user_id, profile_id, coins_spent ,image_url} = req.body;
+  const { user_id, profile_id, coins_spent, image_url } = req.body;
 
   db.getConnection((err, connection) => {
     if (err) {
@@ -691,8 +691,8 @@ app.post('/purchase_profile', (req, res) => {
             });
           }
 
-          // 2. เพิ่มข้อมูล profile ที่ซื้อ
-          connection.query(
+          // 2. เพิ่มข้อมูล profile picture ที่ซื้อ
+        connection.query(
             'INSERT INTO user_Profile_Picture (User_ID, picture_url, is_active) VALUES (?, ?, 0)',
             [user_id, image_url],
             (err) => {
@@ -702,32 +702,33 @@ app.post('/purchase_profile', (req, res) => {
                   return res.status(500).json({ error: 'Insert profile failed' });
                 });
               }
-             
-              // 3. เพิ่มข้อมูล History ที่ซื้อ
-connection.query(
-  'INSERT INTO Profile_Purchase_History (User_ID,Profile_Shop_ID,Coin_Spent)VALUES(?,?,?)',
-   [user_id, profile_id, coins_spent],
-   (err) => {
-    if (err){
-      return connection.rollback(()=>{
-        connection.release();
-        return res.status(500).json({error:'insert purchase history failed'})
-      })
-    }
-   }
-)
-// ✅ Commit ถ้าทุกขั้นตอนผ่าน
-              connection.commit((err) => {
-                if (err) {
-                  return connection.rollback(() => {
+
+              // ✅ 3. เพิ่มประวัติการซื้อ
+          connection.query(
+              'INSERT INTO Profile_Purchase_History (User_ID, Profile_Shop_ID, Coins_Spent) VALUES (?, ?, ?)',
+                [user_id, profile_id, coins_spent],
+                (err) => {
+                  if (err) {
+                    return connection.rollback(() => {
+                      connection.release();
+                      return res.status(500).json({ error: 'Insert purchase history failed' });
+                    });
+                  }
+
+                  // ✅ Commit ถ้าทุกขั้นตอนผ่าน
+                  connection.commit((err) => {
+                    if (err) {
+                      return connection.rollback(() => {
+                        connection.release();
+                        return res.status(500).json({ error: 'Commit failed' });
+                      });
+                    }
+
                     connection.release();
-                    return res.status(500).json({ error: 'Commit failed' });
+                    return res.json({ message: 'Purchase successful' });
                   });
                 }
-
-                connection.release();
-                return res.json({ message: 'Purchase successful' });
-              });
+              );
             }
           );
         }
@@ -735,6 +736,7 @@ connection.query(
     });
   });
 });
+
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
