@@ -751,7 +751,6 @@ async function checkCommentAI(comment) {
   return 'Safe';
 }
 
-// --- POST /submit_reviews ---
 app.post('/submit_reviews', async (req, res) => {
   const {
     User_ID,
@@ -762,27 +761,24 @@ app.post('/submit_reviews', async (req, res) => {
     comment,
   } = req.body;
 
-  // --- Validate input ---
   if (
     !User_ID ||
     !Restaurant_ID ||
-    !rating_hygiene ||
-    !rating_flavor ||
-    !rating_service
+    rating_hygiene == null ||
+    rating_flavor == null ||
+    rating_service == null
   ) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
-    // --- 1. คำนวณ overall rating ---
     const rating_overall =
-      (rating_hygiene + rating_flavor + rating_service) / 3;
+      (Number(rating_hygiene) + Number(rating_flavor) + Number(rating_service)) / 3;
 
-    // --- 2. AI ตรวจสอบ comment ---
     const ai_evaluation = await checkCommentAI(comment || '');
     const message_status = ai_evaluation === 'Safe' ? 'Posted' : 'Pending';
 
-    // --- 3. Insert ลง Review ---
+    // Insert review
     const [insertResult] = await db.promise().execute(
       `INSERT INTO Review 
       (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
@@ -801,52 +797,44 @@ app.post('/submit_reviews', async (req, res) => {
       ]
     );
 
-    console.log('Insert Result:', insertResult);
-
     const reviewId = insertResult.insertId;
 
-    // --- 4. Update average ใน Restaurant ---
+    // คำนวณค่าเฉลี่ยใหม่
     const [avgRows] = await db.promise().execute(
-      `
-      SELECT 
+      `SELECT 
         AVG(rating_hygiene) AS hygiene_avg,
         AVG(rating_flavor) AS flavor_avg,
         AVG(rating_service) AS service_avg,
         AVG(rating_overall) AS overall_avg
       FROM Review
-      WHERE Restaurant_ID = ?
-    `,
+      WHERE Restaurant_ID = ?`,
       [Restaurant_ID]
     );
 
-    const avg = avgRows[0];
+    const avg = avgRows[0] || {};
 
     await db.promise().execute(
-      `
-      UPDATE Restaurant SET 
+      `UPDATE Restaurant SET 
         rating_overall_avg = ?,
         rating_hygiene_avg = ?,
         rating_flavor_avg = ?,
         rating_service_avg = ?
-      WHERE Restaurant_ID = ?
-    `,
+      WHERE Restaurant_ID = ?`,
       [
-        avg.overall_avg?.toFixed(2) || 0,
-        avg.hygiene_avg?.toFixed(2) || 0,
-        avg.flavor_avg?.toFixed(2) || 0,
-        avg.service_avg?.toFixed(2) || 0,
+        Number(avg.overall_avg || 0).toFixed(2),
+        Number(avg.hygiene_avg || 0).toFixed(2),
+        Number(avg.flavor_avg || 0).toFixed(2),
+        Number(avg.service_avg || 0).toFixed(2),
         Restaurant_ID,
       ]
     );
 
-    // --- 5. Insert ลง Admin_check_inappropriate_review ถ้าไม่ Safe ---
+    // ถ้า AI บอกว่าไม่ปลอดภัย
     if (ai_evaluation !== 'Safe') {
       await db.promise().execute(
-        `
-        INSERT INTO Admin_check_inappropriate_review 
+        `INSERT INTO Admin_check_inappropriate_review 
         (Review_ID, Admin_ID, admin_action_taken)
-        VALUES (?, NULL, 'Pending')
-      `,
+        VALUES (?, NULL, 'Pending')`,
         [reviewId]
       );
     }
@@ -862,8 +850,6 @@ app.post('/submit_reviews', async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 });
-
-
 
 
 
