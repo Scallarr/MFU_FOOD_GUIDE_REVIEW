@@ -565,7 +565,7 @@ app.post('/leaderboard/update-auto', async (req, res) => {
     COALESCE(COUNT(DISTINCT rl.Like_ID), 0) AS total_likes,
     COALESCE(COUNT(DISTINCT r.Review_ID), 0) AS total_reviews
   FROM User u
-LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m') = ? AND r.status = 'Post'
+LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m') = ? AND r.message_status = 'Post'
   LEFT JOIN Review_Likes rl ON rl.Review_ID IN (
    SELECT Review_ID FROM Review WHERE User_ID = u.User_ID AND status = 'Post'
  ) AND DATE_FORMAT(rl.Liked_At, '%Y-%m') = ?
