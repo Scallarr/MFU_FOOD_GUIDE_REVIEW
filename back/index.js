@@ -751,7 +751,7 @@ async function checkCommentAI(comment) {
   return 'Safe';
 }
 
-// --- POST /api/reviews ---
+// --- POST /submit_reviews ---
 app.post('/submit_reviews', async (req, res) => {
   const {
     User_ID,
@@ -783,34 +783,30 @@ app.post('/submit_reviews', async (req, res) => {
     const message_status = ai_evaluation === 'Safe' ? 'Posted' : 'Pending';
 
     // --- 3. Insert ลง Review ---
-   // ✅ Execute insert
-const reviewResult = await db.execute(
-  `INSERT INTO Review 
-  (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  [
-    User_ID,
-    Restaurant_ID,
-    rating_overall.toFixed(1),
-    rating_hygiene,
-    rating_flavor,
-    rating_service,
-    comment || '',
-    0,
-    ai_evaluation,
-    message_status,
-  ]
-);
+    const [insertResult] = await db.promise().execute(
+      `INSERT INTO Review 
+      (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        User_ID,
+        Restaurant_ID,
+        rating_overall.toFixed(1),
+        rating_hygiene,
+        rating_flavor,
+        rating_service,
+        comment || '',
+        0,
+        ai_evaluation,
+        message_status,
+      ]
+    );
 
-// ✅ แยก result ออกมาเพื่อใช้ insertId
-const [insertResult] = reviewResult;
-console.log('Insert Result:', insertResult);
+    console.log('Insert Result:', insertResult);
 
-const reviewId = insertResult.insertId;
+    const reviewId = insertResult.insertId;
 
     // --- 4. Update average ใน Restaurant ---
-    // ดึงค่าเฉลี่ยใหม่
-    const [avgRows] = await db.execute(
+    const [avgRows] = await db.promise().execute(
       `
       SELECT 
         AVG(rating_hygiene) AS hygiene_avg,
@@ -825,8 +821,7 @@ const reviewId = insertResult.insertId;
 
     const avg = avgRows[0];
 
-    // อัพเดต Restaurant
-    await db.execute(
+    await db.promise().execute(
       `
       UPDATE Restaurant SET 
         rating_overall_avg = ?,
@@ -846,7 +841,7 @@ const reviewId = insertResult.insertId;
 
     // --- 5. Insert ลง Admin_check_inappropriate_review ถ้าไม่ Safe ---
     if (ai_evaluation !== 'Safe') {
-      await db.execute(
+      await db.promise().execute(
         `
         INSERT INTO Admin_check_inappropriate_review 
         (Review_ID, Admin_ID, admin_action_taken)
