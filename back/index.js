@@ -895,7 +895,7 @@ app.post('/submit_reviews', async (req, res) => {
         AVG(rating_service) AS service_avg,
         AVG(rating_overall) AS overall_avg
       FROM Review
-      WHERE Restaurant_ID = ?`,
+      WHERE Restaurant_ID = ?  AND message_status = 'Posted'`,
       [Restaurant_ID]
     );
 
