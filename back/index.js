@@ -1063,8 +1063,12 @@ app.post('/create_thread', async (req, res) => {
       );
     }
 
-    res.json({ success: true, Thread_ID: newThreadId });
-
+     res.json({
+      success: true,
+      Thread_ID: newThreadId,
+      ai_evaluation,
+    });
+console.log(ai_evaluation);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
