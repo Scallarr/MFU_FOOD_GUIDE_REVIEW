@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/thread_reply.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThreadsPage extends StatefulWidget {
@@ -302,188 +303,212 @@ class _ThreadsPageState extends State<ThreadsPage> {
               final thread = filteredThreads[index];
               final likedByUser = thread['is_liked'] == 1;
 
-              return Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 6,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 30,
-                                backgroundImage: NetworkImage(
-                                  thread['picture_url'],
-                                ),
-                                backgroundColor: Colors.grey.shade200,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      thread['fullname'],
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Text(
-                                      timeAgo(thread['created_at']),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              thread['message'],
-                              style: const TextStyle(fontSize: 15),
+              return InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ThreadRepliesPage(thread: thread),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: Offset(0, 3),
                             ),
-                          ),
-                          const SizedBox(height: 7),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              InkWell(
-                                onTap: () {
-                                  toggleLike(thread['Thread_ID'], likedByUser);
-                                },
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 15,
-                                    vertical: 6,
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundImage: NetworkImage(
+                                    thread['picture_url'],
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: likedByUser
-                                        ? Colors.red.shade100
-                                        : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: likedByUser
-                                          ? Colors.red
-                                          : const Color.fromARGB(
-                                              255,
-                                              102,
-                                              100,
-                                              100,
-                                            ),
-                                    ),
-                                  ),
-                                  child: Row(
+                                  backgroundColor: Colors.grey.shade200,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Icon(
-                                        Icons.favorite,
-                                        size: 18,
+                                      Row(
+                                        children: [
+                                          Text(
+                                            thread['fullname'],
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          SizedBox(width: 7),
+                                          Icon(
+                                            Icons.verified,
+                                            size: 16,
+                                            color: Colors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        timeAgo(thread['created_at']),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                thread['message'],
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                            ),
+                            const SizedBox(height: 7),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    toggleLike(
+                                      thread['Thread_ID'],
+                                      likedByUser,
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 15,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: likedByUser
+                                          ? Colors.red.shade100
+                                          : Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
                                         color: likedByUser
                                             ? Colors.red
                                             : const Color.fromARGB(
                                                 255,
-                                                0,
-                                                0,
-                                                0,
+                                                102,
+                                                100,
+                                                100,
                                               ),
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${thread['total_likes']}',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.favorite,
+                                          size: 18,
                                           color: likedByUser
-                                              ? Colors.red.shade700
+                                              ? Colors.red
                                               : const Color.fromARGB(
                                                   255,
                                                   0,
                                                   0,
                                                   0,
                                                 ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${thread['total_likes']}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: likedByUser
+                                                ? Colors.red.shade700
+                                                : const Color.fromARGB(
+                                                    255,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                  ),
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.blue.shade200,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.comment,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        '${thread['total_comments']}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blue,
                                           fontSize: 14,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 20),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.blue.shade200,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.comment,
-                                      size: 18,
-                                      color: Colors.blue,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      '${thread['total_comments']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(width: 20),
-                            ],
+                                SizedBox(width: 20),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 212, 58, 58),
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 212, 58, 58),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.verified,
-                          size: 20,
-                          color: Colors.white,
+                          child: const Icon(
+                            Icons.verified,
+                            size: 20,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }, childCount: filteredThreads.length),

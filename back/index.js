@@ -1076,6 +1076,40 @@ console.log(ai_evaluation);
 });
 
 
+app.get('/api/thread_replies/:threadId', async (req, res) => {
+  const threadId = req.params.threadId;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT
+        tr.Thread_reply_ID,
+        tr.Thread_ID,
+        tr.User_ID,
+        tr.message,
+        tr.created_at,
+        tr.total_likes,
+        tr.ai_evaluation,
+        u.fullname,
+        upp.picture_url
+      FROM Thread_reply tr
+      JOIN User u ON tr.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp
+        ON u.User_ID = upp.User_ID AND upp.is_active = 1
+      WHERE tr.Thread_ID = ?
+        AND tr.admin_decision = 'Posted'
+      ORDER BY tr.created_at ASC`,
+      [threadId]
+    );
+
+    res.json(rows);
+    console.log(rows);
+  } catch (error) {
+    console.error('Error fetching thread replies:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));
