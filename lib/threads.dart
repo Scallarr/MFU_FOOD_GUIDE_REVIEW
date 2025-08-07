@@ -47,7 +47,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
 
   Future<void> toggleLike(int threadId, bool liked) async {
     final response = await http.post(
-      Uri.parse('https://mfu-food-guide-review.onrender.com/toggle_like'),
+      Uri.parse('https://mfu-food-guide-review.onrender.com/like_thread'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'User_ID': userId,
@@ -77,7 +77,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundImage: NetworkImage(thread['profile_picture']),
+                backgroundImage: NetworkImage(thread['picture_url']),
               ),
               title: Text(thread['fullname']),
               subtitle: Column(

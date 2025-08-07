@@ -970,36 +970,34 @@ app.get('/all_threads/:userId', async (req, res) => {
 
 
 app.post('/like_thread', async (req, res) => {
-  const { userId, threadId } = req.body;
-  if (!userId || !threadId) return res.status(400).send('Missing params');
+  const { User_ID, Thread_ID, liked } = req.body;
+
+  if (!User_ID || !Thread_ID || liked === undefined) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
 
   try {
-    // เช็คว่ามีอยู่แล้วไหม
-    const [rows] = await db.promise().execute(
-      `SELECT * FROM Thread_Likes WHERE User_ID = ? AND Thread_ID = ?`,
-      [userId, threadId]
-    );
-
-    if (rows.length > 0) {
-      // ยกเลิกไลค์
+    if (liked) {
+      // เพิ่มไลค์
+      await db.promise().execute(
+        `INSERT IGNORE INTO Thread_Likes (User_ID, Thread_ID) VALUES (?, ?)`,
+        [User_ID, Thread_ID]
+      );
+    } else {
+      // ลบไลค์
       await db.promise().execute(
         `DELETE FROM Thread_Likes WHERE User_ID = ? AND Thread_ID = ?`,
-        [userId, threadId]
+        [User_ID, Thread_ID]
       );
-      res.json({ liked: false });
-    } else {
-      // กดไลค์
-      await db.promise().execute(
-        `INSERT INTO Thread_Likes (User_ID, Thread_ID) VALUES (?, ?)`,
-        [userId, threadId]
-      );
-      res.json({ liked: true });
     }
-  } catch (err) {
-    console.error(err);
+
+    res.json({ message: 'Like status updated' });
+  } catch (error) {
+    console.error('Error in /like_thread:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 
 app.post('/unlike_thread', async (req, res) => {
