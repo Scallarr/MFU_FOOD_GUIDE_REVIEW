@@ -948,7 +948,7 @@ app.get('/all_threads/:userId', async (req, res) => {
         T.Thread_ID, T.message, T.created_at, T.User_ID,
         U.fullname, U.username,
         P.picture_url,
-        (SELECT COUNT(*) FROM Thread_Likes WHERE Thread_ID = T.Thread_ID) AS total_likes,
+        (SELECT COUNT(*) FROM Thread WHERE Thread_ID = T.Thread_ID) AS total_likes,
         (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = T.Thread_ID) AS total_comments,
         EXISTS (
           SELECT 1 FROM Thread_Likes WHERE Thread_ID = T.Thread_ID AND User_ID = ?
@@ -967,7 +967,6 @@ app.get('/all_threads/:userId', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 
 app.post('/like_thread', async (req, res) => {
   const { User_ID, Thread_ID, liked } = req.body;
@@ -991,7 +990,17 @@ app.post('/like_thread', async (req, res) => {
       );
     }
 
-    res.json({ message: 'Like status updated' });
+    // อัปเดต Total_likes ของ Thread นั้น ๆ
+    await db.promise().execute(
+      `UPDATE Threads
+       SET Total_likes = (
+         SELECT COUNT(*) FROM Thread_Likes WHERE Thread_ID = ?
+       )
+       WHERE Thread_ID = ?`,
+      [Thread_ID, Thread_ID]
+    );
+
+    res.json({ message: 'Like status and total likes updated' });
   } catch (error) {
     console.error('Error in /like_thread:', error);
     res.status(500).json({ error: 'Server error' });

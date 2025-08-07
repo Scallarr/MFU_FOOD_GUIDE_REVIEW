@@ -71,8 +71,8 @@ class _ThreadsPageState extends State<ThreadsPage> {
         itemCount: threads.length,
         itemBuilder: (context, index) {
           final thread = threads[index];
-          final likedByUser = thread['liked_by_user'] == 1;
-
+          final likedByUser =
+              thread['is_liked'] == 1; // ✅ แก้จาก 'liked_by_user'
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: ListTile(
