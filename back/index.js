@@ -947,7 +947,7 @@ app.get('/all_threads/:userId', async (req, res) => {
       SELECT 
         T.Thread_ID, T.message, T.created_at, T.User_ID,
         U.fullname, U.username,
-        P.profile_picture_url,
+        P.picture_url,
         (SELECT COUNT(*) FROM Thread_Likes WHERE Thread_ID = T.Thread_ID) AS total_likes,
         (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = T.Thread_ID) AS total_comments,
         EXISTS (
