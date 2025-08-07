@@ -204,7 +204,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsPage()),
+          MaterialPageRoute(builder: (context) => ThreadPage()),
         );
         break;
     }

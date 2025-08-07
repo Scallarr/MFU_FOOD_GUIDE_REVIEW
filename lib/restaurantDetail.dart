@@ -744,7 +744,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
               padding: EdgeInsets.only(
                 left: 15,
                 top: 15,
-                right: 15,
+                right: 14,
                 bottom: 13,
               ),
               child: Row(
@@ -763,16 +763,40 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                     child: Stack(
                       children: [
                         Padding(
-                          padding: EdgeInsets.only(right: 80),
+                          padding: EdgeInsets.only(right: 0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                review.username,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    review.username,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    getTimeAgo(
+                                          DateTime.parse(
+                                            review.createdAt,
+                                          ).toLocal(), // ✅ แปลงเป็น Local
+                                        ).isNotEmpty
+                                        ? getTimeAgo(
+                                            DateTime.parse(
+                                              review.createdAt,
+                                            ).toLocal(), // ✅
+                                          )
+                                        : _formatDate(review.createdAt),
+                                    style: TextStyle(
+                                      color: const Color.fromARGB(255, 0, 0, 0),
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ),
                               SizedBox(height: 6),
                               Row(
@@ -800,9 +824,10 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                 }),
                               ),
                               SizedBox(height: 10),
+                              Row(children: []),
                               Padding(
                                 padding: EdgeInsets.only(
-                                  right: 20,
+                                  right: 80,
                                 ), // ปรับตามต้องการ
                                 child: Text(
                                   review.comment,
@@ -813,35 +838,10 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                             ],
                           ),
                         ),
-                        Positioned(
-                          top: 0,
-                          right: 5,
-                          child: Column(
-                            children: [
-                              Text(
-                                getTimeAgo(
-                                      DateTime.parse(
-                                        review.createdAt,
-                                      ).toLocal(), // ✅ แปลงเป็น Local
-                                    ).isNotEmpty
-                                    ? getTimeAgo(
-                                        DateTime.parse(
-                                          review.createdAt,
-                                        ).toLocal(), // ✅
-                                      )
-                                    : _formatDate(review.createdAt),
-                                style: TextStyle(
-                                  color: const Color.fromARGB(255, 0, 0, 0),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
 
                         SizedBox(height: 12),
                         Padding(
-                          padding: EdgeInsetsGeometry.only(right: 22, top: 30),
+                          padding: EdgeInsetsGeometry.only(right: 7, top: 30),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -856,22 +856,23 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                     },
                                     child: Padding(
                                       padding: EdgeInsets.only(
-                                        left: 5,
-                                        top: 3,
+                                        right: 00,
+                                        left: 60,
+                                        top: 10,
                                       ), // ปรับตามต้องการ
                                       child: Icon(
                                         Icons.favorite,
                                         color: isLiked
                                             ? Colors.red
                                             : Colors.grey,
-                                        size: 40,
+                                        size: 50,
                                       ),
                                     ),
                                   ),
                                   SizedBox(height: 4),
                                   Padding(
                                     padding: EdgeInsets.only(
-                                      left: 18,
+                                      left: 60,
                                       bottom: 20,
                                     ), // ปรับตามต้องการ
                                     child: Text(

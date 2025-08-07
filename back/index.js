@@ -939,7 +939,63 @@ app.post('/submit_reviews', async (req, res) => {
   }
 });
 
+app.get('/get_threads', async (req, res) => {
+  const currentUserId = req.query.user_id;
 
+  const [rows] = await db.promise().execute(
+    `SELECT 
+      Thread.Thread_ID,
+      Thread.message,
+      Thread.created_at,
+      Thread.Total_likes,
+      User.fullname,
+      Picture.picture_url,
+      (SELECT COUNT(*) FROM Thread_Likes 
+        WHERE Thread_Likes.Thread_ID = Thread.Thread_ID 
+          AND Thread_Likes.User_ID = ?) AS is_liked
+    FROM Thread
+    JOIN User ON Thread.User_ID = User.User_ID
+    JOIN user_Profile_Picture AS Picture ON Picture.User_ID = User.User_ID AND Picture.is_active = 1
+    WHERE Thread.admin_decision = 'Posted'
+    ORDER BY Thread.created_at DESC`,
+    [currentUserId]
+  );
+
+  res.json(rows);
+  console.log(rows);
+});
+
+app.post('/like_thread', async (req, res) => {
+  const { User_ID, Thread_ID } = req.body;
+
+  await db.promise().execute(
+    `INSERT INTO Thread_Likes (User_ID, Thread_ID) VALUES (?, ?)`,
+    [User_ID, Thread_ID]
+  );
+
+  await db.promise().execute(
+    `UPDATE Thread SET Total_likes = Total_likes + 1 WHERE Thread_ID = ?`,
+    [Thread_ID]
+  );
+
+  res.sendStatus(200);
+});
+
+app.post('/unlike_thread', async (req, res) => {
+  const { User_ID, Thread_ID } = req.body;
+
+  await db.promise().execute(
+    `DELETE FROM Thread_Likes WHERE User_ID = ? AND Thread_ID = ?`,
+    [User_ID, Thread_ID]
+  );
+
+  await db.promise().execute(
+    `UPDATE Thread SET Total_likes = Total_likes - 1 WHERE Thread_ID = ? AND Total_likes > 0`,
+    [Thread_ID]
+  );
+
+  res.sendStatus(200);
+});
 
 
   // ✅ Start Server

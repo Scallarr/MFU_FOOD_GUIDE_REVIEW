@@ -40,7 +40,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsPage()),
+          MaterialPageRoute(builder: (context) => ThreadPage()),
         );
         break;
     }
@@ -151,14 +151,14 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                           children: [
                             const Icon(
                               Icons.thumb_up,
-                              size: 20,
+                              size: 21,
                               color: Colors.brown,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '${user['total_likes']}',
                               style: TextStyle(
-                                fontSize: 17,
+                                fontSize: 18,
                                 color: Colors.brown.shade700,
                                 letterSpacing: 0.2,
                               ),
@@ -182,14 +182,14 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                           children: [
                             const Icon(
                               Icons.rate_review,
-                              size: 23,
+                              size: 25,
                               color: Colors.brown,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               '${user['total_reviews']}',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 18,
                                 color: Colors.brown.shade700,
                                 letterSpacing: 0.2,
                               ),
@@ -246,7 +246,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
     return Card(
       color: const Color.fromARGB(255, 246, 239, 208),
       elevation: 6,
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 7),
+      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
@@ -312,6 +312,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
+                      const SizedBox(width: 10),
                       GestureDetector(
                         onTap: () {
                           final snackBar = SnackBar(
@@ -329,16 +330,16 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${restaurant['overall_rating']}',
+                              '${double.parse(restaurant['overall_rating'].toString()).toStringAsFixed(1)}',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 17,
                                 color: Colors.brown.shade700,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 18),
+                      const SizedBox(width: 20),
                       GestureDetector(
                         onTap: () {
                           final snackBar = SnackBar(
@@ -353,7 +354,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                           children: [
                             Icon(
                               Icons.rate_review,
-                              size: 22,
+                              size: 23,
                               color: Colors.brown.shade700,
                             ),
                             const SizedBox(width: 4),
@@ -452,9 +453,9 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        '🏆 Top Users',
+                        '🏆 Monthly Like Leaders ',
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -490,9 +491,9 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                           ),
 
                           Text(
-                            ' Top Restaurants',
+                            ' Best Restaurants ',
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 19,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
