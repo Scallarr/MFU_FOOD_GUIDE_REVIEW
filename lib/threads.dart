@@ -23,7 +23,8 @@ class _ThreadsPageState extends State<ThreadsPage> {
   Future<void> _loadUserID() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      userId = prefs.getInt('User_ID');
+      userId = prefs.getInt('user_id');
+      print('userId' + userId.toString());
     });
     fetchThreads();
   }
@@ -31,8 +32,8 @@ class _ThreadsPageState extends State<ThreadsPage> {
   Future<void> fetchThreads() async {
     final response = await http.get(
       Uri.parse(
-        'https://mfu-food-guide-review.onrender.com/get_threads',
-      ), // 🔁 เปลี่ยนเป็น API จริง
+        'https://mfu-food-guide-review.onrender.com/all_threads/$userId',
+      ),
     );
 
     if (response.statusCode == 200) {

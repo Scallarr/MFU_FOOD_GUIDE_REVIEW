@@ -948,10 +948,10 @@ app.get('/all_threads/:userId', async (req, res) => {
         T.Thread_ID, T.message, T.time_posted, T.User_ID,
         U.fullname, U.username,
         P.profile_picture_url,
-        (SELECT COUNT(*) FROM Like_Thread WHERE Thread_ID = T.Thread_ID) AS total_likes,
-        (SELECT COUNT(*) FROM Comment_Thread WHERE Thread_ID = T.Thread_ID) AS total_comments,
+        (SELECT COUNT(*) FROM Thread_Likes WHERE Thread_ID = T.Thread_ID) AS total_likes,
+        (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = T.Thread_ID) AS total_comments,
         EXISTS (
-          SELECT 1 FROM Like_Thread WHERE Thread_ID = T.Thread_ID AND User_ID = ?
+          SELECT 1 FROM Thread_Likes WHERE Thread_ID = T.Thread_ID AND User_ID = ?
         ) AS is_liked
       FROM Thread T
       JOIN User U ON T.User_ID = U.User_ID
@@ -975,21 +975,21 @@ app.post('/like_thread', async (req, res) => {
   try {
     // เช็คว่ามีอยู่แล้วไหม
     const [rows] = await db.promise().execute(
-      `SELECT * FROM Like_Thread WHERE User_ID = ? AND Thread_ID = ?`,
+      `SELECT * FROM Thread_Likes WHERE User_ID = ? AND Thread_ID = ?`,
       [userId, threadId]
     );
 
     if (rows.length > 0) {
       // ยกเลิกไลค์
       await db.promise().execute(
-        `DELETE FROM Like_Thread WHERE User_ID = ? AND Thread_ID = ?`,
+        `DELETE FROM Thread_Likes WHERE User_ID = ? AND Thread_ID = ?`,
         [userId, threadId]
       );
       res.json({ liked: false });
     } else {
       // กดไลค์
       await db.promise().execute(
-        `INSERT INTO Like_Thread (User_ID, Thread_ID) VALUES (?, ?)`,
+        `INSERT INTO Thread_Likes (User_ID, Thread_ID) VALUES (?, ?)`,
         [userId, threadId]
       );
       res.json({ liked: true });
