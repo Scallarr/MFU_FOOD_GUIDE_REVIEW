@@ -992,7 +992,7 @@ app.post('/like_thread', async (req, res) => {
 
     // อัปเดต Total_likes ของ Thread นั้น ๆ
     await db.promise().execute(
-      `UPDATE Threads
+      `UPDATE Thread
        SET Total_likes = (
          SELECT COUNT(*) FROM Thread_Likes WHERE Thread_ID = ?
        )
