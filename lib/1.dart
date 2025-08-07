@@ -34,7 +34,7 @@ class _LeaderboardPageState extends State<LeaderboardPage2> {
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadPage()),
+          MaterialPageRoute(builder: (context) => ThreadsPage()),
         );
         break;
     }

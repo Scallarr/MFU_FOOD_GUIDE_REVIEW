@@ -939,47 +939,67 @@ app.post('/submit_reviews', async (req, res) => {
   }
 });
 
-app.get('/get_threads', async (req, res) => {
-  const currentUserId = req.query.user_id;
+app.get('/all_threads/:userId', async (req, res) => {
+  const userId = req.params.userId;
 
-  const [rows] = await db.promise().execute(
-    `SELECT 
-      Thread.Thread_ID,
-      Thread.message,
-      Thread.created_at,
-      Thread.Total_likes,
-      User.fullname,
-      Picture.picture_url,
-      (SELECT COUNT(*) FROM Thread_Likes 
-        WHERE Thread_Likes.Thread_ID = Thread.Thread_ID 
-          AND Thread_Likes.User_ID = ?) AS is_liked
-    FROM Thread
-    JOIN User ON Thread.User_ID = User.User_ID
-    JOIN user_Profile_Picture AS Picture ON Picture.User_ID = User.User_ID AND Picture.is_active = 1
-    WHERE Thread.admin_decision = 'Posted'
-    ORDER BY Thread.created_at DESC`,
-    [currentUserId]
-  );
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT 
+        T.Thread_ID, T.message, T.time_posted, T.User_ID,
+        U.fullname, U.username,
+        P.profile_picture_url,
+        (SELECT COUNT(*) FROM Like_Thread WHERE Thread_ID = T.Thread_ID) AS total_likes,
+        (SELECT COUNT(*) FROM Comment_Thread WHERE Thread_ID = T.Thread_ID) AS total_comments,
+        EXISTS (
+          SELECT 1 FROM Like_Thread WHERE Thread_ID = T.Thread_ID AND User_ID = ?
+        ) AS is_liked
+      FROM Thread T
+      JOIN User U ON T.User_ID = U.User_ID
+      LEFT JOIN user_Profile_Picture P ON P.User_ID = U.User_ID AND P.is_active = 1
+      WHERE T.admin_decision = 'Posted'
+      ORDER BY T.time_posted DESC
+    `, [userId]);
 
-  res.json(rows);
-  console.log(rows);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
+
 
 app.post('/like_thread', async (req, res) => {
-  const { User_ID, Thread_ID } = req.body;
+  const { userId, threadId } = req.body;
+  if (!userId || !threadId) return res.status(400).send('Missing params');
 
-  await db.promise().execute(
-    `INSERT INTO Thread_Likes (User_ID, Thread_ID) VALUES (?, ?)`,
-    [User_ID, Thread_ID]
-  );
+  try {
+    // เช็คว่ามีอยู่แล้วไหม
+    const [rows] = await db.promise().execute(
+      `SELECT * FROM Like_Thread WHERE User_ID = ? AND Thread_ID = ?`,
+      [userId, threadId]
+    );
 
-  await db.promise().execute(
-    `UPDATE Thread SET Total_likes = Total_likes + 1 WHERE Thread_ID = ?`,
-    [Thread_ID]
-  );
-
-  res.sendStatus(200);
+    if (rows.length > 0) {
+      // ยกเลิกไลค์
+      await db.promise().execute(
+        `DELETE FROM Like_Thread WHERE User_ID = ? AND Thread_ID = ?`,
+        [userId, threadId]
+      );
+      res.json({ liked: false });
+    } else {
+      // กดไลค์
+      await db.promise().execute(
+        `INSERT INTO Like_Thread (User_ID, Thread_ID) VALUES (?, ?)`,
+        [userId, threadId]
+      );
+      res.json({ liked: true });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
+
 
 app.post('/unlike_thread', async (req, res) => {
   const { User_ID, Thread_ID } = req.body;
