@@ -96,6 +96,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
                         ),
                         onPressed: () {
                           toggleLike(thread['Thread_ID'], likedByUser);
+                          fetchThreads();
                         },
                       ),
                       Text('${thread['total_likes']}'),
