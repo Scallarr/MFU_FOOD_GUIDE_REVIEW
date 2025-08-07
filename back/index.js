@@ -957,7 +957,7 @@ app.get('/all_threads/:userId', async (req, res) => {
       JOIN User U ON T.User_ID = U.User_ID
       LEFT JOIN user_Profile_Picture P ON P.User_ID = U.User_ID AND P.is_active = 1
       WHERE T.admin_decision = 'Posted'
-      ORDER BY T.time_posted DESC
+      ORDER BY T.created_at DESC
     `, [userId]);
 
     res.json(rows);
