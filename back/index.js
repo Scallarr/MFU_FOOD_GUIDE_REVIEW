@@ -945,7 +945,7 @@ app.get('/all_threads/:userId', async (req, res) => {
   try {
     const [rows] = await db.promise().execute(`
       SELECT 
-        T.Thread_ID, T.message, T.time_posted, T.User_ID,
+        T.Thread_ID, T.message, T.created_at, T.User_ID,
         U.fullname, U.username,
         P.profile_picture_url,
         (SELECT COUNT(*) FROM Thread_Likes WHERE Thread_ID = T.Thread_ID) AS total_likes,
