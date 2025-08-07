@@ -961,6 +961,7 @@ app.get('/all_threads/:userId', async (req, res) => {
     `, [userId]);
 
     res.json(rows);
+    console.log(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

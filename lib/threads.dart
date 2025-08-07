@@ -83,7 +83,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(thread['time_posted']),
+                  Text(thread['created_at']),
                   const SizedBox(height: 4),
                   Text(thread['message']),
                   const SizedBox(height: 6),
