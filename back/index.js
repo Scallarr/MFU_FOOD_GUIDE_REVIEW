@@ -1025,6 +1025,52 @@ app.post('/unlike_thread', async (req, res) => {
   res.sendStatus(200);
 });
 
+app.post('/create_thread', async (req, res) => {
+  try {
+    const { User_ID, message } = req.body;
+    if (!User_ID || !message) {
+      return res.status(400).json({ error: 'Missing User_ID or message' });
+    }
+
+    const aiResult = await checkCommentAI(message);
+
+    let ai_evaluation = 'Undetermined';
+    let admin_decision = 'Pending';
+
+    if (aiResult === 'Safe') {
+      ai_evaluation = 'Safe';
+      admin_decision = 'Posted';
+    } else if (aiResult === 'Inappropriate') {
+      ai_evaluation = 'Inappropriate';
+      admin_decision = 'Pending';
+    }
+
+    const [result] = await db.promise().execute(
+      `INSERT INTO Thread 
+       (User_ID, message, ai_evaluation, admin_decision, created_at, Total_likes)
+       VALUES (?, ?, ?, ?, NOW(), 0)`,
+      [User_ID, message, ai_evaluation, admin_decision]
+    );
+
+    const newThreadId = result.insertId;
+
+    if (aiResult === 'Inappropriate') {
+     await db.promise().execute(
+        `INSERT INTO Admin_check_inappropriate_thread
+         (Thread_ID, Admin_ID, admin_action_taken)
+         VALUES (?, NULL, 'Pending')`,
+        [newThreadId]
+      );
+    }
+
+    res.json({ success: true, Thread_ID: newThreadId });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
