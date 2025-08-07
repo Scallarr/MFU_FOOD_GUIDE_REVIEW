@@ -23,11 +23,11 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
 
   Future<void> fetchReplies() async {
     final threadId =
-        widget.thread['Thread_ID'] ?? widget.thread['thread_id'] ?? 0;
-
+        widget.thread['Thread_ID'] ?? widget.thread['Thread_ID'] ?? 0;
+    print(threadId);
     // แก้ URL เป็นของ backend จริงของคุณ
     final url = Uri.parse(
-      'http://your-backend-url/api/thread_replies/$threadId',
+      'https://mfu-food-guide-review.onrender.com/api/thread_replies/$threadId',
     );
 
     try {

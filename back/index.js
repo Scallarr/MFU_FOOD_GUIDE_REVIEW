@@ -1080,7 +1080,7 @@ app.get('/api/thread_replies/:threadId', async (req, res) => {
   const threadId = req.params.threadId;
 
   try {
-    const [rows] = await pool.query(
+    const [rows] = await db.promise().execute(
       `SELECT
         tr.Thread_reply_ID,
         tr.Thread_ID,
