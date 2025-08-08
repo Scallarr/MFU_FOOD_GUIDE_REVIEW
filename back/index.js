@@ -944,20 +944,37 @@ app.get('/all_threads/:userId', async (req, res) => {
 
   try {
     const [rows] = await db.promise().execute(`
-      SELECT 
-        T.Thread_ID, T.message, T.created_at, T.User_ID,
-        U.fullname, U.username,
-        P.picture_url,
-        T.Total_likes AS total_likes,
-        (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = T.Thread_ID) AS total_comments,
-        EXISTS (
-          SELECT 1 FROM Thread_Likes WHERE Thread_ID = T.Thread_ID AND User_ID = ?
-        ) AS is_liked
-      FROM Thread T
-      JOIN User U ON T.User_ID = U.User_ID
-      LEFT JOIN user_Profile_Picture P ON P.User_ID = U.User_ID AND P.is_active = 1
-      WHERE T.admin_decision = 'Posted'
-      ORDER BY T.created_at DESC
+    SELECT 
+    T.Thread_ID, 
+    T.message, 
+    T.created_at, 
+    T.User_ID,
+    U.fullname, 
+    U.username,
+    P.picture_url,
+    T.Total_likes AS total_likes,
+    (
+      SELECT COUNT(*) 
+      FROM Thread_reply TR
+      JOIN Thread TT ON TT.Thread_ID = TR.Thread_ID
+      WHERE TR.Thread_ID = T.Thread_ID
+        AND TT.admin_decision = 'Posted'
+    ) AS total_comments,
+    EXISTS (
+      SELECT 1 
+      FROM Thread_Likes 
+      WHERE Thread_ID = T.Thread_ID 
+        AND User_ID = ?
+    ) AS is_liked
+FROM Thread T
+JOIN User U 
+  ON T.User_ID = U.User_ID
+LEFT JOIN user_Profile_Picture P 
+  ON P.User_ID = U.User_ID 
+  AND P.is_active = 1
+WHERE T.admin_decision = 'Posted'
+ORDER BY T.created_at DESC
+
     `, [userId]);
 
     res.json(rows);
