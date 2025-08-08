@@ -247,7 +247,7 @@ app.get('/restaurant/:id', (req, res) => {
   SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
          r.rating_service, r.comment, r.total_likes, r.created_at,
          r.message_status,  -- ✅ ดึงสถานะด้วย
-         u.username, p.picture_url,
+         u.username,u.email, p.picture_url,
          EXISTS (
            SELECT 1 FROM Review_Likes rl
            WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
@@ -502,6 +502,8 @@ app.get('/leaderboard', async (req, res) => {
         u.User_ID,
         u.username,
         u.coins,
+        u.user,
+        u.email,
         COUNT(r.Review_ID) AS total_reviews,
         SUM(r.total_likes) AS total_likes,
         ROW_NUMBER() OVER (ORDER BY SUM(r.total_likes) DESC) AS \`rank\`,

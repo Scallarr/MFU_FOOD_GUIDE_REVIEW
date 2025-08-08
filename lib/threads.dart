@@ -438,22 +438,27 @@ class _ThreadsPageState extends State<ThreadsPage> {
                                               fontSize: 16,
                                             ),
                                           ),
-                                          SizedBox(width: 7),
+
                                           Icon(
                                             Icons.verified,
                                             size: 16,
                                             color: Colors.blue,
                                           ),
+                                          Spacer(),
+                                          Text(
+                                            timeAgo(thread['created_at']),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
                                         ],
                                       ),
+                                      SizedBox(height: 4),
                                       Text(
-                                        timeAgo(thread['created_at']),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
+                                        obfuscateEmail(thread['email'] ?? ''),
+                                        style: TextStyle(fontSize: 12.3),
                                       ),
-                                      Text(thread['email']),
                                     ],
                                   ),
                                 ),
@@ -709,4 +714,18 @@ class _ThreadsPageState extends State<ThreadsPage> {
       ),
     );
   }
+}
+
+String obfuscateEmail(String email) {
+  if (email.endsWith('@lamduan.mfu.ac.th')) {
+    final domain = '@lamduan.mfu.ac.th';
+    if (email.length > domain.length + 2) {
+      final prefix = email.substring(0, 2);
+      return '$prefix********$domain';
+    }
+  } else if (email.endsWith('@mfu.ac.th')) {
+    final domain = '@mfu.ac.th';
+    return '**********$domain';
+  }
+  return email; // กรณีอื่น ๆ
 }

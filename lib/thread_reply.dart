@@ -577,6 +577,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
+                  // mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -597,11 +598,19 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                           size: 16,
                           color: Colors.blue,
                         ),
+                        const SizedBox(width: 50),
+                        Text(
+                          timeAgo(thread['created_at'] ?? ''),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ],
                     ),
                     Text(
-                      timeAgo(thread['created_at'] ?? ''),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      obfuscateEmail(thread['email'] ?? ''),
+                      style: TextStyle(fontSize: 12.3),
                     ),
                   ],
                 ),
@@ -742,26 +751,32 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                 ),
               ),
               const SizedBox(width: 10),
-              // Profile Picture (ขวา)
+
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
-                    radius: 30,
+                  Padding(
+                    padding: EdgeInsets.only(
+                      right: 10,
+                      top: 2,
+                    ), // เว้นขอบรอบรูป
+                    child: CircleAvatar(
+                      backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
+                      radius: 30,
+                    ),
                   ),
                   Positioned(
-                    top: -7,
-                    left: 40,
+                    top: 0,
+                    left: 42,
                     child: Container(
-                      padding: const EdgeInsets.all(5),
+                      padding: const EdgeInsets.all(4), // เว้นขอบรอบไอคอน
                       decoration: BoxDecoration(
                         color: const Color.fromARGB(255, 212, 69, 69),
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: const Icon(
                         Icons.verified,
-                        size: 15,
+                        size: 19,
                         color: Colors.white,
                       ),
                     ),
@@ -775,13 +790,17 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
-                    radius: 30,
+                  Padding(
+                    padding: EdgeInsets.only(left: 5, top: 2), // เว้นขอบรอบรูป
+                    child: CircleAvatar(
+                      backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
+                      radius: 30,
+                    ),
                   ),
+
                   Positioned(
-                    top: -5,
-                    left: -5,
+                    top: -4,
+                    left: 0,
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
@@ -790,7 +809,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                       ),
                       child: const Icon(
                         Icons.verified,
-                        size: 20,
+                        size: 19,
                         color: Colors.white,
                       ),
                     ),
@@ -962,4 +981,18 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
       return '';
     }
   }
+}
+
+String obfuscateEmail(String email) {
+  if (email.endsWith('@lamduan.mfu.ac.th')) {
+    final domain = '@lamduan.mfu.ac.th';
+    if (email.length > domain.length + 2) {
+      final prefix = email.substring(0, 2);
+      return '$prefix********$domain';
+    }
+  } else if (email.endsWith('@mfu.ac.th')) {
+    final domain = '@mfu.ac.th';
+    return '**********$domain';
+  }
+  return email; // กรณีอื่น ๆ
 }
