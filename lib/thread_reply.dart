@@ -20,6 +20,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   List<Map<String, dynamic>> mentionSuggestions = [];
   bool showSuggestions = false;
   String currentMention = '';
+  String? pictureUrl;
 
   TextEditingController _replyController = TextEditingController();
   bool _isSending = false;
@@ -112,7 +113,16 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
         setState(() {
           _replyController.clear();
         });
-
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Reply sent successfully!',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Color.fromARGB(255, 0, 0, 0),
+            duration: Duration(seconds: 2),
+          ),
+        );
         if (responseData['ai_evaluation'] == 'Inappropriate') {
           // แสดง dialog แจ้งเตือนคำหยาบ
           await showDialog(
@@ -307,11 +317,18 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                   itemBuilder: (context, index) {
                     final user = mentionSuggestions[index];
                     return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: NetworkImage(
-                          'https://mfu-food-guide-review.onrender.com/user_profile_picture/${user['User_ID']}',
-                        ),
-                      ),
+                      leading:
+                          user['picture_url'] != null &&
+                              user['picture_url'].isNotEmpty
+                          ? CircleAvatar(
+                              backgroundImage: NetworkImage(
+                                user['picture_url'],
+                              ),
+                            )
+                          : const CircleAvatar(
+                              child: Icon(Icons.person, size: 24),
+                            ),
+
                       title: Text(user['username']),
                       onTap: () {
                         final text = _replyController.text;
@@ -364,51 +381,77 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
 
                   // ช่องพิมพ์ข้อความ
                   Expanded(
-                    child: TextField(
-                      controller: _replyController,
-                      maxLines: null,
-                      onChanged: (text) {
-                        final words = text.split(' ');
-                        final lastWord = words.isNotEmpty ? words.last : '';
+                    child: Stack(
+                      children: [
+                        // 1. RichText แสดงข้อความพร้อมไฮไลต์ @mention
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: RichText(
+                            text: _buildHighlightText(_replyController.text),
+                          ),
+                        ),
 
-                        if (lastWord.startsWith('@')) {
-                          final mentionText = lastWord
-                              .substring(1)
-                              .toLowerCase();
-                          setState(() {
-                            currentMention = mentionText;
-                            mentionSuggestions = allUsers
-                                .where(
-                                  (user) =>
-                                      user['username'].toLowerCase().startsWith(
-                                        mentionText,
-                                      ) &&
-                                      user['User_ID'] != currentUserId,
-                                )
-                                .toList();
-                            showSuggestions = mentionSuggestions.isNotEmpty;
-                          });
-                        } else {
-                          setState(() {
-                            showSuggestions = false;
-                          });
-                        }
-                      },
-                      decoration: const InputDecoration(
-                        hintText: 'Write a reply...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(20)),
-                          borderSide: BorderSide.none,
+                        // 2. TextField โปร่งใส ซ้อนบน RichText
+                        TextField(
+                          controller: _replyController,
+                          maxLines: null,
+                          cursorColor: Colors.black,
+                          style: const TextStyle(
+                            color: Color.fromARGB(255, 0, 0, 0),
+                          ), // ทำให้ตัวอักษรใน TextField หายไป
+                          decoration: const InputDecoration(
+                            hintText: 'Write a reply...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(20),
+                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Color(0xFFF0F0F0),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                          onChanged: (text) {
+                            final words = text.split(' ');
+                            final lastWord = words.isNotEmpty ? words.last : '';
+
+                            if (lastWord.startsWith('@')) {
+                              final mentionText = lastWord
+                                  .substring(1)
+                                  .toLowerCase();
+                              setState(() {
+                                currentMention = mentionText;
+                                mentionSuggestions = allUsers
+                                    .where(
+                                      (user) =>
+                                          user['username']
+                                              .toLowerCase()
+                                              .startsWith(mentionText) &&
+                                          user['User_ID'] != currentUserId,
+                                    )
+                                    .toList();
+                                showSuggestions = mentionSuggestions.isNotEmpty;
+                              });
+                            } else {
+                              setState(() {
+                                showSuggestions = false;
+                              });
+                            }
+                            setState(
+                              () {},
+                            ); // รีเฟรชเพื่อให้ RichText อัพเดตด้วย
+                          },
                         ),
-                        filled: true,
-                        fillColor: Color(0xFFF0F0F0),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
+
                   const SizedBox(width: 10),
 
                   // ปุ่มส่ง
@@ -608,7 +651,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            reply['fullname'] ?? '',
+                            reply['username'] ?? '',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 13.5,
@@ -632,10 +675,8 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        reply['message'] ?? '',
-                        textAlign: TextAlign.left,
-                        style: const TextStyle(fontSize: 14, height: 1.4),
+                      RichText(
+                        text: _buildMessageWithMentions(reply['message'] ?? ''),
                       ),
                     ],
                   ),
@@ -734,10 +775,10 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                             child: Row(
                               children: [
                                 Text(
-                                  reply['fullname'] ?? '',
+                                  reply['username'] ?? '',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 13.5,
+                                    fontSize: 14,
                                   ),
                                 ),
                                 const SizedBox(width: 5),
@@ -752,22 +793,99 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                           Text(
                             timeAgo(reply['created_at'] ?? ''),
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: Colors.grey,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        reply['message'] ?? '',
-                        style: const TextStyle(fontSize: 14, height: 1.4),
+                      RichText(
+                        text: _buildMessageWithMentions(reply['message'] ?? ''),
                       ),
                     ],
                   ),
                 ),
               ),
             ],
+    );
+  }
+
+  // ฟังก์ชันช่วยแปลงข้อความธรรมดาเป็น TextSpan ที่ไฮไลต์ @mentions
+  TextSpan _buildMessageWithMentions(String message) {
+    final RegExp regex = RegExp(r'@[\w]+'); // หา pattern @username
+    final List<TextSpan> spans = [];
+
+    int start = 0;
+    final matches = regex.allMatches(message);
+
+    for (final match in matches) {
+      if (match.start > start) {
+        spans.add(
+          TextSpan(
+            text: message.substring(start, match.start),
+            style: const TextStyle(color: Colors.black, fontSize: 17),
+          ),
+        );
+      }
+
+      final mentionText = message.substring(match.start, match.end);
+
+      spans.add(
+        TextSpan(
+          text: mentionText,
+          style: const TextStyle(
+            fontSize: 17,
+            color: Colors.red,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+
+      start = match.end;
+    }
+
+    if (start < message.length) {
+      spans.add(
+        TextSpan(
+          text: message.substring(start),
+          style: const TextStyle(color: Colors.black, fontSize: 17),
+        ),
+      );
+    }
+
+    return TextSpan(children: spans);
+  }
+
+  TextSpan _buildHighlightText(String text) {
+    final RegExp exp = RegExp(r'(@\w+)');
+    final List<TextSpan> spans = [];
+    int start = 0;
+
+    final matches = exp.allMatches(text);
+
+    for (final match in matches) {
+      if (match.start > start) {
+        spans.add(TextSpan(text: text.substring(start, match.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
+      );
+      start = match.end;
+    }
+    if (start < text.length) {
+      spans.add(TextSpan(text: text.substring(start)));
+    }
+
+    return TextSpan(
+      style: const TextStyle(color: Colors.black, fontSize: 10),
+      children: spans,
     );
   }
 
