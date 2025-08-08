@@ -1122,14 +1122,14 @@ app.post('/api/send_reply', async (req, res) => {
     const hasProfanity = aiEvaluation === 'Inappropriate';
     const adminDecision = hasProfanity ? 'Pending' : 'Posted';
 
-    const conn = db.promise().execute();
+    const conn = await db.promise().getConnection(); // ขอ connection จาก pool
     try {
       await conn.beginTransaction();
 
       const [result] = await conn.execute(
         `INSERT INTO Thread_reply
-        (Thread_ID, User_ID, message, created_at, total_Likes, ai_evaluation, admin_decision)
-        VALUES (?, ?, ?, NOW(), 0, ?, ?)`,
+          (Thread_ID, User_ID, message, created_at, total_Likes, ai_evaluation, admin_decision)
+          VALUES (?, ?, ?, NOW(), 0, ?, ?)`,
         [Thread_ID, User_ID, message, aiEvaluation, adminDecision]
       );
 
@@ -1138,8 +1138,8 @@ app.post('/api/send_reply', async (req, res) => {
       if (hasProfanity) {
         await conn.execute(
           `INSERT INTO Admin_check_inappropriate_thread_reply
-          (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
-          VALUES (?, NULL, 'Pending', NULL, NULL)`,
+            (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
+            VALUES (?, NULL, 'Pending', NULL, NULL)`,
           [insertedId]
         );
       }
@@ -1151,13 +1151,14 @@ app.post('/api/send_reply', async (req, res) => {
       console.error(dbErr);
       res.status(500).json({ error: 'Database error' });
     } finally {
-      conn.release();
+      conn.release(); // ปล่อย connection กลับ pool
     }
   } catch (err) {
     console.error('Error in AI checking:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
