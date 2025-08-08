@@ -21,6 +21,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   bool showSuggestions = false;
   String currentMention = '';
   String? pictureUrl;
+  ScrollController _scrollController = ScrollController();
 
   TextEditingController _replyController = TextEditingController();
   bool _isSending = false;
@@ -35,6 +36,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _replyController.dispose();
     super.dispose();
   }
@@ -57,10 +59,20 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        final filteredReplies = data;
         setState(() {
-          replies = filteredReplies;
+          replies = data;
           isLoading = false;
+        });
+
+        // เลื่อนลงล่างหลังโหลดข้อมูลเสร็จ (เพิ่ม delay เล็กน้อยเพื่อให้ ListView สร้าง widget เสร็จ)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
         });
       } else {
         setState(() => isLoading = false);
@@ -291,6 +303,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                   : replies.isEmpty
                   ? const Center(child: Text('No replies found'))
                   : ListView.builder(
+                      controller: _scrollController,
                       itemCount: replies.length,
                       itemBuilder: (context, index) {
                         final reply = replies[index];

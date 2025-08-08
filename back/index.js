@@ -1098,7 +1098,7 @@ app.get('/api/thread_replies/:threadId', async (req, res) => {
         ON u.User_ID = upp.User_ID AND upp.is_active = 1
       WHERE tr.Thread_ID = ?
         AND tr.admin_decision = 'Posted'
-      ORDER BY tr.created_at DESC`,
+      ORDER BY tr.created_at ASC`,
       [threadId]
     );
 
