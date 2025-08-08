@@ -1194,6 +1194,36 @@ app.get('/api/all_users', (req, res) => {
 });
 
 
+// ✅ API: คืนค่า URL ของรูปโปรไฟล์
+app.get('/user_profile_picture/:userId', (req, res) => {
+  const userId = req.params.userId;
+
+  const sql = `
+    SELECT picture_url 
+    FROM user_profile_picture 
+    WHERE User_ID = ? AND is_active = 1
+    LIMIT 1
+  `;
+
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching picture_url:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+   if (results.length > 0 && results[0].picture_url) {
+  console.log(results[0].picture_url);  // log ก่อนส่ง
+  return res.status(200).json({ picture_url: results[0].picture_url });
+}
+ else {
+      // 🔄 ไม่เจอ → ส่ง default URL
+      return res.status(200).json({
+        picture_url: 'https://example.com/default-profile.jpg'
+      });
+    }
+    
+  });
+});
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
