@@ -951,7 +951,7 @@ app.get('/all_threads/:userId', async (req, res) => {
     T.User_ID,
     U.fullname, 
     U.username,
-    u.email,
+    U.email,
     P.picture_url,
     T.Total_likes AS total_likes,
     (

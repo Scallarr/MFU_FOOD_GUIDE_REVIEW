@@ -453,6 +453,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
                                           color: Colors.grey[600],
                                         ),
                                       ),
+                                      Text(thread['email']),
                                     ],
                                   ),
                                 ),
