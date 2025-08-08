@@ -411,6 +411,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 227, 221, 209),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -436,7 +437,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverAppBar(
-              backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+              backgroundColor: const Color(0xFFCEBFA3),
               pinned: false,
               floating: true,
               snap: true,

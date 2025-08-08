@@ -171,12 +171,14 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
   Widget build(BuildContext context) {
     if (isLoading || restaurant == null) {
       return Scaffold(
+        backgroundColor: const Color(0xFFCEBFA3),
         appBar: AppBar(title: Text('Restaurant Details')),
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 223, 219, 213),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -593,11 +595,11 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
         ...menusToShow.map(
           (menu) => Card(
             // color: const Color.fromARGB(255, 240, 231, 183),
-            color: const Color.fromARGB(255, 251, 236, 224),
+            color: const Color.fromARGB(255, 248, 244, 241),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            elevation: 3,
+            elevation: 8,
             margin: EdgeInsets.symmetric(vertical: 15),
             child: Padding(
               padding: const EdgeInsets.all(0.0),
@@ -668,17 +670,17 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                   });
                 },
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 250, 235, 223),
-                  foregroundColor: const Color.fromARGB(255, 51, 50, 50),
+                  backgroundColor: const Color.fromARGB(255, 197, 172, 152),
+                  foregroundColor: const Color.fromARGB(255, 255, 255, 255),
                   padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                     side: BorderSide(
                       color: const Color.fromARGB(
                         255,
-                        184,
-                        153,
-                        140,
+                        230,
+                        212,
+                        212,
                       ), // ← สีเส้นขอบที่ต้องการ
                       width: 1.5, // ← ความหนาของเส้นขอบ
                     ),
@@ -732,168 +734,182 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
 
           return Card(
             // color: const Color.fromARGB(255, 255, 239, 210),
-            color: const Color.fromARGB(255, 247, 235, 216),
+            color: const Color.fromARGB(255, 243, 241, 241),
             margin: EdgeInsets.symmetric(vertical: 10),
-            elevation: 4,
+            elevation: 8,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             child: Container(
-              constraints: BoxConstraints(minHeight: 100),
-              // padding: EdgeInsets.all(15),
-              padding: EdgeInsets.only(
-                left: 15,
-                top: 15,
-                right: 14,
-                bottom: 13,
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 243, 241, 241),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: 17),
-                    child: CircleAvatar(
-                      backgroundImage: NetworkImage(review.pictureUrl),
-                      radius: 44,
-                      backgroundColor: Colors.grey[200],
+
+              // ... child widget อื่น ๆ
+              child: Container(
+                constraints: BoxConstraints(minHeight: 100),
+                // padding: EdgeInsets.all(15),
+                padding: EdgeInsets.only(
+                  left: 15,
+                  top: 15,
+                  right: 14,
+                  bottom: 13,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(top: 17),
+                      child: CircleAvatar(
+                        backgroundImage: NetworkImage(review.pictureUrl),
+                        radius: 44,
+                        backgroundColor: Colors.grey[200],
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(right: 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    review.username,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Stack(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(right: 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      review.username,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    getTimeAgo(
-                                          DateTime.parse(
-                                            review.createdAt,
-                                          ).toLocal(), // ✅ แปลงเป็น Local
-                                        ).isNotEmpty
-                                        ? getTimeAgo(
+                                    SizedBox(width: 10),
+                                    Text(
+                                      getTimeAgo(
                                             DateTime.parse(
                                               review.createdAt,
-                                            ).toLocal(), // ✅
-                                          )
-                                        : _formatDate(review.createdAt),
-                                    style: TextStyle(
-                                      color: const Color.fromARGB(255, 0, 0, 0),
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: List.generate(5, (i) {
-                                  if (i < review.ratingOverall.floor()) {
-                                    return Icon(
-                                      Icons.star,
-                                      size: 20,
-                                      color: Colors.amber,
-                                    );
-                                  } else if (i < review.ratingOverall &&
-                                      review.ratingOverall - i >= 0.5) {
-                                    return Icon(
-                                      Icons.star_half,
-                                      size: 20,
-                                      color: Colors.amber,
-                                    );
-                                  } else {
-                                    return Icon(
-                                      Icons.star_border,
-                                      size: 20,
-                                      color: Colors.amber,
-                                    );
-                                  }
-                                }),
-                              ),
-                              SizedBox(height: 10),
-                              Row(children: []),
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  right: 80,
-                                ), // ปรับตามต้องการ
-                                child: Text(
-                                  review.comment,
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                            ],
-                          ),
-                        ),
-
-                        SizedBox(height: 12),
-                        Padding(
-                          padding: EdgeInsetsGeometry.only(right: 7, top: 30),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Column(
-                                // mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (userId != null) {
-                                        likeReview(review.id);
-                                      }
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                        right: 00,
-                                        left: 60,
-                                        top: 10,
-                                      ), // ปรับตามต้องการ
-                                      child: Icon(
-                                        Icons.favorite,
-                                        color: isLiked
-                                            ? Colors.red
-                                            : Colors.grey,
-                                        size: 50,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Padding(
-                                    padding: EdgeInsets.only(
-                                      left: 60,
-                                      bottom: 20,
-                                    ), // ปรับตามต้องการ
-                                    child: Text(
-                                      "${review.totalLikes} Likes",
+                                            ).toLocal(), // ✅ แปลงเป็น Local
+                                          ).isNotEmpty
+                                          ? getTimeAgo(
+                                              DateTime.parse(
+                                                review.createdAt,
+                                              ).toLocal(), // ✅
+                                            )
+                                          : _formatDate(review.createdAt),
                                       style: TextStyle(
-                                        fontSize: 11,
-                                        // color: Colors.grey[700],
+                                        color: const Color.fromARGB(
+                                          255,
+                                          0,
+                                          0,
+                                          0,
+                                        ),
+                                        fontSize: 13,
                                       ),
                                     ),
+                                  ],
+                                ),
+                                SizedBox(height: 6),
+                                Row(
+                                  children: List.generate(5, (i) {
+                                    if (i < review.ratingOverall.floor()) {
+                                      return Icon(
+                                        Icons.star,
+                                        size: 20,
+                                        color: Colors.amber,
+                                      );
+                                    } else if (i < review.ratingOverall &&
+                                        review.ratingOverall - i >= 0.5) {
+                                      return Icon(
+                                        Icons.star_half,
+                                        size: 20,
+                                        color: Colors.amber,
+                                      );
+                                    } else {
+                                      return Icon(
+                                        Icons.star_border,
+                                        size: 20,
+                                        color: Colors.amber,
+                                      );
+                                    }
+                                  }),
+                                ),
+                                SizedBox(height: 10),
+                                Row(children: []),
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    right: 80,
+                                  ), // ปรับตามต้องการ
+                                  child: Text(
+                                    review.comment,
+                                    style: TextStyle(fontSize: 13),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                SizedBox(height: 10),
+                              ],
+                            ),
                           ),
-                        ),
 
-                        // SizedBox(height: 20),
-                      ],
+                          SizedBox(height: 12),
+                          Padding(
+                            padding: EdgeInsetsGeometry.only(right: 7, top: 30),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Column(
+                                  // mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (userId != null) {
+                                          likeReview(review.id);
+                                        }
+                                      },
+                                      child: Padding(
+                                        padding: EdgeInsets.only(
+                                          right: 00,
+                                          left: 60,
+                                          top: 10,
+                                        ), // ปรับตามต้องการ
+                                        child: Icon(
+                                          Icons.favorite,
+                                          color: isLiked
+                                              ? Colors.red
+                                              : Colors.grey,
+                                          size: 50,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 60,
+                                        bottom: 20,
+                                      ), // ปรับตามต้องการ
+                                      child: Text(
+                                        "${review.totalLikes} Likes",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          // color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // SizedBox(height: 20),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

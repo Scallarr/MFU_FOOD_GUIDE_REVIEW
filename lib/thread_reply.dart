@@ -15,7 +15,8 @@ class ThreadRepliesPage extends StatefulWidget {
 class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   List replies = [];
   bool isLoading = true;
-  int? currentUserId;
+  int? userId;
+  String? profilePictureUrl;
   List<Map<String, dynamic>> allUsers = [];
   List<Map<String, dynamic>> mentionSuggestions = [];
   bool showSuggestions = false;
@@ -32,6 +33,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
     fetchReplies();
     loadUserId();
     fetchAllUsers();
+    fetchProfilePicture();
   }
 
   @override
@@ -44,8 +46,31 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   Future<void> loadUserId() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      currentUserId = prefs.getInt('user_id');
+      userId = prefs.getInt('user_id');
     });
+  }
+
+  Future<void> fetchProfilePicture() async {
+    final prefs = await SharedPreferences.getInstance();
+    userId = prefs.getInt('user_id');
+    print(userId);
+
+    if (userId == null) return;
+    final url = Uri.parse(
+      'https://mfu-food-guide-review.onrender.com/user_profile_picture/$userId',
+    );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print(data);
+        setState(() {
+          profilePictureUrl = data['picture_url'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('Error fetching profile picture: $e');
+    }
   }
 
   Future<void> fetchReplies() async {
@@ -100,7 +125,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   }
 
   Future<void> sendReply() async {
-    if (_replyController.text.trim().isEmpty || currentUserId == null) return;
+    if (_replyController.text.trim().isEmpty || userId == null) return;
 
     setState(() {
       _isSending = true;
@@ -114,7 +139,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
         Uri.parse('https://mfu-food-guide-review.onrender.com/api/send_reply'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'User_ID': currentUserId,
+          'User_ID': userId,
           'Thread_ID': threadId,
           'message': message,
         }),
@@ -240,6 +265,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
         }
 
         await fetchReplies();
+        await refreshThreadData();
       } else {
         ScaffoldMessenger.of(
           context,
@@ -254,6 +280,27 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
     setState(() {
       _isSending = false;
     });
+  }
+
+  Future<void> refreshThreadData() async {
+    try {
+      final threadId = widget.thread['Thread_ID'];
+      final response = await http.get(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/api/thread/$threadId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final updatedThread = json.decode(response.body);
+        setState(() {
+          widget.thread.clear();
+          widget.thread.addAll(updatedThread); // อัปเดตข้อมูล thread
+        });
+      }
+    } catch (e) {
+      print('Error refreshing thread: $e');
+    }
   }
 
   @override
@@ -288,86 +335,96 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
         foregroundColor: Colors.black,
         elevation: 1,
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
+      body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 18),
-            _buildThreadItem(thread),
-            const SizedBox(height: 16),
-            const SizedBox(height: 20),
             Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : replies.isEmpty
-                  ? const Center(child: Text('No replies found'))
-                  : ListView.builder(
-                      controller: _scrollController,
-                      itemCount: replies.length,
-                      itemBuilder: (context, index) {
-                        final reply = replies[index];
-                        return _buildReplyItem(reply);
-                      },
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 18),
+                    _buildThreadItem(thread),
+                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+                    Expanded(
+                      child: isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : replies.isEmpty
+                          ? const Center(child: Text('No replies found'))
+                          : ListView.builder(
+                              controller: _scrollController,
+                              itemCount: replies.length,
+                              itemBuilder: (context, index) {
+                                final reply = replies[index];
+                                return _buildReplyItem(reply);
+                              },
+                            ),
                     ),
-            ),
-            if (showSuggestions)
-              Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade300),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
+                    if (showSuggestions)
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.grey.shade300),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListView.builder(
+                          itemCount: mentionSuggestions.length,
+                          itemBuilder: (context, index) {
+                            final user = mentionSuggestions[index];
+                            return ListTile(
+                              leading:
+                                  (user['picture_url'] != null &&
+                                      user['picture_url'].isNotEmpty)
+                                  ? CircleAvatar(
+                                      backgroundImage: NetworkImage(
+                                        user['picture_url'],
+                                      ),
+                                    )
+                                  : const CircleAvatar(
+                                      child: Icon(Icons.person, size: 24),
+                                    ),
+                              title: Text(user['username']),
+                              onTap: () {
+                                final text = _replyController.text;
+                                final words = text.split(' ');
+                                if (words.isNotEmpty) {
+                                  words.removeLast();
+                                  words.add('@${user['username']}');
+                                }
+                                final newText = words.join(' ') + ' ';
+                                _replyController.text = newText;
+                                _replyController.selection =
+                                    TextSelection.fromPosition(
+                                      TextPosition(
+                                        offset: _replyController.text.length,
+                                      ),
+                                    );
+
+                                setState(() {
+                                  showSuggestions = false;
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
                   ],
                 ),
-                child: ListView.builder(
-                  itemCount: mentionSuggestions.length,
-                  itemBuilder: (context, index) {
-                    final user = mentionSuggestions[index];
-                    return ListTile(
-                      leading:
-                          user['picture_url'] != null &&
-                              user['picture_url'].isNotEmpty
-                          ? CircleAvatar(
-                              backgroundImage: NetworkImage(
-                                user['picture_url'],
-                              ),
-                            )
-                          : const CircleAvatar(
-                              child: Icon(Icons.person, size: 24),
-                            ),
-
-                      title: Text(user['username']),
-                      onTap: () {
-                        final text = _replyController.text;
-                        final words = text.split(' ');
-                        if (words.isNotEmpty) {
-                          words.removeLast();
-                          words.add('@${user['username']}');
-                        }
-                        final newText = words.join(' ') + ' ';
-                        _replyController.text = newText;
-                        _replyController.selection = TextSelection.fromPosition(
-                          TextPosition(offset: _replyController.text.length),
-                        );
-
-                        setState(() {
-                          showSuggestions = false;
-                        });
-                      },
-                    );
-                  },
-                ),
               ),
+            ),
 
-            // --- เพิ่มช่องใส่ Reply ด้านล่าง ---
+            // **Input Reply ด้านล่าง แยกออกมา**
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              margin: EdgeInsets.zero, // เอา padding/margin ออกให้ชิดขอบล่าง
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -380,48 +437,45 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
               ),
               child: Row(
                 children: [
-                  // รูปโปรไฟล์ซ้ายสุด
                   CircleAvatar(
-                    radius: 22,
-                    backgroundImage: currentUserId != null
-                        ? NetworkImage(
-                            'https://mfu-food-guide-review.onrender.com/user_profile_picture/$currentUserId',
-                          )
-                        : null,
-                    backgroundColor: Colors.grey.shade300,
+                    radius: 30,
+                    backgroundImage:
+                        (profilePictureUrl != null &&
+                            profilePictureUrl!.isNotEmpty)
+                        ? NetworkImage(profilePictureUrl!)
+                        : const NetworkImage(
+                            'https://e7.pngegg.com/pngimages/84/165/png-clipart-united-states-avatar-organization-information-user-avatar-service-computer-wallpaper-thumbnail.png',
+                          ),
+                    backgroundColor: Colors.grey.shade200,
                   ),
+
                   const SizedBox(width: 10),
 
-                  // ช่องพิมพ์ข้อความ
                   Expanded(
                     child: Stack(
                       children: [
-                        // 1. RichText แสดงข้อความพร้อมไฮไลต์ @mention
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                            horizontal: 0,
+                            vertical: 10,
                           ),
                           child: RichText(
                             text: _buildHighlightText(_replyController.text),
                           ),
                         ),
-
-                        // 2. TextField โปร่งใส ซ้อนบน RichText
                         TextField(
                           controller: _replyController,
                           maxLines: null,
                           cursorColor: Colors.black,
                           style: const TextStyle(
                             color: Color.fromARGB(255, 0, 0, 0),
-                          ), // ทำให้ตัวอักษรใน TextField หายไป
+                          ),
                           decoration: const InputDecoration(
                             hintText: 'Write a reply...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.all(
                                 Radius.circular(20),
                               ),
-                              borderSide: BorderSide.none,
                             ),
                             filled: true,
                             fillColor: Color(0xFFF0F0F0),
@@ -431,34 +485,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                             ),
                           ),
                           onChanged: (text) {
-                            final words = text.split(' ');
-                            final lastWord = words.isNotEmpty ? words.last : '';
-
-                            if (lastWord.startsWith('@')) {
-                              final mentionText = lastWord
-                                  .substring(1)
-                                  .toLowerCase();
-                              setState(() {
-                                currentMention = mentionText;
-                                mentionSuggestions = allUsers
-                                    .where(
-                                      (user) =>
-                                          user['username']
-                                              .toLowerCase()
-                                              .startsWith(mentionText) &&
-                                          user['User_ID'] != currentUserId,
-                                    )
-                                    .toList();
-                                showSuggestions = mentionSuggestions.isNotEmpty;
-                              });
-                            } else {
-                              setState(() {
-                                showSuggestions = false;
-                              });
-                            }
-                            setState(
-                              () {},
-                            ); // รีเฟรชเพื่อให้ RichText อัพเดตด้วย
+                            // ...logic mention...
                           },
                         ),
                       ],
@@ -467,7 +494,6 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
 
                   const SizedBox(width: 10),
 
-                  // ปุ่มส่ง
                   _isSending
                       ? const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 12),
@@ -623,8 +649,8 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   }
 
   Widget _buildReplyItem(Map reply) {
-    final isMe = reply['User_ID'] == currentUserId;
-    print(currentUserId);
+    final isMe = reply['User_ID'] == userId;
+    print(userId);
     print(reply['User_ID']);
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/dashboard.dart';
+import 'package:myapp/home.dart';
+import 'package:myapp/leaderboard.dart';
 import 'package:myapp/thread_reply.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,6 +17,7 @@ class ThreadsPage extends StatefulWidget {
 class _ThreadsPageState extends State<ThreadsPage> {
   List threads = [];
   int? userId;
+  int _selectedIndex = 3;
   TextEditingController _textController = TextEditingController();
 
   TextEditingController _searchController = TextEditingController();
@@ -53,6 +57,8 @@ class _ThreadsPageState extends State<ThreadsPage> {
       setState(() {
         threads = json.decode(response.body);
       });
+      print('f');
+      print(threads);
     } else {
       throw Exception('Failed to load threads');
     }
@@ -74,6 +80,25 @@ class _ThreadsPageState extends State<ThreadsPage> {
     } else {
       throw Exception('Failed to toggle like');
     }
+  }
+
+  Future<String?> fetchUserPictureUrl(int? userId) async {
+    if (userId == null) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/user_profile_picture/$userId',
+        ),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['picture_url'] as String?;
+      }
+    } catch (e) {
+      print('Error fetching user picture: $e');
+    }
+    return null;
   }
 
   Future<void> sendThread() async {
@@ -228,6 +253,34 @@ class _ThreadsPageState extends State<ThreadsPage> {
     }
   }
 
+  void _onItemTapped(int index) {
+    if (index == _selectedIndex) return;
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => RestaurantListPage()),
+        );
+        break;
+      case 1:
+        // Already on leaderboard
+        break;
+      case 2:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => DashboardPage()),
+        );
+        break;
+      case 3:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LeaderboardPage()),
+        );
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // กรอง threads ตาม search query
@@ -241,7 +294,12 @@ class _ThreadsPageState extends State<ThreadsPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
+      backgroundColor: const Color.fromARGB(
+        255,
+        245,
+        236,
+        206,
+      ), // สีพื้นหลังอ่อนๆ
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -249,7 +307,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
             floating: true,
             snap: true,
             pinned: false,
-            backgroundColor: const Color(0xFFCEBFA3),
+            backgroundColor: const Color.fromARGB(255, 202, 184, 151),
             expandedHeight: 70,
             flexibleSpace: const FlexibleSpaceBar(
               centerTitle: true,
@@ -318,13 +376,17 @@ class _ThreadsPageState extends State<ThreadsPage> {
               final likedByUser = thread['is_liked'] == 1;
 
               return InkWell(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final shouldRefresh = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => ThreadRepliesPage(thread: thread),
                     ),
                   );
+
+                  if (shouldRefresh == true) {
+                    await fetchThreads(); // ฟังก์ชันโหลด thread ใหม่
+                  }
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(
@@ -536,8 +598,27 @@ class _ThreadsPageState extends State<ThreadsPage> {
           const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
         ],
       ),
-
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color.fromARGB(255, 175, 128, 52),
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.emoji_events),
+            label: 'Leaderboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
+        ],
+      ),
       bottomSheet: Container(
+        height: 80,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -552,16 +633,33 @@ class _ThreadsPageState extends State<ThreadsPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundImage: userId != null
-                  ? NetworkImage(
-                      'https://mfu-food-guide-review.onrender.com/user_profile_picture/$userId',
-                    )
-                  : null,
-              backgroundColor: Colors.grey.shade300,
+            FutureBuilder<String?>(
+              future: fetchUserPictureUrl(userId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.grey.shade300,
+                    child: const CircularProgressIndicator(),
+                  );
+                } else if (snapshot.hasError || snapshot.data == null) {
+                  return CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.grey.shade300,
+                    child: const Icon(Icons.person),
+                  );
+                } else {
+                  return CircleAvatar(
+                    radius: 22,
+                    backgroundImage: NetworkImage(snapshot.data!),
+                    backgroundColor: Colors.grey.shade300,
+                  );
+                }
+              },
             ),
+
             const SizedBox(width: 10),
+
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -571,6 +669,9 @@ class _ThreadsPageState extends State<ThreadsPage> {
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color.fromARGB(221, 148, 143, 143),
+                  ),
                 ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 150),
@@ -589,7 +690,9 @@ class _ThreadsPageState extends State<ThreadsPage> {
                 ),
               ),
             ),
+
             const SizedBox(width: 10),
+
             InkWell(
               onTap: sendThread,
               borderRadius: BorderRadius.circular(25),

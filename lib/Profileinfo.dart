@@ -487,9 +487,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (error.isNotEmpty) {
       return Scaffold(
+        backgroundColor: const Color.fromARGB(255, 233, 232, 231),
         appBar: AppBar(
           title: const Text('My Profile'),
-          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+          backgroundColor: const Color(0xFFCEBFA3),
         ),
         body: Center(child: Text(error)),
       );
@@ -510,10 +511,11 @@ class _ProfilePageState extends State<ProfilePage> {
         : '';
 
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 240, 235, 229),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+            backgroundColor: const Color(0xFFCEBFA3),
             floating: true,
             snap: true,
             title: const Text('My Profile'),

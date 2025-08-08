@@ -213,10 +213,11 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 238, 233, 217),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(83), // เพิ่มความสูงของ AppBar
         child: AppBar(
-          backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+          backgroundColor: const Color(0xFFCEBFA3),
           foregroundColor: Colors.black,
           elevation: 1,
           automaticallyImplyLeading: false,
