@@ -75,12 +75,12 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
   Widget buildUserCard(Map<String, dynamic> user, int rank) {
     return Card(
-      color: const Color.fromARGB(255, 221, 187, 136),
-      elevation: 6,
+      color: const Color.fromARGB(255, 255, 255, 255),
+      elevation: 9,
       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 7),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -244,12 +244,12 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
   Widget buildRestaurantCard(Map<String, dynamic> restaurant, int rank) {
     return Card(
-      color: const Color.fromARGB(255, 246, 239, 208),
-      elevation: 6,
+      color: const Color.fromARGB(255, 250, 250, 250),
+      elevation: 9,
       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -411,7 +411,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 227, 221, 209),
+      backgroundColor: const Color(0xFFF7F4EF),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -443,7 +443,14 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
               snap: true,
               elevation: 4,
               centerTitle: true,
-              title: const Text('Leaderboard'),
+              title: const Text(
+                'Leaderboard',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontSize: 27,
+                ),
+              ),
             ),
             SliverList(
               delegate: SliverChildListDelegate([

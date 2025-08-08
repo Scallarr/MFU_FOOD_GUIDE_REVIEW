@@ -149,7 +149,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
   Widget buildProfileCard(Map<String, dynamic> profile) {
     bool isPurchased = profile['is_purchased'] == 1;
     return Card(
-      elevation: 4,
+      elevation: 10,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Padding(
@@ -332,6 +332,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return Scaffold(
+        backgroundColor: const Color(0xFFF7F4EF),
         appBar: AppBar(title: Text("Profile Shop")),
         body: Center(child: CircularProgressIndicator()),
       );
@@ -339,6 +340,7 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
 
     if (errorMsg.isNotEmpty) {
       return Scaffold(
+        backgroundColor: const Color(0xFFF7F4EF),
         appBar: AppBar(title: const Text("Profile Shop")),
         body: Center(child: Text(errorMsg)),
       );
@@ -350,9 +352,10 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
         return false; // ปิดการ pop อัตโนมัติ
       },
       child: Scaffold(
+        backgroundColor: const Color(0xFFF7F4EF),
         appBar: AppBar(
           title: const Text("Profile Shop"),
-          backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+          backgroundColor: const Color(0xFFCEBFA3),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -364,6 +367,14 @@ class _ProfileShopPageState extends State<ProfileShopPage> {
                   color: const Color.fromARGB(255, 255, 255, 255),
                   border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2), // สีเงา
+                      spreadRadius: 2, // ขนาดเงา
+                      blurRadius: 10, // ความฟุ้งของเงา
+                      offset: const Offset(0, 3), // ตำแหน่งเงา (x, y)
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [

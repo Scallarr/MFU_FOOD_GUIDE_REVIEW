@@ -485,7 +485,27 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                             ),
                           ),
                           onChanged: (text) {
-                            // ...logic mention...
+                            final words = text.split(' ');
+                            final lastWord = words.isNotEmpty ? words.last : '';
+
+                            if (lastWord.startsWith('@')) {
+                              final mentionText = lastWord
+                                  .substring(1)
+                                  .toLowerCase();
+                              setState(() {
+                                currentMention = mentionText;
+                                mentionSuggestions = allUsers
+                                    .where(
+                                      (user) =>
+                                          user['username']
+                                              .toLowerCase()
+                                              .startsWith(mentionText) &&
+                                          user['User_ID'] != userId,
+                                    )
+                                    .toList();
+                                showSuggestions = mentionSuggestions.isNotEmpty;
+                              });
+                            }
                           },
                         ),
                       ],

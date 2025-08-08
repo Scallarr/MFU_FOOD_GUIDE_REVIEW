@@ -511,7 +511,7 @@ class _ProfilePageState extends State<ProfilePage> {
         : '';
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 240, 235, 229),
+      backgroundColor: const Color(0xFFF7F4EF),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -754,7 +754,7 @@ Widget _buildStatCard(IconData icon, String label, int value) {
   return Expanded(
     child: Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
+      elevation: 10,
       color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),

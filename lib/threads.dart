@@ -294,12 +294,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(
-        255,
-        245,
-        236,
-        206,
-      ), // สีพื้นหลังอ่อนๆ
+      backgroundColor: const Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -307,8 +302,8 @@ class _ThreadsPageState extends State<ThreadsPage> {
             floating: true,
             snap: true,
             pinned: false,
-            backgroundColor: const Color.fromARGB(255, 202, 184, 151),
-            expandedHeight: 70,
+            backgroundColor: const Color(0xFFCEBFA3),
+            expandedHeight: 56.5,
             flexibleSpace: const FlexibleSpaceBar(
               centerTitle: true,
               titlePadding: EdgeInsets.only(left: 16, bottom: 12),

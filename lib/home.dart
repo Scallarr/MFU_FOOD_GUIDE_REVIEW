@@ -213,11 +213,12 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 238, 233, 217),
+      backgroundColor: const Color(0xFFF7F4EF),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(83), // เพิ่มความสูงของ AppBar
         child: AppBar(
           backgroundColor: const Color(0xFFCEBFA3),
+          // backgroundColor: const Color(0xFFCEBFA3),
           foregroundColor: Colors.black,
           elevation: 1,
           automaticallyImplyLeading: false,
@@ -231,7 +232,11 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                     padding: EdgeInsets.only(left: 20),
                     child: Text(
                       'MFU Food Guide',
-                      style: TextStyle(fontSize: 26, color: Colors.black),
+                      style: TextStyle(
+                        fontSize: 27,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   GestureDetector(
@@ -579,7 +584,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                   horizontal: 10,
                                   vertical: 10,
                                 ),
-                                elevation: 4,
+                                elevation: 10,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),

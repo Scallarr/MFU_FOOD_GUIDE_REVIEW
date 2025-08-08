@@ -22,6 +22,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F4EF),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(

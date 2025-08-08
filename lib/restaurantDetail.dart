@@ -178,12 +178,19 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 223, 219, 213),
+      backgroundColor: const Color(0xFFF7F4EF),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            title: Text(restaurant!.name),
-            backgroundColor: const Color.fromARGB(255, 221, 187, 136),
+            title: Text(
+              restaurant!.name,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: const Color(0xFFCEBFA3),
             floating: true, // ทำให้เลื่อนขึ้นมาได้ทันที
             snap: true, // เลื่อนลงซ่อนทันที
             elevation: 4,
@@ -595,7 +602,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
         ...menusToShow.map(
           (menu) => Card(
             // color: const Color.fromARGB(255, 240, 231, 183),
-            color: const Color.fromARGB(255, 248, 244, 241),
+            color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -734,16 +741,16 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
 
           return Card(
             // color: const Color.fromARGB(255, 255, 239, 210),
-            color: const Color.fromARGB(255, 243, 241, 241),
+            color: const Color.fromARGB(255, 255, 255, 255),
             margin: EdgeInsets.symmetric(vertical: 10),
-            elevation: 8,
+            elevation: 12,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             child: Container(
               margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 243, 241, 241),
+                color: const Color.fromARGB(255, 255, 255, 255),
                 borderRadius: BorderRadius.circular(12),
               ),
 
@@ -753,7 +760,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                 // padding: EdgeInsets.all(15),
                 padding: EdgeInsets.only(
                   left: 15,
-                  top: 15,
+                  top: 13,
                   right: 14,
                   bottom: 13,
                 ),
@@ -764,7 +771,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                       padding: EdgeInsets.only(top: 17),
                       child: CircleAvatar(
                         backgroundImage: NetworkImage(review.pictureUrl),
-                        radius: 44,
+                        radius: 40,
                         backgroundColor: Colors.grey[200],
                       ),
                     ),
