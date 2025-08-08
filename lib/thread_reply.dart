@@ -248,7 +248,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
           },
         ),
         title: Text(
-          'Replies to ${thread['fullname']} ',
+          'Replies to ${thread['username']} ',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 17,
@@ -480,7 +480,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                       children: [
                         Flexible(
                           child: Text(
-                            thread['fullname'] ?? '',
+                            thread['username'] ?? '',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,

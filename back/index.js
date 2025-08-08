@@ -1090,6 +1090,7 @@ app.get('/api/thread_replies/:threadId', async (req, res) => {
         tr.total_likes,
         tr.ai_evaluation,
         u.fullname,
+        u.username,
         upp.picture_url
       FROM Thread_reply tr
       JOIN User u ON tr.User_ID = u.User_ID
@@ -1200,7 +1201,7 @@ app.get('/user_profile_picture/:userId', (req, res) => {
 
   const sql = `
     SELECT picture_url 
-    FROM user_profile_picture 
+    FROM user_Profile_Picture 
     WHERE User_ID = ? AND is_active = 1
     LIMIT 1
   `;
