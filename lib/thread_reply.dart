@@ -87,9 +87,115 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
       );
 
       if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
         setState(() {
           _replyController.clear();
         });
+
+        if (responseData['ai_evaluation'] == 'Inappropriate') {
+          // แสดง dialog แจ้งเตือนคำหยาบ
+          await showDialog(
+            context: context,
+            builder: (context) {
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                elevation: 10,
+                backgroundColor: Colors.white,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromARGB(66, 94, 81, 81),
+                        blurRadius: 15,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.redAccent.withOpacity(0.5),
+                              blurRadius: 12,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 56,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Warning!',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 26,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Your comment contains inappropriate content and is pending review.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.black,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 6,
+                            shadowColor: const Color.fromARGB(
+                              255,
+                              0,
+                              0,
+                              0,
+                            ).withOpacity(0.6),
+                          ),
+                          child: const Text(
+                            'OK',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
         await fetchReplies();
       } else {
         ScaffoldMessenger.of(
@@ -114,6 +220,12 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context, true); // ส่งค่ากลับว่าให้รีเฟรชหน้าก่อนหน้า
+          },
+        ),
         title: Text(
           'Replies to ${thread['fullname']} ',
           style: const TextStyle(
@@ -133,6 +245,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
         foregroundColor: Colors.black,
         elevation: 1,
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(

@@ -1145,7 +1145,13 @@ app.post('/api/send_reply', async (req, res) => {
       }
 
       await conn.commit();
-      res.json({ message: 'Reply sent successfully', Thread_reply_ID: insertedId });
+     res.json({
+  message: 'Reply sent successfully',
+  Thread_reply_ID: insertedId,
+  ai_evaluation: aiEvaluation,
+  admin_decision: adminDecision
+});
+
     } catch (dbErr) {
       await conn.rollback();
       console.error(dbErr);
