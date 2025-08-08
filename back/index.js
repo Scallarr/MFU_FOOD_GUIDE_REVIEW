@@ -502,7 +502,6 @@ app.get('/leaderboard', async (req, res) => {
         u.User_ID,
         u.username,
         u.coins,
-        u.user,
         u.email,
         COUNT(r.Review_ID) AS total_reviews,
         SUM(r.total_likes) AS total_likes,

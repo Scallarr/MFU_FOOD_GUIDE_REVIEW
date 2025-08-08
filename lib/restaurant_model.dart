@@ -57,6 +57,7 @@ class Review {
   final double ratingOverall;
   final String comment;
   final String username;
+  final String email;
   final String pictureUrl;
   final int totalLikes;
   final String createdAt;
@@ -66,6 +67,7 @@ class Review {
     required this.ratingOverall,
     required this.comment,
     required this.username,
+    required this.email,
     required this.pictureUrl,
     required this.totalLikes,
     required this.createdAt,
@@ -78,6 +80,7 @@ class Review {
       ratingOverall: double.parse(json['rating_overall'].toString()),
       comment: json['comment'],
       username: json['username'] ?? 'Anonymous',
+      email: json['email'],
       pictureUrl:
           json['picture_url'] ??
           'https://www.gravatar.com/avatar/placeholder?d=mp',

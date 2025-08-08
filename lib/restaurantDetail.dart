@@ -113,6 +113,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
               totalLikes: updatedLikes,
               createdAt: oldReview.createdAt,
               isLiked: likedNow,
+              email: oldReview.email,
             );
 
             restaurant!.reviews[index] = updatedReview;
@@ -842,31 +843,37 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 6),
+                                    SizedBox(height: 5),
+                                    Text(
+                                      obfuscateEmail(review.email),
+                                      style: TextStyle(fontSize: 10.5),
+                                    ),
+                                    SizedBox(height: 10),
                                     Row(
                                       children: List.generate(5, (i) {
                                         if (i < review.ratingOverall.floor()) {
                                           return Icon(
                                             Icons.star,
-                                            size: 20,
+                                            size: 24,
                                             color: Colors.amber,
                                           );
                                         } else if (i < review.ratingOverall &&
                                             review.ratingOverall - i >= 0.5) {
                                           return Icon(
                                             Icons.star_half,
-                                            size: 20,
+                                            size: 24,
                                             color: Colors.amber,
                                           );
                                         } else {
                                           return Icon(
                                             Icons.star_border,
-                                            size: 20,
+                                            size: 24,
                                             color: Colors.amber,
                                           );
                                         }
                                       }),
                                     ),
+
                                     SizedBox(height: 10),
                                     Row(children: []),
                                     Padding(
@@ -905,14 +912,15 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                             padding: EdgeInsets.only(
                                               right: 00,
                                               left: 60,
-                                              top: 10,
+                                              top: 20,
+                                              bottom: 0,
                                             ), // ปรับตามต้องการ
                                             child: Icon(
                                               Icons.favorite,
                                               color: isLiked
                                                   ? Colors.red
                                                   : Colors.grey,
-                                              size: 50,
+                                              size: 40,
                                             ),
                                           ),
                                         ),
@@ -1045,4 +1053,18 @@ String getTimeAgo(DateTime dateTimeUtc) {
   } else {
     return ''; // You can use _formatDate() instead later
   }
+}
+
+String obfuscateEmail(String email) {
+  if (email.endsWith('@lamduan.mfu.ac.th')) {
+    final domain = '@lamduan.mfu.ac.th';
+    if (email.length > domain.length + 2) {
+      final prefix = email.substring(0, 2);
+      return '$prefix********$domain';
+    }
+  } else if (email.endsWith('@mfu.ac.th')) {
+    final domain = '@mfu.ac.th';
+    return '**********$domain';
+  }
+  return email; // กรณีอื่น ๆ
 }
