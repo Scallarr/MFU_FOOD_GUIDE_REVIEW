@@ -1110,6 +1110,55 @@ app.get('/api/thread_replies/:threadId', async (req, res) => {
 });
 
 
+app.post('/api/send_reply', async (req, res) => {
+  const { User_ID, Thread_ID, message } = req.body;
+
+  if (!User_ID || !Thread_ID || !message) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const aiEvaluation = await checkCommentAI(message);
+    const hasProfanity = aiEvaluation === 'Inappropriate';
+    const adminDecision = hasProfanity ? 'Pending' : 'Posted';
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [result] = await conn.execute(
+        `INSERT INTO Thread_reply
+        (Thread_ID, User_ID, message, created_at, total_Likes, ai_evaluation, admin_decision)
+        VALUES (?, ?, ?, NOW(), 0, ?, ?)`,
+        [Thread_ID, User_ID, message, aiEvaluation, adminDecision]
+      );
+
+      const insertedId = result.insertId;
+
+      if (hasProfanity) {
+        await conn.execute(
+          `INSERT INTO Admin_check_inappropriate_thread_reply
+          (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
+          VALUES (?, NULL, 'Pending', NULL, NULL)`,
+          [insertedId]
+        );
+      }
+
+      await conn.commit();
+      res.json({ message: 'Reply sent successfully', Thread_reply_ID: insertedId });
+    } catch (dbErr) {
+      await conn.rollback();
+      console.error(dbErr);
+      res.status(500).json({ error: 'Database error' });
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    console.error('Error in AI checking:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));

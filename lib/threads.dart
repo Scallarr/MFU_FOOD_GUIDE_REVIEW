@@ -252,6 +252,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
             backgroundColor: const Color(0xFFCEBFA3),
             expandedHeight: 70,
             flexibleSpace: const FlexibleSpaceBar(
+              centerTitle: true,
               titlePadding: EdgeInsets.only(left: 16, bottom: 12),
               title: Text(
                 'Food Threads 🧵',
@@ -274,30 +275,43 @@ class _ThreadsPageState extends State<ThreadsPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search threads...',
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide.none,
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 1,
+                      offset: const Offset(1, 1),
+                    ),
+                  ],
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value.toLowerCase();
-                  });
-                },
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search threads...',
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value.toLowerCase();
+                    });
+                  },
+                ),
               ),
             ),
           ),
+
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final thread = filteredThreads[index];
@@ -323,11 +337,17 @@ class _ThreadsPageState extends State<ThreadsPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(18),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 6,
-                              offset: Offset(0, 3),
+                              color: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ).withOpacity(0.20), // สีเงาและความโปร่งใส
+                              spreadRadius: 3, // ขนาดเงา
+                              blurRadius: 5, // ความฟุ้งของเงา
+                              offset: const Offset(0, 4), // ตำแหน่งเงา (x, y)
                             ),
                           ],
                         ),
