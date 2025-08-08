@@ -1122,7 +1122,7 @@ app.post('/api/send_reply', async (req, res) => {
     const hasProfanity = aiEvaluation === 'Inappropriate';
     const adminDecision = hasProfanity ? 'Pending' : 'Posted';
 
-    const conn = await pool.getConnection();
+    const conn = db.promise().execute();
     try {
       await conn.beginTransaction();
 
