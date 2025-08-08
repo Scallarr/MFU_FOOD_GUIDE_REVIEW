@@ -16,6 +16,10 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
   List replies = [];
   bool isLoading = true;
   int? currentUserId;
+  List<Map<String, dynamic>> allUsers = [];
+  List<Map<String, dynamic>> mentionSuggestions = [];
+  bool showSuggestions = false;
+  String currentMention = '';
 
   TextEditingController _replyController = TextEditingController();
   bool _isSending = false;
@@ -25,6 +29,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
     super.initState();
     fetchReplies();
     loadUserId();
+    fetchAllUsers();
   }
 
   @override
@@ -62,6 +67,22 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
     } catch (e) {
       print('Error fetching replies: $e');
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> fetchAllUsers() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://mfu-food-guide-review.onrender.com/api/all_users'),
+      );
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        setState(() {
+          allUsers = List<Map<String, dynamic>>.from(data);
+        });
+      }
+    } catch (e) {
+      print('Error fetching users: $e');
     }
   }
 
@@ -267,6 +288,52 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                       },
                     ),
             ),
+            if (showSuggestions)
+              Container(
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ListView.builder(
+                  itemCount: mentionSuggestions.length,
+                  itemBuilder: (context, index) {
+                    final user = mentionSuggestions[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: NetworkImage(
+                          'https://mfu-food-guide-review.onrender.com/user_profile_picture/${user['User_ID']}',
+                        ),
+                      ),
+                      title: Text(user['username']),
+                      onTap: () {
+                        final text = _replyController.text;
+                        final words = text.split(' ');
+                        if (words.isNotEmpty) {
+                          words.removeLast();
+                          words.add('@${user['username']}');
+                        }
+                        final newText = words.join(' ') + ' ';
+                        _replyController.text = newText;
+                        _replyController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _replyController.text.length),
+                        );
+
+                        setState(() {
+                          showSuggestions = false;
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
 
             // --- เพิ่มช่องใส่ Reply ด้านล่าง ---
             Container(
@@ -300,6 +367,33 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                     child: TextField(
                       controller: _replyController,
                       maxLines: null,
+                      onChanged: (text) {
+                        final words = text.split(' ');
+                        final lastWord = words.isNotEmpty ? words.last : '';
+
+                        if (lastWord.startsWith('@')) {
+                          final mentionText = lastWord
+                              .substring(1)
+                              .toLowerCase();
+                          setState(() {
+                            currentMention = mentionText;
+                            mentionSuggestions = allUsers
+                                .where(
+                                  (user) =>
+                                      user['username'].toLowerCase().startsWith(
+                                        mentionText,
+                                      ) &&
+                                      user['User_ID'] != currentUserId,
+                                )
+                                .toList();
+                            showSuggestions = mentionSuggestions.isNotEmpty;
+                          });
+                        } else {
+                          setState(() {
+                            showSuggestions = false;
+                          });
+                        }
+                      },
                       decoration: const InputDecoration(
                         hintText: 'Write a reply...',
                         border: OutlineInputBorder(
@@ -484,7 +578,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
               // Bubble + Name + Time (ขวา)
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 20),
+                  margin: const EdgeInsets.only(bottom: 20, left: 7),
                   padding: const EdgeInsets.only(
                     left: 14,
                     right: 14,
@@ -609,10 +703,12 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
               // Bubble + Name + Time
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                  margin: const EdgeInsets.only(bottom: 20, right: 7),
+                  padding: const EdgeInsets.only(
+                    right: 14,
+                    left: 14,
+                    top: 10,
+                    bottom: 20,
                   ),
                   decoration: BoxDecoration(
                     color: const Color.fromARGB(255, 255, 255, 255),

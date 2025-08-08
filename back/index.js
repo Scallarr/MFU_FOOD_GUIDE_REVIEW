@@ -1165,6 +1165,35 @@ app.post('/api/send_reply', async (req, res) => {
   }
 });
 
+app.get('/api/all_users', (req, res) => {
+  const sql = `
+    SELECT 
+      u.User_ID, 
+      u.username, 
+      p.picture_url
+    FROM 
+      User u
+    LEFT JOIN 
+      user_Profile_Picture p 
+    ON 
+      u.User_ID = p.User_ID AND p.is_active = 1
+    WHERE 
+      u.status = 'Active'
+    ORDER BY 
+      u.username ASC;
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('❌ Failed to fetch users with picture:', err);
+      return res.status(500).json({ message: 'Internal Server Error' });
+    }
+
+    res.status(200).json(results);
+  });
+});
+
+
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;

@@ -279,7 +279,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
                 decoration: BoxDecoration(
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withOpacity(0.5),
                       blurRadius: 1,
                       offset: const Offset(1, 1),
                     ),
