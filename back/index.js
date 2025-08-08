@@ -958,7 +958,7 @@ app.get('/all_threads/:userId', async (req, res) => {
       FROM Thread_reply TR
       JOIN Thread TT ON TT.Thread_ID = TR.Thread_ID
       WHERE TR.Thread_ID = T.Thread_ID
-        AND TT.admin_decision = 'Posted'
+        AND TR.admin_decision = 'Posted'
     ) AS total_comments,
     EXISTS (
       SELECT 1 

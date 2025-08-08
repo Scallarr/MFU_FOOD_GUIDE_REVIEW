@@ -125,16 +125,16 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
         setState(() {
           _replyController.clear();
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Reply sent successfully!',
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Color.fromARGB(255, 0, 0, 0),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //     content: Text(
+        //       'Reply sent successfully!',
+        //       style: TextStyle(color: Colors.white),
+        //     ),
+        //     backgroundColor: Color.fromARGB(255, 0, 0, 0),
+        //     duration: Duration(seconds: 2),
+        //   ),
+        // );
         if (responseData['ai_evaluation'] == 'Inappropriate') {
           // แสดง dialog แจ้งเตือนคำหยาบ
           await showDialog(
