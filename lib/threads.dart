@@ -264,7 +264,10 @@ class _ThreadsPageState extends State<ThreadsPage> {
         );
         break;
       case 1:
-        // Already on leaderboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LeaderboardPage()),
+        );
         break;
       case 2:
         Navigator.pushReplacement(
@@ -286,7 +289,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
     // กรอง threads ตาม search query
     final filteredThreads = threads.where((thread) {
       final message = thread['message'].toString().toLowerCase();
-      final fullname = thread['fullname'].toString().toLowerCase();
+      final fullname = thread['username'].toString().toLowerCase();
       final status = thread['status']?.toString().toLowerCase() ?? '';
       return message.contains(_searchQuery) ||
           fullname.contains(_searchQuery) ||
@@ -429,7 +432,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
                                       Row(
                                         children: [
                                           Text(
-                                            thread['fullname'],
+                                            thread['username'],
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 16,

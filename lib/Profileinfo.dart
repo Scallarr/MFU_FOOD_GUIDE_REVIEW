@@ -7,6 +7,7 @@ import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/services.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -257,7 +258,7 @@ class _ProfilePageState extends State<ProfilePage> {
     TextEditingController controller,
     bool isEditing,
     VoidCallback onEditPressed,
-    VoidCallback onCancelPressed, // เพิ่ม callback สำหรับ discard
+    VoidCallback onCancelPressed,
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -287,13 +288,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 255,
                                 255,
                                 255,
-                              ), // สีข้อความปุ่ม Cancel
+                              ),
                               backgroundColor: const Color.fromARGB(
                                 255,
                                 0,
                                 0,
                                 0,
-                              ), // สีพื้นหลังปุ่ม Cancel (ถ้าต้องการ)
+                              ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
@@ -312,7 +313,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 220,
                                 4,
                                 4,
-                              ), // สีพื้นหลังปุ่ม Save
+                              ),
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
@@ -323,19 +324,17 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             child: const Text(
                               'Save',
-                              style: TextStyle(
-                                color: Colors.white,
-                              ), // สีข้อความปุ่ม Save
+                              style: TextStyle(color: Colors.white),
                             ),
                           ),
                         ],
                       ),
                     );
                     if (confirm == true) {
-                      onEditPressed(); // บันทึก
+                      onEditPressed();
                     }
                   } else {
-                    onEditPressed(); // เข้าสู่โหมดแก้ไข
+                    onEditPressed();
                   }
                 },
                 child: Container(
@@ -412,7 +411,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     );
 
                     if (confirm == true) {
-                      onCancelPressed(); // เรียกฟังก์ชันยกเลิก ไม่บันทึก
+                      onCancelPressed();
                     }
                   },
                   child: Container(
@@ -428,9 +427,11 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 6),
           TextField(
-            maxLength: 15,
+            maxLength: 13,
             controller: controller,
             readOnly: !isEditing,
+            // เพิ่ม inputFormatters เพื่อป้องกันการพิมพ์เว้นวรรค
+            inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
             decoration: InputDecoration(
               filled: isEditing,
               fillColor: Colors.yellow[50],

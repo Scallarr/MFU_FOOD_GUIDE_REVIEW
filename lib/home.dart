@@ -617,12 +617,23 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                           Row(
                                             children: [
                                               Expanded(
-                                                child: Text(
-                                                  res.name,
-                                                  style: TextStyle(
-                                                    fontSize: 20,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                                child: Row(
+                                                  children: [
+                                                    Text(
+                                                      res.name,
+                                                      style: TextStyle(
+                                                        fontSize: 20,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 7),
+                                                    Icon(
+                                                      Icons.check_circle,
+                                                      color: Colors.blue,
+                                                      size: 19,
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                               Container(

@@ -84,54 +84,84 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Avatar ขนาดใหญ่เต็มกรอบซ้ายสุด
-            Container(
-              width: 90,
-              height: 90,
-              margin: const EdgeInsets.only(left: 16, right: 18),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.brown.shade700, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.brown.shade400.withOpacity(0.3),
-                    offset: const Offset(0, 3),
-                    blurRadius: 5,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Avatar ขนาดใหญ่เต็มกรอบซ้ายสุด
+                Container(
+                  width: 90,
+                  height: 90,
+                  margin: const EdgeInsets.only(left: 16, right: 18),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.brown.shade700, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.brown.shade400.withOpacity(0.3),
+                        offset: const Offset(0, 3),
+                        blurRadius: 5,
+                      ),
+                    ],
+                    image: DecorationImage(
+                      image:
+                          user['profile_image'] != null &&
+                              user['profile_image'].isNotEmpty
+                          ? NetworkImage(user['profile_image'])
+                          : const AssetImage('assets/default_user.png')
+                                as ImageProvider,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ],
-                image: DecorationImage(
-                  image:
-                      user['profile_image'] != null &&
-                          user['profile_image'].isNotEmpty
-                      ? NetworkImage(user['profile_image'])
-                      : const AssetImage('assets/default_user.png')
-                            as ImageProvider,
-                  fit: BoxFit.cover,
                 ),
-              ),
+                Positioned(
+                  top: -5,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 212, 58, 58),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.verified,
+                      size: 30,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
-
             // Username และ Stats พร้อมไอคอนกดแสดง SnackBar
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    user['username'] ?? '',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.brown.shade900,
-                      shadows: [
-                        Shadow(
-                          color: Colors.brown.shade200,
-                          offset: const Offset(0, 0),
-                          blurRadius: 1,
+                  Row(
+                    children: [
+                      Text(
+                        user['username'] ?? '',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.brown.shade900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.brown.shade200,
+                              offset: const Offset(0, 0),
+                              blurRadius: 1,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(width: 5),
+                      const Icon(
+                        Icons.check_circle,
+                        color: Colors.blue,
+                        size: 22,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   Row(
@@ -250,155 +280,182 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            // Rank number (ย้ายมาอยู่ซ้าย)
-            Container(
-              width: 60,
-              height: 60,
-              margin: const EdgeInsets.only(left: 16, right: 14),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 83, 82, 77),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.brown.shade300.withOpacity(0.4),
-                    offset: const Offset(0, 2),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${rank + 1}',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: const Color.fromARGB(255, 255, 255, 255),
-                  shadows: [
-                    Shadow(
-                      color: Colors.brown.shade300,
-                      offset: const Offset(0, 1),
-                      blurRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ชื่อร้าน และคะแนน
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    restaurant['restaurant_name'] ?? '',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.brown.shade900,
-                      shadows: [
-                        Shadow(
-                          color: Colors.brown.shade200,
-                          offset: const Offset(0, 0),
-                          blurRadius: 1,
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () {
-                          final snackBar = SnackBar(
-                            content: Text('Overall Rating of This Restaurant'),
-                            duration: const Duration(seconds: 2),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                        },
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.star,
-                              size: 20,
-                              color: Colors.brown.shade700,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${double.parse(restaurant['overall_rating'].toString()).toStringAsFixed(1)}',
-                              style: TextStyle(
-                                fontSize: 17,
-                                color: Colors.brown.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      GestureDetector(
-                        onTap: () {
-                          final snackBar = SnackBar(
-                            content: Text(
-                              'Total Reviews of This Restaurant on This Month ',
-                            ),
-                            duration: const Duration(seconds: 2),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                        },
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.rate_review,
-                              size: 23,
-                              color: Colors.brown.shade700,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${restaurant['total_reviews']}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.brown.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Rank number (ย้ายมาอยู่ซ้าย)
+                Container(
+                  width: 60,
+                  height: 60,
+                  margin: const EdgeInsets.only(left: 16, right: 14),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 83, 82, 77),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.brown.shade300.withOpacity(0.4),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 5),
-
-            // รูปภาพร้าน (ย้ายมาขวาถัดจาก rank)
-            Container(
-              width: 90,
-              height: 90,
-              margin: const EdgeInsets.only(right: 18),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.brown.shade700, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.brown.shade400.withOpacity(0.3),
-                    offset: const Offset(0, 3),
-                    blurRadius: 5,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${rank + 1}',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      shadows: [
+                        Shadow(
+                          color: Colors.brown.shade300,
+                          offset: const Offset(0, 1),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-                image: DecorationImage(
-                  image:
-                      (restaurant['restaurant_image'] != null &&
-                          restaurant['restaurant_image'].isNotEmpty)
-                      ? NetworkImage(restaurant['restaurant_image'])
-                      : const AssetImage('assets/default_restaurant.png')
-                            as ImageProvider,
-                  fit: BoxFit.cover,
+                ),
+
+                // ชื่อร้าน และคะแนน
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        restaurant['restaurant_name'] ?? '',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.brown.shade900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.brown.shade200,
+                              offset: const Offset(0, 0),
+                              blurRadius: 1,
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const SizedBox(width: 10),
+                          GestureDetector(
+                            onTap: () {
+                              final snackBar = SnackBar(
+                                content: Text(
+                                  'Overall Rating of This Restaurant',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              );
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(snackBar);
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  size: 20,
+                                  color: Colors.brown.shade700,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${double.parse(restaurant['overall_rating'].toString()).toStringAsFixed(1)}',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    color: Colors.brown.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          GestureDetector(
+                            onTap: () {
+                              final snackBar = SnackBar(
+                                content: Text(
+                                  'Total Reviews of This Restaurant on This Month ',
+                                ),
+                                duration: const Duration(seconds: 2),
+                              );
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(snackBar);
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.rate_review,
+                                  size: 23,
+                                  color: Colors.brown.shade700,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${restaurant['total_reviews']}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.brown.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 5),
+
+                // รูปภาพร้าน (ย้ายมาขวาถัดจาก rank)
+                Container(
+                  width: 90,
+                  height: 90,
+                  margin: const EdgeInsets.only(right: 18),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.brown.shade700, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.brown.shade400.withOpacity(0.3),
+                        offset: const Offset(0, 3),
+                        blurRadius: 5,
+                      ),
+                    ],
+                    image: DecorationImage(
+                      image:
+                          (restaurant['restaurant_image'] != null &&
+                              restaurant['restaurant_image'].isNotEmpty)
+                          ? NetworkImage(restaurant['restaurant_image'])
+                          : const AssetImage('assets/default_restaurant.png')
+                                as ImageProvider,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              top: -10,
+              left: 357,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 3, 129, 232),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.verified,
+                  size: 25,
+                  color: Colors.white,
                 ),
               ),
             ),

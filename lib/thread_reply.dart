@@ -453,6 +453,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
 
                   Expanded(
                     child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(
@@ -729,7 +730,6 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
                               color: Colors.grey,
                             ),
                           ),
-
                           const SizedBox(width: 5),
                         ],
                       ),
