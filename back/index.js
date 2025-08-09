@@ -1253,7 +1253,8 @@ app.put('/edit/restaurants/:id', async (req, res) => {
     location, 
     operating_hours, 
     phone_number, 
-    category 
+    category ,
+    image_url
   } = req.body;
 
   // ตรวจสอบข้อมูลที่จำเป็น
@@ -1269,9 +1270,10 @@ app.put('/edit/restaurants/:id', async (req, res) => {
         location = ?, 
         operating_hours = ?, 
         phone_number = ?, 
-        category = ?
+        category = ?,
+        image_url = ?
       WHERE Restaurant_ID = ?`,
-      [restaurant_name, location, operating_hours, phone_number, category, id]
+      [restaurant_name, location, operating_hours, phone_number, category,image_url, id]
     );
 
     if (result.affectedRows === 0) {
