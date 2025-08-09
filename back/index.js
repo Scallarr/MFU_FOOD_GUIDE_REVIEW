@@ -1263,7 +1263,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
 
   try {
     // อัพเดทข้อมูลในฐานข้อมูล
-    const [result] = await conn.execute(
+    const [result] = await db.promise().execute(
       `UPDATE restaurants SET 
         restaurant_name = ?, 
         location = ?, 
@@ -1280,7 +1280,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
     }
 
     // ดึงข้อมูลร้านอาหารที่อัพเดทแล้ว
-    const [updatedRestaurant] = await conn.execute(
+    const [updatedRestaurant] = await db.promise().execute(
       'SELECT * FROM restaurants WHERE Restaurant_ID = ?',
       [id]
     );
