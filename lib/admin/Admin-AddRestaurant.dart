@@ -100,7 +100,9 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
 
       try {
         final response = await http.post(
-          Uri.parse('https://mfu-food-guide-review.onrender.com/restaurants'),
+          Uri.parse(
+            'https://mfu-food-guide-review.onrender.com/Add/restaurants',
+          ),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({
             'restaurant_name': _nameController.text,

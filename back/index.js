@@ -1348,12 +1348,12 @@ app.post('/Add/restaurants', async (req, res) => {
     });
   }
 
-  try {
-    const connection = await pool.getConnection();
+
+   
     
     try {
       // Insert new restaurant
-      const [result] = await connection.query(
+      const [result] = await db.promise().execute(
         `INSERT INTO Restaurant 
         (restaurant_name, location, operating_hours, phone_number, photos, category) 
         VALUES (?, ?, ?, ?, ?, ?)`,
@@ -1361,7 +1361,7 @@ app.post('/Add/restaurants', async (req, res) => {
       );
 
       // Get the newly created restaurant
-      const [rows] = await connection.query(
+      const [rows] = await db.promise().execute(
         `SELECT 
           Restaurant_ID as id,
           restaurant_name as name,
@@ -1381,32 +1381,14 @@ app.post('/Add/restaurants', async (req, res) => {
       );
 
       res.status(201).json(rows[0]);
-    } finally {
-      connection.release();
-    }
-  } catch (err) {
-    console.error('Database error:', err);
-    res.status(500).json({ 
-      error: 'Database operation failed',
-      details: err.message 
-    });
+    } 
+   catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทร้านอาหาร' });
   }
-});
+})
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
-});
-
-
-
-
-
-
-
-
-
 
 
 
