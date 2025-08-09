@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:myapp/Dashboard.dart';
+import 'package:myapp/Profileinfo.dart';
+import 'package:myapp/dashboard.dart';
 import 'dart:convert';
 import 'package:myapp/home.dart';
 import 'package:myapp/threads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LeaderboardPage extends StatefulWidget {
   const LeaderboardPage({super.key});
@@ -17,6 +19,8 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   List<dynamic> topRestaurants = [];
   int _selectedIndex = 1;
   String monthYear = '';
+  int? userId;
+  String? profileImageUrl;
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -34,7 +38,7 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DashboardPage()),
+          MaterialPageRoute(builder: (context) => Dashboard()),
         );
         break;
       case 3:
@@ -50,6 +54,43 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
   void initState() {
     super.initState();
     fetchLeaderboard();
+
+    loadUserIdAndFetchProfile();
+  }
+
+  Future<void> loadUserIdAndFetchProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedUserId = prefs.getInt('user_id');
+
+    if (storedUserId != null) {
+      setState(() {
+        userId = storedUserId;
+      });
+
+      await fetchProfilePicture(userId!);
+    }
+  }
+
+  Future<void> fetchProfilePicture(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          profileImageUrl = data['picture_url'];
+          print(profileImageUrl);
+        });
+      } else {
+        print('Failed to load profile picture');
+      }
+    } catch (e) {
+      print('Error fetching profile picture: $e');
+    }
   }
 
   Future<void> fetchLeaderboard() async {
@@ -163,71 +204,84 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                       ),
                     ],
                   ),
+                  Text(
+                    obfuscateEmail(user['email'] ?? ''),
+                    style: TextStyle(fontSize: 10.3),
+                  ),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Number of likes the user received in this month',
+                  Padding(
+                    padding: EdgeInsetsGeometry.only(top: 2),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Number of likes the user received in this month',
+                                ),
+                                duration: const Duration(seconds: 2),
                               ),
-                              duration: const Duration(seconds: 2),
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 7),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.thumb_up,
+                                  size: 21,
+                                  color: Colors.brown,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${user['total_likes']}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.brown.shade700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.thumb_up,
-                              size: 21,
-                              color: Colors.brown,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${user['total_likes']}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.brown.shade700,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 20),
-                      GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Number of Reviews that User write in this month',
+                        const SizedBox(width: 20),
+                        GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Number of Reviews that User write in this month',
+                                ),
+                                duration: const Duration(seconds: 2),
                               ),
-                              duration: const Duration(seconds: 2),
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 7),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.rate_review,
+                                  size: 25,
+                                  color: Colors.brown,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${user['total_reviews']}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.brown.shade700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.rate_review,
-                              size: 25,
-                              color: Colors.brown,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${user['total_reviews']}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.brown.shade700,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -494,21 +548,65 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverAppBar(
+              toolbarHeight: 70,
               backgroundColor: const Color(0xFFCEBFA3),
               pinned: false,
               floating: true,
               snap: true,
               elevation: 4,
-              centerTitle: true,
-              title: const Text(
-                'Leaderboard',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  fontSize: 27,
+              title: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ), // ปรับตามต้องการ
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'LEADERBOARD',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 3,
+                            color: Colors.black38,
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePage(),
+                          ),
+                        );
+                      },
+                      child: profileImageUrl == null
+                          ? CircleAvatar(
+                              backgroundColor: Colors.grey[300],
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                              radius: 27, // ขนาดใหญ่
+                            )
+                          : CircleAvatar(
+                              backgroundImage: NetworkImage(profileImageUrl!),
+                              radius: 27, // ขนาดใหญ่
+                              backgroundColor: Colors.grey[300],
+                            ),
+                    ),
+                  ],
                 ),
               ),
             ),
+
             SliverList(
               delegate: SliverChildListDelegate([
                 const SizedBox(height: 20),
@@ -588,4 +686,22 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
       ),
     );
   }
+}
+
+String obfuscateEmail(String email) {
+  if (email.endsWith('@lamduan.mfu.ac.th')) {
+    final domain = '@lamduan.mfu.ac.th';
+    if (email.length > domain.length + 2) {
+      final prefix = email.substring(0, 2);
+      return '$prefix********$domain';
+    }
+  } else if (email.endsWith('@mfu.ac.th')) {
+    final domain = '@mfu.ac.th';
+    return '**********$domain';
+  } else {
+    final domain = '@gmail.com';
+    return '**********$domain';
+  }
+
+  return email; // กรณีอื่น ๆ
 }

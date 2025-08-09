@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/leaderboard.dart';
@@ -23,10 +24,15 @@ class _ThreadsPageState extends State<ThreadsPage> {
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  String? profileImageUrl;
+
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _loadUserID();
+    loadUserIdAndFetchProfile();
   }
 
   @override
@@ -43,6 +49,41 @@ class _ThreadsPageState extends State<ThreadsPage> {
       print('userId: $userId');
     });
     fetchThreads();
+  }
+
+  Future<void> loadUserIdAndFetchProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedUserId = prefs.getInt('user_id');
+
+    if (storedUserId != null) {
+      setState(() {
+        userId = storedUserId;
+      });
+
+      await fetchProfilePicture(userId!);
+    }
+  }
+
+  Future<void> fetchProfilePicture(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          profileImageUrl = data['picture_url'];
+          print(profileImageUrl);
+        });
+      } else {
+        print('Failed to load profile picture');
+      }
+    } catch (e) {
+      print('Error fetching profile picture: $e');
+    }
   }
 
   Future<void> fetchThreads() async {
@@ -117,6 +158,11 @@ class _ThreadsPageState extends State<ThreadsPage> {
         _textController.clear();
         fetchThreads();
 
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
         // สมมติ API ตอบกลับ ai_evaluation ด้วย (ต้อง backend ส่งกลับมาด้วย)
         String aiEval = data['ai_evaluation'] ?? 'Safe';
 
@@ -272,7 +318,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DashboardPage()),
+          MaterialPageRoute(builder: (context) => Dashboard()),
         );
         break;
       case 3:
@@ -299,34 +345,64 @@ class _ThreadsPageState extends State<ThreadsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverAppBar(
-            centerTitle: true,
+            toolbarHeight: 70,
+            backgroundColor: const Color(0xFFCEBFA3),
+            pinned: false,
             floating: true,
             snap: true,
-            pinned: false,
-            backgroundColor: const Color(0xFFCEBFA3),
-            expandedHeight: 56.5,
-            flexibleSpace: const FlexibleSpaceBar(
-              centerTitle: true,
-              titlePadding: EdgeInsets.only(left: 16, bottom: 12),
-              title: Text(
-                'Food Threads 🧵',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 1),
-                      blurRadius: 3,
-                      color: Colors.black38,
+            elevation: 4,
+            title: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ), // ปรับตามต้องการ
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'FOOD THREADS',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 3,
+                          color: Colors.black38,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                      );
+                    },
+                    child: profileImageUrl == null
+                        ? CircleAvatar(
+                            backgroundColor: Colors.grey[300],
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                            radius: 27, // ขนาดใหญ่
+                          )
+                        : CircleAvatar(
+                            backgroundImage: NetworkImage(profileImageUrl!),
+                            radius: 27, // ขนาดใหญ่
+                            backgroundColor: Colors.grey[300],
+                          ),
+                  ),
+                ],
               ),
             ),
-            elevation: 4,
           ),
           SliverToBoxAdapter(
             child: Padding(

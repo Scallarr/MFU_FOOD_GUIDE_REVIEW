@@ -807,7 +807,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                               review.username,
                                               style: TextStyle(
                                                 fontWeight: FontWeight.bold,
-                                                fontSize: 15,
+                                                fontSize: 14.5,
                                               ),
                                             ),
                                             SizedBox(width: 7),
@@ -838,7 +838,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
                                               0,
                                               0,
                                             ),
-                                            fontSize: 13,
+                                            fontSize: 12,
                                           ),
                                         ),
                                       ],

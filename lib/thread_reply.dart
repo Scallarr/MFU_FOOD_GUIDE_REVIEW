@@ -88,13 +88,13 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
           replies = data;
           isLoading = false;
         });
-
-        // เลื่อนลงล่างหลังโหลดข้อมูลเสร็จ (เพิ่ม delay เล็กน้อยเพื่อให้ ListView สร้าง widget เสร็จ)
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (_scrollController.hasClients) {
+            // หน่วงเวลาสั้น ๆ ให้ UI โหลดเสร็จ
+            await Future.delayed(const Duration(milliseconds: 400));
             _scrollController.animateTo(
               _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 500),
               curve: Curves.easeOut,
             );
           }
@@ -105,7 +105,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
     } catch (e) {
       print('Error fetching replies: $e');
       setState(() => isLoading = false);
-    }
+    } // เลื่อนลงล่างหลังโหลดข้อมูลเสร็จ (เพิ่ม delay เล็กน้อยเพื่อให้ ListView สร้าง widget เสร็จ)
   }
 
   Future<void> fetchAllUsers() async {
@@ -320,7 +320,7 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
           'Replies to ${thread['username']} ',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 17,
+            fontSize: 19,
             color: Colors.white,
             shadows: [
               Shadow(
@@ -565,113 +565,133 @@ class _ThreadRepliesPageState extends State<ThreadRepliesPage> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                backgroundImage: NetworkImage(thread['picture_url'] ?? ''),
-                radius: 30,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  // mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: NetworkImage(thread['picture_url'] ?? ''),
+                    radius: 30,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      // mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            thread['username'] ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                thread['username'] ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.verified,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 50),
+                            Text(
+                              timeAgo(thread['created_at'] ?? ''),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.verified,
-                          size: 16,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(width: 50),
                         Text(
-                          timeAgo(thread['created_at'] ?? ''),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
+                          obfuscateEmail(thread['email'] ?? ''),
+                          style: TextStyle(fontSize: 12.3),
                         ),
                       ],
                     ),
-                    Text(
-                      obfuscateEmail(thread['email'] ?? ''),
-                      style: TextStyle(fontSize: 12.3),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                thread['message'] ?? '',
+                style: const TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 6,
                     ),
-                  ],
-                ),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.red),
+                    ),
+
+                    child: Row(
+                      children: [
+                        const Icon(Icons.favorite, size: 18, color: Colors.red),
+                        const SizedBox(width: 7),
+                        Text('${thread['total_likes'] ?? 0}'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 30),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color.fromARGB(255, 73, 108, 223),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.comment,
+                          size: 20,
+                          color: Color.fromARGB(255, 11, 127, 223),
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          '${thread['total_comments'] ?? 0} ',
+                          style: TextStyle(fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 0),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(thread['message'] ?? '', style: const TextStyle(fontSize: 15)),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.red),
-                ),
-
-                child: Row(
-                  children: [
-                    const Icon(Icons.favorite, size: 18, color: Colors.red),
-                    const SizedBox(width: 7),
-                    Text('${thread['total_likes'] ?? 0}'),
-                  ],
-                ),
+          Positioned(
+            top: -5,
+            left: -5,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 212, 58, 58),
+                borderRadius: BorderRadius.circular(13),
               ),
-              const SizedBox(width: 30),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color.fromARGB(255, 73, 108, 223),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.comment,
-                      size: 20,
-                      color: Color.fromARGB(255, 11, 127, 223),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      '${thread['total_comments'] ?? 0} ',
-                      style: TextStyle(fontSize: 15),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 0),
-            ],
+              child: const Icon(Icons.verified, size: 20, color: Colors.white),
+            ),
           ),
         ],
       ),

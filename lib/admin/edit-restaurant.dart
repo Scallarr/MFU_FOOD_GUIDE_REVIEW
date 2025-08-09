@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'home.dart';
+import 'package:myapp/admin/Home.dart';
 
-class EditRestaurantPage extends StatefulWidget {
+class EditRestaurant extends StatefulWidget {
   final int userId;
   final int restaurantId;
   final Restaurant currentData;
 
-  const EditRestaurantPage({
+  const EditRestaurant({
     required this.userId,
     required this.restaurantId,
     required this.currentData,
@@ -19,7 +19,7 @@ class EditRestaurantPage extends StatefulWidget {
   _EditRestaurantPageState createState() => _EditRestaurantPageState();
 }
 
-class _EditRestaurantPageState extends State<EditRestaurantPage> {
+class _EditRestaurantPageState extends State<EditRestaurant> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _locationController;

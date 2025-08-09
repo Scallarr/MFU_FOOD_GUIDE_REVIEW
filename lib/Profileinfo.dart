@@ -200,6 +200,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -241,6 +242,22 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
+                      // Positioned(
+                      //   top: -5,
+                      //   left: 8,
+                      //   child: Container(
+                      //     padding: const EdgeInsets.all(4),
+                      //     decoration: BoxDecoration(
+                      //       color: const Color.fromARGB(255, 212, 58, 58),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: const Icon(
+                      //       Icons.verified,
+                      //       size: 30,
+                      //       color: Colors.white,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 );
@@ -490,7 +507,21 @@ class _ProfilePageState extends State<ProfilePage> {
       return Scaffold(
         backgroundColor: const Color.fromARGB(255, 233, 232, 231),
         appBar: AppBar(
-          title: const Text('My Profile'),
+          title: const Text(
+            'My Profile',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 28,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  offset: Offset(0, 1),
+                  blurRadius: 3,
+                  color: Colors.black38,
+                ),
+              ],
+            ),
+          ),
           backgroundColor: const Color(0xFFCEBFA3),
         ),
         body: Center(child: Text(error)),
@@ -519,7 +550,22 @@ class _ProfilePageState extends State<ProfilePage> {
             backgroundColor: const Color(0xFFCEBFA3),
             floating: true,
             snap: true,
-            title: const Text('My Profile'),
+            centerTitle: true,
+            title: const Text(
+              'My Profile',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 28,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    offset: Offset(0, 1),
+                    blurRadius: 3,
+                    color: Colors.black38,
+                  ),
+                ],
+              ),
+            ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () => Navigator.pushAndRemoveUntil(
@@ -550,6 +596,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       }
                     },
                     child: Stack(
+                      clipBehavior: Clip.none,
                       alignment: Alignment.center,
                       children: [
                         CircleAvatar(
@@ -575,6 +622,22 @@ class _ProfilePageState extends State<ProfilePage> {
                               Icons.edit,
                               size: 20,
                               color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: -5,
+                          left: -20,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 212, 58, 58),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.verified,
+                              size: 50,
+                              color: Colors.white,
                             ),
                           ),
                         ),

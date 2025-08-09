@@ -1245,6 +1245,57 @@ app.get('/user_profile_picture/:userId', (req, res) => {
   });
 });
 
+
+app.put('/edit/restaurants/:id', async (req, res) => {
+  const { id } = req.params;
+  const { 
+    restaurant_name, 
+    location, 
+    operating_hours, 
+    phone_number, 
+    category 
+  } = req.body;
+
+  // ตรวจสอบข้อมูลที่จำเป็น
+  if (!restaurant_name || !location || !operating_hours || !phone_number || !category) {
+    return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+  }
+
+  try {
+    // อัพเดทข้อมูลในฐานข้อมูล
+    const [result] = await pool.query(
+      `UPDATE restaurants SET 
+        restaurant_name = ?, 
+        location = ?, 
+        operating_hours = ?, 
+        phone_number = ?, 
+        category = ?,
+        updated_at = NOW()
+      WHERE Restaurant_ID = ?`,
+      [restaurant_name, location, operating_hours, phone_number, category, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'ไม่พบร้านอาหาร' });
+    }
+
+    // ดึงข้อมูลร้านอาหารที่อัพเดทแล้ว
+    const [updatedRestaurant] = await pool.query(
+      'SELECT * FROM restaurants WHERE Restaurant_ID = ?',
+      [id]
+    );
+
+    res.json(updatedRestaurant[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทร้านอาหาร' });
+  }
+});
+
+
+
+
+
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));

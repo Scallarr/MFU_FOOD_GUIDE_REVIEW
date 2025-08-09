@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:myapp/1.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/restaurantDetail.dart';
+import 'package:myapp/admin/edit-restaurant.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/threads.dart';
@@ -53,15 +53,15 @@ class Restaurant {
   }
 }
 
-class RestaurantListPage extends StatefulWidget {
+class RestaurantListPageAdmin extends StatefulWidget {
   @override
   _RestaurantListPageState createState() => _RestaurantListPageState();
   final bool reload;
 
-  const RestaurantListPage({super.key, this.reload = false});
+  const RestaurantListPageAdmin({super.key, this.reload = false});
 }
 
-class _RestaurantListPageState extends State<RestaurantListPage> {
+class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   late Future<List<Restaurant>> futureRestaurants;
   List<Restaurant> allRestaurants = [];
   String searchQuery = '';
@@ -217,7 +217,6 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            toolbarHeight: 70,
             backgroundColor: const Color(0xFFCEBFA3),
             foregroundColor: Colors.black,
             elevation: 1,
@@ -232,7 +231,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                     const Padding(
                       padding: EdgeInsets.only(left: 20),
                       child: Text(
-                        'MFU Food Guide',
+                        'MFU Food Guide For Admin',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 29,
@@ -577,7 +576,18 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                 builder: (context) =>
                     RestaurantDetailPage(restaurantId: res.id),
               ),
-            );
+            ).then((shouldRefresh) {
+              if (shouldRefresh == true) {
+                setState(() {
+                  futureRestaurants = fetchRestaurants();
+                  futureRestaurants.then((list) {
+                    setState(() {
+                      allRestaurants = list;
+                    });
+                  });
+                });
+              }
+            });
           },
           child: Card(
             margin: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -588,16 +598,59 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                  child: Image.network(
-                    res.photoUrl,
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(height: 180, color: Colors.grey[300]),
-                  ),
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child: Image.network(
+                        res.photoUrl,
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(height: 180, color: Colors.grey[300]),
+                      ),
+                    ),
+                    if (userId != null)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.edit, color: Colors.white),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditRestaurant(
+                                    userId: userId!,
+                                    restaurantId: res.id,
+                                    currentData: res,
+                                  ),
+                                ),
+                              ).then((shouldRefresh) {
+                                if (shouldRefresh == true) {
+                                  setState(() {
+                                    futureRestaurants = fetchRestaurants();
+                                    futureRestaurants.then((list) {
+                                      setState(() {
+                                        allRestaurants = list;
+                                      });
+                                    });
+                                  });
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
