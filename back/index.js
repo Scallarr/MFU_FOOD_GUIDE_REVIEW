@@ -1269,7 +1269,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
         location = ?, 
         operating_hours = ?, 
         phone_number = ?, 
-        category = ?,
+        category = ?
       WHERE Restaurant_ID = ?`,
       [restaurant_name, location, operating_hours, phone_number, category, id]
     );
