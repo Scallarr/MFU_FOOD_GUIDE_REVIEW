@@ -1271,7 +1271,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
         operating_hours = ?, 
         phone_number = ?, 
         category = ?,
-        image_url = ?
+        photos = ?
       WHERE Restaurant_ID = ?`,
       [restaurant_name, location, operating_hours, phone_number, category,image_url, id]
     );
@@ -1287,6 +1287,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
     );
 
     res.json(updatedRestaurant[0]);
+    console.log(updatedRestaurant[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทร้านอาหาร' });
