@@ -1264,13 +1264,12 @@ app.put('/edit/restaurants/:id', async (req, res) => {
   try {
     // อัพเดทข้อมูลในฐานข้อมูล
     const [result] = await db.promise().execute(
-      `UPDATE restaurants SET 
+      `UPDATE Restaurant SET 
         restaurant_name = ?, 
         location = ?, 
         operating_hours = ?, 
         phone_number = ?, 
         category = ?,
-        updated_at = NOW()
       WHERE Restaurant_ID = ?`,
       [restaurant_name, location, operating_hours, phone_number, category, id]
     );
