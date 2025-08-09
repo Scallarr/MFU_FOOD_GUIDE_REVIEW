@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/admin/Admin-AddRestaurant.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
@@ -13,6 +14,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/threads.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
 class Restaurant {
   final int id;
@@ -58,8 +60,8 @@ class Restaurant {
       ratingFlavor: double.parse(json['rating_flavor_avg'].toString()),
       ratingService: double.parse(json['rating_service_avg'].toString()),
       category: json['category'],
-      pendingReviewsCount: json['pending-reviews-count '],
-      postedReviewsCount: json['posted-reviews-count'],
+      pendingReviewsCount: json['pending_reviews_count'] ?? 0,
+      postedReviewsCount: json['posted_reviews_count'] ?? 0,
     );
   }
 }
@@ -240,6 +242,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            toolbarHeight: 70,
             backgroundColor: const Color(0xFFCEBFA3),
             foregroundColor: Colors.black,
             elevation: 1,
@@ -247,7 +250,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
             snap: true,
             flexibleSpace: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(right: 23.0, top: 8),
+                padding: const EdgeInsets.only(right: 0, top: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -302,7 +305,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
           // Search Bar
           SliverPadding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.only(left: 6, right: 6, top: 14),
             sliver: SliverToBoxAdapter(
               child: TextField(
                 decoration: InputDecoration(
@@ -323,12 +326,12 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
           // Filter Buttons
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             sliver: SliverToBoxAdapter(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     SizedBox(
                       width: 105,
@@ -572,270 +575,544 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
           BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color.fromARGB(255, 235, 188, 117),
+        child: Icon(Icons.add, color: Colors.white),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddRestaurantPage(userId: userId!),
+            ),
+          ).then((shouldRefresh) {
+            if (shouldRefresh == true) {
+              _refreshRestaurantData();
+            }
+          });
+        },
+      ),
     );
   }
 
   Widget _buildRestaurantListContent() {
     if (allRestaurants.isEmpty) {
       return SliverFillRemaining(
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+          ),
+        ),
       );
     }
 
     if (filteredAndSortedRestaurants.isEmpty) {
       return SliverFillRemaining(
-        child: Center(child: Text('No restaurants found')),
+        child: Center(
+          child: Text(
+            'No restaurants found',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
       );
     }
 
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final res = filteredAndSortedRestaurants[index];
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    RestaurantDetailPage(restaurantId: res.id),
-              ),
-            ).then((shouldRefresh) {
-              if (shouldRefresh == true) {
-                _refreshRestaurantData();
-              }
-            });
-          },
-          child: Card(
-            margin: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            elevation: 10,
-            shape: RoundedRectangleBorder(
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Material(
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            elevation: 8,
+            child: InkWell(
               borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      child: Image.network(
-                        res.photoUrl,
-                        height: 180,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      RestaurantDetailPage(restaurantId: res.id),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Section
+                  Stack(
+                    children: [
+                      // Hero Image with shimmer effect
+                      Container(
+                        height: 200,
                         width: double.infinity,
-                        fit: BoxFit.cover,
-                        filterQuality: FilterQuality.low,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                          child: Image.network(
+                            res.photoUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Shimmer.fromColors(
+                                baseColor: Colors.grey[300]!,
+                                highlightColor: Colors.grey[100]!,
+                                child: Container(color: Colors.white),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: Colors.grey[200],
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.restaurant,
+                                      size: 50,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ),
+                          ),
+                        ),
                       ),
-                    ),
-                    if (userId != null)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
+
+                      // Dark overlay gradient
+                      Positioned.fill(
+                        child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.black54,
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.2),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Rating Badge
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: IconButton(
-                            icon: Icon(Icons.edit, color: Colors.white),
-                            onPressed: () => _navigateToEditRestaurant(res),
-                          ),
-                        ),
-                      ),
-                    // Badge แสดงจำนวนรีวิวที่รออนุมัติ
-                    if (res.pendingReviewsCount > 0)
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: GestureDetector(
-                          onTap: () => _navigateToPendingReviews(res.id),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black26, blurRadius: 4),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.hourglass_top,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                color: Colors.amber,
+                                size: 20,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                res.ratingOverall.toStringAsFixed(1),
+                                style: TextStyle(
                                   color: Colors.white,
-                                  size: 16,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
-                                SizedBox(width: 4),
-                                Text(
-                                  '${res.pendingReviewsCount} รออนุมัติ',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text(
-                                  res.name,
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
+
+                      // Admin controls
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        right: 12,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Left side - Pending reviews or empty container
+                            if (res.pendingReviewsCount > 0)
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(
+                                    255,
+                                    230,
+                                    188,
+                                    127,
                                   ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black12,
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(width: 7),
-                                Icon(
-                                  Icons.check_circle,
-                                  color: Colors.blue,
-                                  size: 19,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.hourglass_top_rounded,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      '${res.pendingReviewsCount} Pending',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 83, 82, 77),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.star, color: Colors.white, size: 18),
-                                SizedBox(width: 4),
-                                Text(
-                                  res.ratingOverall.toStringAsFixed(1),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                              )
+                            else
+                              Container(), // Empty container to maintain space
+                            // Right side - Edit button
+                            if (userId != null)
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Colors.white.withOpacity(0.9),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.edit_rounded,
+                                    size: 18,
+                                    color: Colors.blue[700],
                                   ),
+                                  onPressed: () =>
+                                      _navigateToEditRestaurant(res),
+                                  padding: EdgeInsets.zero,
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.redAccent,
-                            size: 20,
-                          ),
-                          SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              '${res.location}, MFU',
-                              style: TextStyle(fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      // แถวแสดงประเภทอาหารและจำนวนรีวิว
-                      Row(
-                        children: [
-                          // ประเภทอาหาร
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.fastfood,
-                                  size: 18,
-                                  color: Color.fromARGB(255, 215, 169, 131),
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  res.category.replaceAll('_', ' '),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Color.fromARGB(255, 222, 122, 122),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          // จำนวนรีวิวที่โพสต์แล้ว
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.rate_review,
-                                  size: 16,
-                                  color: Colors.green,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  '${res.postedReviewsCount} โพสต์แล้ว',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.green.shade800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildRatingItem('Hygiene', res.ratingHygiene),
-                          _buildRatingItem('Flavor', res.ratingFlavor),
-                          _buildRatingItem('Service', res.ratingService),
-                        ],
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+
+                  // Content Section
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title Row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    res.name,
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.2,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on_rounded,
+                                        size: 16,
+                                        color: Colors.red[400],
+                                      ),
+                                      SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${res.location}, MFU',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[700],
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(
+                              Icons.verified_rounded,
+                              color: Colors.blue,
+                              size: 24,
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 16),
+
+                        // Stats Row
+                        Row(
+                          children: [
+                            // Category Chip
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.orange[100]!,
+                                    Colors.orange[50]!,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.restaurant_menu_rounded,
+                                    size: 16,
+                                    color: Colors.orange[800],
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    res.category.replaceAll('_', ' '),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.orange[900],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            Spacer(),
+
+                            // Reviews Count
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.green[100]!,
+                                    Colors.green[50]!,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.reviews_rounded,
+                                    size: 16,
+                                    color: Colors.green[800],
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    '${res.postedReviewsCount} Reviews',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green[900],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 20),
+
+                        // Rating Progress Bars
+                        Column(
+                          children: [
+                            _buildRatingIndicator('Hygiene', res.ratingHygiene),
+                            SizedBox(height: 8),
+                            _buildRatingIndicator('Flavor', res.ratingFlavor),
+                            SizedBox(height: 8),
+                            _buildRatingIndicator('Service', res.ratingService),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       }, childCount: filteredAndSortedRestaurants.length),
+    );
+  }
+
+  Widget _buildRatingIndicator(String label, double rating) {
+    final ratingColor = _getRatingColor(rating);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+            ),
+            Text(
+              rating.toStringAsFixed(1),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: ratingColor,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 6),
+        Container(
+          height: 9,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              // Background track
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 218, 218, 218),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              // Progress bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                  width: (rating / 5) * MediaQuery.of(context).size.width,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        ratingColor.withOpacity(0.9),
+                        ratingColor.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Inner highlight
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Color(0xFF3E2723); // Dark coffee brown
+    if (rating >= 4.0) return Color(0xFF3E2723); // Medium coffee
+    if (rating >= 3.5) return Color(0xFF3E2723); // Mocha
+    if (rating >= 3.0) return Color(0xFF3E2723); // Latte
+    if (rating >= 2.5) return Color(0xFF3E2723); // Light beige
+    if (rating >= 2.0) return Color(0xFF3E2723); // Cream
+    return Color(0xFF3E2723); // Dark chocolate (lowest rating)
+  }
+  // Color _getRatingColor(double rating) {
+  //   if (rating >= 4.5) return Color(0xFF6D4C41); // Dark coffee brown
+  //   if (rating >= 4.0) return Color(0xFF8D6E63); // Medium coffee
+  //   if (rating >= 3.5) return Color(0xFFA1887F); // Mocha
+  //   if (rating >= 3.0) return Color(0xFFBCAAA4); // Latte
+  //   if (rating >= 2.5) return Color(0xFFD7CCC8); // Light beige
+  //   if (rating >= 2.0) return Color(0xFFEFEBE9); // Cream
+  //   return Color(0xFF3E2723); // Dark chocolate (lowest rating)
+  // }
+
+  Widget _buildRatingBar(String label, double rating) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+            Text(
+              rating.toStringAsFixed(1),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        SizedBox(height: 4),
+        Container(
+          height: 6,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3),
+            color: const Color.fromARGB(255, 206, 184, 176),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: rating / 5,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+                color: Colors.brown.shade400,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -1329,6 +1329,84 @@ app.put('/edit/restaurants/:id', async (req, res) => {
 });
 
 
+// Add Restaurant Endpoint
+app.post('/Add/restaurants', async (req, res) => {
+  const {
+    restaurant_name,
+    location,
+    operating_hours,
+    phone_number,
+    photos,
+    category,
+    added_by
+  } = req.body;
+
+  // Validate required fields
+  if (!restaurant_name || !location || !category || !photos) {
+    return res.status(400).json({ 
+      error: 'Missing required fields: name, location, category, and photo are required' 
+    });
+  }
+
+  try {
+    const connection = await pool.getConnection();
+    
+    try {
+      // Insert new restaurant
+      const [result] = await connection.query(
+        `INSERT INTO Restaurant 
+        (restaurant_name, location, operating_hours, phone_number, photos, category) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [restaurant_name, location, operating_hours, phone_number, photos, category]
+      );
+
+      // Get the newly created restaurant
+      const [rows] = await connection.query(
+        `SELECT 
+          Restaurant_ID as id,
+          restaurant_name as name,
+          location,
+          operating_hours as operatingHours,
+          phone_number as phoneNumber,
+          photos as photoUrl,
+          category,
+          rating_overall_avg as ratingOverall,
+          rating_hygiene_avg as ratingHygiene,
+          rating_flavor_avg as ratingFlavor,
+          rating_service_avg as ratingService,
+          0 as pendingReviewsCount,
+          0 as postedReviewsCount
+        FROM Restaurant WHERE Restaurant_ID = ?`,
+        [result.insertId]
+      );
+
+      res.status(201).json(rows[0]);
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ 
+      error: 'Database operation failed',
+      details: err.message 
+    });
+  }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+
+
+
+
+
+
+
+
 
 
 
