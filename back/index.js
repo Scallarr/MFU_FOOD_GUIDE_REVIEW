@@ -1280,7 +1280,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
 
     // ดึงข้อมูลร้านอาหารที่อัพเดทแล้ว
     const [updatedRestaurant] = await db.promise().execute(
-      'SELECT * FROM restaurants WHERE Restaurant_ID = ?',
+      'SELECT * FROM Restaurant WHERE Restaurant_ID = ?',
       [id]
     );
 
