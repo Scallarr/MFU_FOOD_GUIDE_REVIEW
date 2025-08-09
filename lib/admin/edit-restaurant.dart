@@ -64,7 +64,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
       try {
         final response = await http.put(
           Uri.parse(
-            'https://mfu-food-guide-review.onrender.com/restaurants/${widget.restaurantId}',
+            'https://mfu-food-guide-review.onrender.com/edit/restaurants/${widget.restaurantId}',
           ),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({

@@ -1263,7 +1263,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
 
   try {
     // อัพเดทข้อมูลในฐานข้อมูล
-    const [result] = await pool.query(
+    const [result] = await conn.execute(
       `UPDATE restaurants SET 
         restaurant_name = ?, 
         location = ?, 
@@ -1280,7 +1280,7 @@ app.put('/edit/restaurants/:id', async (req, res) => {
     }
 
     // ดึงข้อมูลร้านอาหารที่อัพเดทแล้ว
-    const [updatedRestaurant] = await pool.query(
+    const [updatedRestaurant] = await conn.execute(
       'SELECT * FROM restaurants WHERE Restaurant_ID = ?',
       [id]
     );
