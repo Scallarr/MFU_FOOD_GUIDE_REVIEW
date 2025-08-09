@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
-import 'package:myapp/admin/Home.dart';
+import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/home.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';

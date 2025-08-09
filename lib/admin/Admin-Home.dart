@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/admin/Admin-Dashboard.dart';
+import 'package:myapp/admin/Admin-Leaderboard.dart';
+import 'package:myapp/admin/Admin-Thread.dart';
+import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/restaurantDetail.dart';
-import 'package:myapp/admin/edit-restaurant.dart';
+import 'package:myapp/admin/Admin-Edit-Restaurant.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/threads.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class Restaurant {
   final int id;
@@ -21,6 +26,8 @@ class Restaurant {
   final double ratingFlavor;
   final double ratingService;
   final String category;
+  final int pendingReviewsCount;
+  final int postedReviewsCount;
 
   Restaurant({
     required this.id,
@@ -34,6 +41,8 @@ class Restaurant {
     required this.ratingFlavor,
     required this.ratingService,
     required this.category,
+    required this.pendingReviewsCount,
+    required this.postedReviewsCount,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -49,6 +58,8 @@ class Restaurant {
       ratingFlavor: double.parse(json['rating_flavor_avg'].toString()),
       ratingService: double.parse(json['rating_service_avg'].toString()),
       category: json['category'],
+      pendingReviewsCount: json['pending-reviews-count '],
+      postedReviewsCount: json['posted-reviews-count'],
     );
   }
 }
@@ -89,6 +100,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   int _selectedIndex = 0;
 
   @override
+  @override
   void initState() {
     super.initState();
     loadUserIdAndFetchProfile();
@@ -96,8 +108,19 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
     futureRestaurants.then((list) {
       setState(() {
         allRestaurants = list;
+        _precacheRestaurantImages(); // ย้ายมาที่นี่หลังจากได้ข้อมูลแล้ว
       });
     });
+  }
+
+  void _precacheRestaurantImages() {
+    for (var restaurant in allRestaurants) {
+      try {
+        precacheImage(NetworkImage(restaurant.photoUrl), context);
+      } catch (e) {
+        print('Failed to precache image: ${restaurant.photoUrl}');
+      }
+    }
   }
 
   Future<void> loadUserIdAndFetchProfile() async {
@@ -190,19 +213,19 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPage()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageAdmin()),
         );
         break;
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Dashboard()),
+          MaterialPageRoute(builder: (context) => DashboardAdmin()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsPage()),
+          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
         );
         break;
     }
@@ -234,7 +257,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         'MFU Food Guide For Admin',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 29,
+                          fontSize: 18,
                           color: Colors.white,
                           shadows: [
                             Shadow(
@@ -251,7 +274,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProfilePage(),
+                            builder: (context) => ProfilePageAdmin(),
                           ),
                         );
                       },
@@ -578,14 +601,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
               ),
             ).then((shouldRefresh) {
               if (shouldRefresh == true) {
-                setState(() {
-                  futureRestaurants = fetchRestaurants();
-                  futureRestaurants.then((list) {
-                    setState(() {
-                      allRestaurants = list;
-                    });
-                  });
-                });
+                _refreshRestaurantData();
               }
             });
           },
@@ -609,8 +625,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         height: 180,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Container(height: 180, color: Colors.grey[300]),
+                        filterQuality: FilterQuality.low,
                       ),
                     ),
                     if (userId != null)
@@ -624,29 +639,48 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                           ),
                           child: IconButton(
                             icon: Icon(Icons.edit, color: Colors.white),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => EditRestaurant(
-                                    userId: userId!,
-                                    restaurantId: res.id,
-                                    currentData: res,
+                            onPressed: () => _navigateToEditRestaurant(res),
+                          ),
+                        ),
+                      ),
+                    // Badge แสดงจำนวนรีวิวที่รออนุมัติ
+                    if (res.pendingReviewsCount > 0)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: GestureDetector(
+                          onTap: () => _navigateToPendingReviews(res.id),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black26, blurRadius: 4),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.hourglass_top,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '${res.pendingReviewsCount} รออนุมัติ',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
                                   ),
                                 ),
-                              ).then((shouldRefresh) {
-                                if (shouldRefresh == true) {
-                                  setState(() {
-                                    futureRestaurants = fetchRestaurants();
-                                    futureRestaurants.then((list) {
-                                      setState(() {
-                                        allRestaurants = list;
-                                      });
-                                    });
-                                  });
-                                }
-                              });
-                            },
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -689,26 +723,12 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                             ),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.star,
-                                  color: const Color.fromARGB(
-                                    255,
-                                    255,
-                                    255,
-                                    255,
-                                  ),
-                                  size: 18,
-                                ),
+                                Icon(Icons.star, color: Colors.white, size: 18),
                                 SizedBox(width: 4),
                                 Text(
                                   res.ratingOverall.toStringAsFixed(1),
                                   style: TextStyle(
-                                    color: const Color.fromRGBO(
-                                      248,
-                                      248,
-                                      248,
-                                      1,
-                                    ),
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                   ),
@@ -737,8 +757,10 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         ],
                       ),
                       SizedBox(height: 10),
+                      // แถวแสดงประเภทอาหารและจำนวนรีวิว
                       Row(
                         children: [
+                          // ประเภทอาหาร
                           Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 10,
@@ -753,24 +775,43 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                 Icon(
                                   Icons.fastfood,
                                   size: 18,
-                                  color: const Color.fromARGB(
-                                    255,
-                                    215,
-                                    169,
-                                    131,
-                                  ),
+                                  color: Color.fromARGB(255, 215, 169, 131),
                                 ),
                                 SizedBox(width: 6),
                                 Text(
                                   res.category.replaceAll('_', ' '),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: const Color.fromARGB(
-                                      255,
-                                      222,
-                                      122,
-                                      122,
-                                    ),
+                                    color: Color.fromARGB(255, 222, 122, 122),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          // จำนวนรีวิวที่โพสต์แล้ว
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.rate_review,
+                                  size: 16,
+                                  color: Colors.green,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  '${res.postedReviewsCount} โพสต์แล้ว',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green.shade800,
                                   ),
                                 ),
                               ],
@@ -796,6 +837,48 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
         );
       }, childCount: filteredAndSortedRestaurants.length),
     );
+  }
+
+  // ฟังก์ชันช่วยเหลือ
+  void _navigateToEditRestaurant(Restaurant restaurant) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditRestaurant(
+          userId: userId!,
+          restaurantId: restaurant.id,
+          currentData: restaurant,
+        ),
+      ),
+    ).then((shouldRefresh) {
+      if (shouldRefresh == true) {
+        _refreshRestaurantData();
+      }
+    });
+  }
+
+  void _navigateToPendingReviews(int restaurantId) {
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => PendingReviewsPage(restaurantId: restaurantId),
+    //   ),
+    // ).then((shouldRefresh) {
+    //   if (shouldRefresh == true) {
+    //     _refreshRestaurantData();
+    //   }
+    // });
+  }
+
+  void _refreshRestaurantData() {
+    setState(() {
+      futureRestaurants = fetchRestaurants();
+      futureRestaurants.then((list) {
+        setState(() {
+          allRestaurants = list;
+        });
+      });
+    });
   }
 
   Widget _buildRatingItem(String label, double rating) {

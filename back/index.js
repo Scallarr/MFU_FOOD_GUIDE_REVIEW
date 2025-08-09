@@ -134,20 +134,54 @@
       res.json(results[0]);
     });
   });
-  app.get('/restaurants', (req, res) => {
-    const sql = `SELECT Restaurant_ID,restaurant_name, location, operating_hours, phone_number, photos, 
-                        rating_overall_avg, rating_hygiene_avg, rating_flavor_avg, rating_service_avg, category 
-                FROM Restaurant`;
 
-    db.query(sql, (err, results) => {
-      if (err) {
-        console.error('Error fetching restaurants:', err);
-        return res.status(500).json({ error: 'Database query error' });
-      }
-      res.json(results);
-      console.log(results);
-    });
+
+
+
+app.get('/restaurants', (req, res) => {
+  const sql = `
+    SELECT 
+      r.Restaurant_ID,
+      r.restaurant_name, 
+      r.location, 
+      r.operating_hours, 
+      r.phone_number, 
+      r.photos, 
+      r.rating_overall_avg, 
+      r.rating_hygiene_avg, 
+      r.rating_flavor_avg, 
+      r.rating_service_avg, 
+      r.category,
+      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID AND message_status = 'Posted') AS posted_reviews_count,
+      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID AND message_status = 'Pending') AS pending_reviews_count,
+      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID AND message_status = 'Banned') AS banned_reviews_count,
+      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID) AS total_reviews_count
+    FROM Restaurant r
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching restaurants:', err);
+      return res.status(500).json({ error: 'Database query error' });
+    }
+    
+    // แปลงผลลัพธ์ให้เหมาะสม
+    const formattedResults = results.map(restaurant => ({
+      ...restaurant,
+      posted_reviews_count: parseInt(restaurant.posted_reviews_count) || 0,
+      pending_reviews_count: parseInt(restaurant.pending_reviews_count) || 0,
+      banned_reviews_count: parseInt(restaurant.banned_reviews_count) || 0,
+      total_reviews_count: parseInt(restaurant.total_reviews_count) || 0
+    }));
+
+    res.json(formattedResults);
+    console.log('Restaurants with review counts:', formattedResults);
   });
+});
+
+
+
+
 app.get('/user-profile-pictures/:userId', (req, res) => {
   const userId = parseInt(req.params.userId);
   const sql = `SELECT Picture_ID, picture_url, is_active 

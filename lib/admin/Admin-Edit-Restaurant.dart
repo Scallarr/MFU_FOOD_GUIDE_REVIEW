@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:myapp/admin/Home.dart' as home;
+import 'package:myapp/admin/Admin-Home.dart' as home;
 
 class EditRestaurant extends StatefulWidget {
   final int userId;

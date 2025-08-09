@@ -41,6 +41,7 @@ dependencies:
   intl: ^0.18.1
   timeago: ^3.6.0 
   fl_chart: ^0.40.0
+  cached_network_image: ^3.2.3
 
   
 dev_dependencies:
