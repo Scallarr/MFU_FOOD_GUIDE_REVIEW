@@ -30,6 +30,7 @@ class Restaurant {
   final String category;
   final int pendingReviewsCount;
   final int postedReviewsCount;
+  // Added to track who created the restaurant
 
   Restaurant({
     required this.id,
@@ -84,6 +85,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   String? filterCategory;
   String? profileImageUrl;
   int? userId;
+  bool _isDeleting = false;
 
   final List<String> locationOptions = [
     'D1',
@@ -102,7 +104,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   int _selectedIndex = 0;
 
   @override
-  @override
   void initState() {
     super.initState();
     loadUserIdAndFetchProfile();
@@ -110,7 +111,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
     futureRestaurants.then((list) {
       setState(() {
         allRestaurants = list;
-        _precacheRestaurantImages(); // ย้ายมาที่นี่หลังจากได้ข้อมูลแล้ว
+        _precacheRestaurantImages();
       });
     });
   }
@@ -169,6 +170,119 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       return jsonList.map((json) => Restaurant.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load restaurants');
+    }
+  }
+
+  Future<void> _deleteRestaurant(int restaurantId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.red, width: 2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.warning, color: Colors.red, size: 48),
+              SizedBox(height: 16),
+              Text(
+                'Delete Restaurant',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Are you sure you want to delete this restaurant?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        side: BorderSide(color: Colors.grey),
+                      ),
+                      child: Text('Cancel'),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      final response = await http.delete(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/Delete/restaurants/$restaurantId',
+        ),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Restaurant deleted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _refreshRestaurantData();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete restaurant: ${response.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isDeleting = false;
+      });
     }
   }
 
@@ -235,6 +349,13 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isDeleting) {
+      return Scaffold(
+        backgroundColor: Colors.black.withOpacity(0.3),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final restaurantsToShow = filteredAndSortedRestaurants;
 
     return Scaffold(
@@ -310,11 +431,39 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Search restaurants...',
-                  prefixIcon: Icon(Icons.search),
+                  hintStyle: TextStyle(
+                    color: Color.fromARGB(255, 0, 0, 0).withOpacity(0.6),
+                  ),
+                  prefixIcon: Icon(Icons.search, color: Color(0xFF5D4037)),
+                  filled: true,
+                  fillColor: Color(0xFFF5F0E6),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Color.fromARGB(255, 108, 76, 44),
+                      width: 2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Color.fromARGB(255, 122, 80, 38),
+                      width: 2,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Color.fromARGB(255, 141, 71, 50),
+                      width: 2.5,
+                    ),
                   ),
                 ),
+                style: TextStyle(color: Color.fromARGB(255, 34, 31, 30)),
                 onChanged: (value) {
                   setState(() {
                     searchQuery = value;
@@ -331,7 +480,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     SizedBox(
                       width: 105,
@@ -363,7 +512,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         },
                       ),
                     ),
-                    SizedBox(width: 7),
+                    SizedBox(width: 13),
                     SizedBox(
                       width: buttonWidth,
                       child: Container(
@@ -456,7 +605,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 7),
+                    SizedBox(width: 22),
                     SizedBox(
                       width: 125,
                       child: Container(
@@ -627,11 +776,11 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
         return Container(
           margin: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Material(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             clipBehavior: Clip.antiAlias,
             elevation: 8,
             child: InkWell(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(5),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -651,7 +800,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         width: double.infinity,
                         child: ClipRRect(
                           borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(16),
+                            top: Radius.circular(12),
                           ),
                           child: Image.network(
                             res.photoUrl,
@@ -746,12 +895,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color.fromARGB(
-                                    255,
-                                    230,
-                                    188,
-                                    127,
-                                  ),
+                                  color: const Color.fromARGB(255, 38, 38, 38),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
@@ -783,21 +927,47 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                               )
                             else
                               Container(), // Empty container to maintain space
-                            // Right side - Edit button
+                            // Right side - Admin buttons
                             if (userId != null)
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: Colors.white.withOpacity(0.9),
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.edit_rounded,
-                                    size: 18,
-                                    color: Colors.blue[700],
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Edit button
+                                  CircleAvatar(
+                                    radius: 23,
+                                    backgroundColor: Colors.white.withOpacity(
+                                      0.9,
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(
+                                        Icons.edit_rounded,
+                                        size: 23,
+                                        color: Colors.blue[700],
+                                      ),
+                                      onPressed: () =>
+                                          _navigateToEditRestaurant(res),
+                                      padding: EdgeInsets.zero,
+                                    ),
                                   ),
-                                  onPressed: () =>
-                                      _navigateToEditRestaurant(res),
-                                  padding: EdgeInsets.zero,
-                                ),
+                                  SizedBox(width: 15),
+                                  // Delete button
+                                  CircleAvatar(
+                                    radius: 23,
+                                    backgroundColor: Colors.white.withOpacity(
+                                      0.9,
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(
+                                        Icons.delete_rounded,
+                                        size: 23,
+                                        color: Colors.red[700],
+                                      ),
+                                      onPressed: () =>
+                                          _deleteRestaurant(res.id),
+                                      padding: EdgeInsets.zero,
+                                    ),
+                                  ),
+                                ],
                               ),
                           ],
                         ),
@@ -823,13 +993,14 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                     res.name,
                                     style: TextStyle(
                                       fontSize: 22,
-                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF5D4037),
+                                      fontWeight: FontWeight.w500,
                                       height: 1.2,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 4),
+                                  SizedBox(height: 10),
                                   Row(
                                     children: [
                                       Icon(
@@ -843,7 +1014,12 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                           '${res.location}, MFU',
                                           style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.grey[700],
+                                            color: const Color.fromARGB(
+                                              255,
+                                              100,
+                                              98,
+                                              98,
+                                            ),
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -866,6 +1042,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
                         // Stats Row
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // Category Chip
                             Container(
@@ -876,11 +1053,11 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    Colors.orange[100]!,
-                                    Colors.orange[50]!,
+                                    const Color.fromARGB(255, 233, 200, 150)!,
+                                    const Color.fromARGB(255, 204, 153, 72)!,
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -888,7 +1065,12 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                   Icon(
                                     Icons.restaurant_menu_rounded,
                                     size: 16,
-                                    color: Colors.orange[800],
+                                    color: const Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                   ),
                                   SizedBox(width: 6),
                                   Text(
@@ -896,14 +1078,17 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.orange[900],
+                                      color: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-
-                            Spacer(),
 
                             // Reviews Count
                             Container(
@@ -912,13 +1097,8 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.green[100]!,
-                                    Colors.green[50]!,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Color.fromARGB(255, 114, 111, 108),
+                                borderRadius: BorderRadius.circular(7),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -926,15 +1106,25 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                   Icon(
                                     Icons.reviews_rounded,
                                     size: 16,
-                                    color: Colors.green[800],
+                                    color: const Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
                                   ),
                                   SizedBox(width: 6),
                                   Text(
-                                    '${res.postedReviewsCount} Reviews',
+                                    '${res.postedReviewsCount} ',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.green[900],
+                                      color: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -1054,69 +1244,15 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   }
 
   Color _getRatingColor(double rating) {
-    if (rating >= 4.5) return Color(0xFF3E2723); // Dark coffee brown
-    if (rating >= 4.0) return Color(0xFF3E2723); // Medium coffee
-    if (rating >= 3.5) return Color(0xFF3E2723); // Mocha
-    if (rating >= 3.0) return Color(0xFF3E2723); // Latte
-    if (rating >= 2.5) return Color(0xFF3E2723); // Light beige
-    if (rating >= 2.0) return Color(0xFF3E2723); // Cream
-    return Color(0xFF3E2723); // Dark chocolate (lowest rating)
-  }
-  // Color _getRatingColor(double rating) {
-  //   if (rating >= 4.5) return Color(0xFF6D4C41); // Dark coffee brown
-  //   if (rating >= 4.0) return Color(0xFF8D6E63); // Medium coffee
-  //   if (rating >= 3.5) return Color(0xFFA1887F); // Mocha
-  //   if (rating >= 3.0) return Color(0xFFBCAAA4); // Latte
-  //   if (rating >= 2.5) return Color(0xFFD7CCC8); // Light beige
-  //   if (rating >= 2.0) return Color(0xFFEFEBE9); // Cream
-  //   return Color(0xFF3E2723); // Dark chocolate (lowest rating)
-  // }
-
-  Widget _buildRatingBar(String label, double rating) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
-              ),
-            ),
-            Text(
-              rating.toStringAsFixed(1),
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        SizedBox(height: 4),
-        Container(
-          height: 6,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3),
-            color: const Color.fromARGB(255, 206, 184, 176),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: rating / 5,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(3),
-                color: Colors.brown.shade400,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
+    if (rating >= 4.5) return Color(0xFF3E2723);
+    if (rating >= 4.0) return Color(0xFF3E2723);
+    if (rating >= 3.5) return Color(0xFF3E2723);
+    if (rating >= 3.0) return Color(0xFF3E2723);
+    if (rating >= 2.5) return Color(0xFF3E2723);
+    if (rating >= 2.0) return Color(0xFF3E2723);
+    return Color(0xFF3E2723);
   }
 
-  // ฟังก์ชันช่วยเหลือ
   void _navigateToEditRestaurant(Restaurant restaurant) {
     Navigator.push(
       context,
@@ -1134,19 +1270,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
     });
   }
 
-  void _navigateToPendingReviews(int restaurantId) {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(
-    //     builder: (context) => PendingReviewsPage(restaurantId: restaurantId),
-    //   ),
-    // ).then((shouldRefresh) {
-    //   if (shouldRefresh == true) {
-    //     _refreshRestaurantData();
-    //   }
-    // });
-  }
-
   void _refreshRestaurantData() {
     setState(() {
       futureRestaurants = fetchRestaurants();
@@ -1156,20 +1279,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
         });
       });
     });
-  }
-
-  Widget _buildRatingItem(String label, double rating) {
-    return Row(
-      children: [
-        Icon(Icons.star, color: Colors.amber, size: 18),
-        SizedBox(width: 4),
-        Text('$label: ', style: TextStyle(fontWeight: FontWeight.w500)),
-        Text(
-          rating.toStringAsFixed(1),
-          style: TextStyle(color: Colors.black87),
-        ),
-      ],
-    );
   }
 }
 

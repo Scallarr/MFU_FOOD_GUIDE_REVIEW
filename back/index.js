@@ -1328,6 +1328,58 @@ app.put('/edit/restaurants/:id', async (req, res) => {
   }
 });
 
+// DELETE /Delete/restaurants/:id
+app.delete('/Delete/restaurants/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. ตรวจสอบว่ามีร้านอาหารนี้อยู่จริงหรือไม่
+    const [checkResult] = await db.promise().execute(
+      'SELECT * FROM Restaurant WHERE Restaurant_ID = ?',
+      [id]
+    );
+
+    if (checkResult.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'ไม่พบร้านอาหารที่ต้องการลบ' 
+      });
+    }
+
+    // 2. ทำการลบร้านอาหาร
+    const [deleteResult] = await db.promise().execute(
+      'DELETE FROM Restaurant WHERE Restaurant_ID = ?',
+      [id]
+    );
+
+    // 3. ตรวจสอบว่าลบสำเร็จหรือไม่
+    if (deleteResult.affectedRows === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Delete Restaurant Failed'
+      });
+    }
+
+    // 4. ส่ง response กลับ
+    res.status(200).json({
+      success: true,
+      message: 'Delete Restaurant Successfull',
+      deletedId: id
+    });
+
+  } catch (err) {
+    console.error('Error deleting restaurant:', err);
+    res.status(500).json({
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการลบร้านอาหาร',
+      error: err.message
+    });
+  }
+});
+
+
+
+
 
 // Add Restaurant Endpoint
 app.post('/Add/restaurants', async (req, res) => {

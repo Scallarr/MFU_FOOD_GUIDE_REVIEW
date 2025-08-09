@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:myapp/admin/Admin-Home.dart' as home;
 
 class EditRestaurant extends StatefulWidget {
@@ -23,298 +25,815 @@ class EditRestaurant extends StatefulWidget {
 
 class _EditRestaurantPageState extends State<EditRestaurant> {
   final _formKey = GlobalKey<FormState>();
+  final Color _primaryColor = Color(0xFF8B5A2B); // Rich brown
+  final Color _secondaryColor = Color(0xFFD2B48C); // Tan
+  final Color _accentColor = Color(0xFFA67C52); // Medium brown
+  final Color _backgroundColor = Color(0xFFF5F0E6); // Cream
+  final Color _textColor = Color(0xFF5D4037); // Dark brown
+
   late TextEditingController _nameController;
-  late TextEditingController _locationController;
-  late TextEditingController _hoursController;
   late TextEditingController _phoneController;
-  late TextEditingController _categoryController;
-  String? _selectedLocation;
-  String? _selectedCategory;
+  String _selectedCategory = 'Main_dish';
+  String _selectedLocation = 'D1';
+  TimeOfDay? _openingTime;
+  TimeOfDay? _closingTime;
   File? _imageFile;
   String? _imageUrl;
   bool _isUploading = false;
+
+  final List<String> _categories = ['Main_dish', 'Snack', 'Drinks'];
+  final List<String> _locations = [
+    'D1',
+    'E1',
+    'E2',
+    'C5',
+    'S2',
+    'M-SQUARE',
+    'LAMDUAN',
+  ];
+  final ImagePicker _picker = ImagePicker();
+  final String _imgbbApiKey = '762958d4dfc64c8a75fe00a0359c6b05';
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.currentData.name);
-    _locationController = TextEditingController(
-      text: widget.currentData.location,
-    );
-    _hoursController = TextEditingController(
-      text: widget.currentData.operatingHours,
-    );
     _phoneController = TextEditingController(
       text: widget.currentData.phoneNumber,
     );
-    _categoryController = TextEditingController(
-      text: widget.currentData.category,
-    );
-    _selectedLocation = widget.currentData.location;
     _selectedCategory = widget.currentData.category;
+    _selectedLocation = widget.currentData.location;
     _imageUrl = widget.currentData.photoUrl;
+
+    // Parse operating hours
+    if (widget.currentData.operatingHours.contains('-')) {
+      final hours = widget.currentData.operatingHours.split('-');
+      if (hours.length == 2) {
+        _openingTime = _parseTime(hours[0]);
+        _closingTime = _parseTime(hours[1]);
+      }
+    }
+  }
+
+  TimeOfDay _parseTime(String timeStr) {
+    try {
+      final format = DateFormat('HH:mm');
+      final dateTime = format.parse(timeStr);
+      return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+    } catch (e) {
+      return TimeOfDay(hour: 8, minute: 0); // Default if parsing fails
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
       });
+      await _uploadImage();
     }
   }
 
-  Future<String?> _uploadImageToImgBB() async {
-    if (_imageFile == null) return null;
+  Future<void> _uploadImage() async {
+    if (_imageFile == null) return;
 
     setState(() {
       _isUploading = true;
     });
 
     try {
-      // Read image file and convert to base64
-      final bytes = await _imageFile!.readAsBytes();
-      final base64Image = base64Encode(bytes);
-
-      // Upload to ImgBB
-      final response = await http.post(
-        Uri.parse(
-          'https://api.imgbb.com/1/upload?key=762958d4dfc64c8a75fe00a0359c6b05',
-        ),
-        body: {'image': base64Image},
+      final uri = Uri.parse('https://api.imgbb.com/1/upload?key=$_imgbbApiKey');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(
+        await http.MultipartFile.fromPath('image', _imageFile!.path),
       );
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final imageUrl = jsonData['data']['url'];
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
+      final jsonResponse = json.decode(responseData);
 
+      if (jsonResponse['success'] == true) {
         setState(() {
-          _imageUrl = imageUrl;
-          _isUploading = false;
+          _imageUrl = jsonResponse['data']['url'];
         });
-
-        return imageUrl;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Image uploaded successfully')));
       } else {
-        throw Exception('Failed to upload image: ${response.body}');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to upload image')));
       }
     } catch (e) {
-      setState(() {
-        _isUploading = false;
-      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error uploading image: $e')));
-      return null;
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
+    }
+  }
+
+  Future<void> _selectOpeningTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _openingTime ?? TimeOfDay(hour: 8, minute: 0),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(primary: _primaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      if (_closingTime != null &&
+          (picked.hour > _closingTime!.hour ||
+              (picked.hour == _closingTime!.hour &&
+                  picked.minute >= _closingTime!.minute))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Closing time must be after opening time')),
+        );
+        return;
+      }
+
+      setState(() {
+        _openingTime = picked;
+      });
+    }
+  }
+
+  Future<void> _selectClosingTime() async {
+    if (_openingTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select opening time first')),
+      );
+      return;
+    }
+
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime:
+          _closingTime ??
+          TimeOfDay(hour: _openingTime!.hour + 4, minute: _openingTime!.minute),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(primary: _primaryColor),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      if (picked.hour < _openingTime!.hour ||
+          (picked.hour == _openingTime!.hour &&
+              picked.minute <= _openingTime!.minute)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Closing time must be after opening time')),
+        );
+        return;
+      }
+
+      setState(() {
+        _closingTime = picked;
+      });
     }
   }
 
   Future<void> _updateRestaurant() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        // Upload new image if selected
-        if (_imageFile != null) {
-          final newImageUrl = await _uploadImageToImgBB();
-          if (newImageUrl == null) return;
-        }
-
-        // Update restaurant data
-        final response = await http.put(
-          Uri.parse(
-            'https://mfu-food-guide-review.onrender.com/edit/restaurants/${widget.restaurantId}',
-          ),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode({
-            'user_id': widget.userId,
-            'restaurant_name': _nameController.text,
-            'location': _selectedLocation,
-            'operating_hours': _hoursController.text,
-            'phone_number': _phoneController.text,
-            'category': _selectedCategory,
-            'image_url': _imageUrl,
-          }),
-        );
-
-        if (response.statusCode == 200) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Restaurant updated successfully')),
-          );
-          Navigator.pop(context, true);
-        } else {
-          throw Exception('Failed to update restaurant: ${response.body}');
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+    if (!_formKey.currentState!.validate()) return;
+    if (_openingTime == null || _closingTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select opening and closing times')),
+      );
+      return;
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final locationOptions = [
-      'D1',
-      'E1',
-      'E2',
-      'C5',
-      'S2',
-      'M-SQUARE',
-      'LAMDUAN',
-    ];
-    final categoryOptions = ['Main_dish', 'Snack', 'Drinks'];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Edit Restaurant'),
-        actions: [
-          IconButton(icon: Icon(Icons.save), onPressed: _updateRestaurant),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _primaryColor, width: 2),
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Image display and picker
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
+              // Title with icon
+              SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(
+                    Icons.restaurant_rounded,
+                    color: _primaryColor,
+                    size: 28,
                   ),
-                  child: _isUploading
-                      ? Center(child: CircularProgressIndicator())
-                      : _imageFile != null
-                      ? Image.file(_imageFile!, fit: BoxFit.cover)
-                      : _imageUrl != null
-                      ? Image.network(_imageUrl!, fit: BoxFit.cover)
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.camera_alt, size: 50),
-                            Text('Tap to select image'),
-                          ],
-                        ),
+                  SizedBox(width: 10),
+                  Text(
+                    'Confirm Restaurant ',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+
+              // Details container
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _secondaryColor, width: 1),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow(Icons.badge, 'Name', _nameController.text),
+                    _buildDetailRow(
+                      Icons.location_on,
+                      'Location',
+                      _selectedLocation,
+                    ),
+                    _buildDetailRow(
+                      Icons.category,
+                      'Category',
+                      _selectedCategory.replaceAll('_', ' '),
+                    ),
+                    _buildDetailRow(
+                      Icons.access_time,
+                      'Hours',
+                      _formatTimeRange(),
+                    ),
+                    _buildDetailRow(
+                      Icons.phone,
+                      'Phone',
+                      _phoneController.text,
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 16),
-              Text('Tap image to change restaurant photo'),
               SizedBox(height: 24),
 
-              // Restaurant name field
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: 'Restaurant Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter restaurant name';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
+              // Buttons row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Cancel button
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        side: BorderSide(color: _primaryColor),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: _primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
 
-              // Location dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedLocation,
-                decoration: InputDecoration(labelText: 'Location'),
-                items: locationOptions.map((location) {
-                  return DropdownMenuItem(
-                    value: location,
-                    child: Text(location),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedLocation = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select location';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Operating hours field
-              TextFormField(
-                controller: _hoursController,
-                decoration: InputDecoration(labelText: 'Operating Hours'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter operating hours';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Phone number field
-              TextFormField(
-                controller: _phoneController,
-                decoration: InputDecoration(labelText: 'Phone Number'),
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter phone number';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-
-              // Category dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: InputDecoration(labelText: 'Category'),
-                items: categoryOptions.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category.replaceAll('_', ' ')),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please select category';
-                  }
-                  return null;
-                },
+                  // Confirm button
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryColor,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        'Update',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
     );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final response = await http.put(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/edit/restaurants/${widget.restaurantId}',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': widget.userId,
+          'restaurant_name': _nameController.text,
+          'location': _selectedLocation,
+          'operating_hours': _formatTimeRange(),
+          'phone_number': _phoneController.text,
+          'category': _selectedCategory,
+          'image_url': _imageUrl,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Restaurant updated successfully!'),
+            backgroundColor: const Color.fromARGB(255, 13, 13, 13),
+          ),
+        );
+        Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update restaurant: ${response.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
+    }
   }
-}
 
-class Restaurant {
-  final String name;
-  final String location;
-  final String operatingHours;
-  final String phoneNumber;
-  final String category;
-  final String? photoUrl;
+  String _formatTimeRange() {
+    final opening = _openingTime!;
+    final closing = _closingTime!;
+    return '${_formatTime(opening)}-${_formatTime(closing)}';
+  }
 
-  Restaurant({
-    required this.name,
-    required this.location,
-    required this.operatingHours,
-    required this.phoneNumber,
-    required this.category,
-    this.photoUrl,
-  });
+  String _formatTime(TimeOfDay time) {
+    final now = DateTime.now();
+    final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    return DateFormat('HH:mm').format(dt);
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Color(0xFF8B5A2B), size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF5D4037),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Edit Restaurant', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFFCEBFA3),
+        iconTheme: IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: _isUploading
+                ? CircularProgressIndicator(color: Colors.white)
+                : Icon(Icons.save),
+            onPressed: _isUploading ? null : _updateRestaurant,
+          ),
+        ],
+      ),
+      backgroundColor: _backgroundColor,
+      body: _isUploading
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header
+                    SizedBox(height: 15),
+                    Text(
+                      'Restaurant Image',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                    SizedBox(height: 10),
+
+                    // Image Upload Section
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                height: 220,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: _secondaryColor.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _accentColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    // Image or placeholder
+                                    if (_imageFile != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.file(
+                                          width: double.infinity,
+                                          _imageFile!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    else if (_imageUrl != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.network(
+                                          width: double.infinity,
+                                          _imageUrl!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    else
+                                      Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_a_photo,
+                                            size: 50,
+                                            color: _accentColor,
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Tap to add restaurant photo',
+                                            style: TextStyle(color: _textColor),
+                                          ),
+                                        ],
+                                      ),
+
+                                    // Semi-transparent overlay with camera icon (แสดงทุกครั้งเมื่อมีรูป)
+                                    Positioned.fill(
+                                      child: AnimatedOpacity(
+                                        opacity:
+                                            1, // ความทึบลดลงเพื่อให้เห็นรูปชัดเจนขึ้น
+                                        duration: Duration(milliseconds: 200),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(
+                                              0.3,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.camera_alt,
+                                                  size: 40,
+                                                  color: Colors.white,
+                                                ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Tap to change photo',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 25),
+
+                    // Restaurant Name
+                    _buildSectionTitle('Basic Information'),
+                    _buildTextField(
+                      controller: _nameController,
+                      label: 'Restaurant Name*',
+                      icon: Icons.restaurant,
+                      maxLength: 15,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a name';
+                        }
+                        if (value.length > 15) {
+                          return 'Name must be 15 characters or less';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
+
+                    // Location Dropdown
+                    _buildDropdown(
+                      value: _selectedLocation,
+                      items: _locations,
+                      label: 'Location*',
+                      icon: Icons.location_on,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedLocation = value!;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 30),
+
+                    // Category Dropdown
+                    _buildDropdown(
+                      value: _selectedCategory,
+                      items: _categories,
+                      label: 'Category*',
+                      icon: Icons.category,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategory = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Text(item.replaceAll('_', ' ')),
+                    ),
+                    SizedBox(height: 30),
+
+                    // Phone Number
+                    _buildTextField(
+                      controller: _phoneController,
+                      label: 'Phone Number*',
+                      icon: Icons.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a phone number';
+                        }
+                        if (value.length < 9 || value.length > 10) {
+                          return 'Phone number must be 9-10 digits';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 35),
+
+                    // Operating Hours
+                    _buildSectionTitle('Operating Hours'),
+                    SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTimeButton(
+                            text: _openingTime != null
+                                ? 'Open: ${_formatTime(_openingTime!)}'
+                                : 'Opening Time',
+                            onPressed: _selectOpeningTime,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTimeButton(
+                            text: _closingTime != null
+                                ? 'Close: ${_formatTime(_closingTime!)}'
+                                : 'Closing Time',
+                            onPressed: _selectClosingTime,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 30),
+
+                    // Update Button
+                    ElevatedButton(
+                      onPressed: _updateRestaurant,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 62, 61, 61),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Text(
+                        'Update Restaurant',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: _primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: _textColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _accentColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _accentColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _primaryColor, width: 2),
+        ),
+        prefixIcon: Icon(icon, color: _accentColor),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLength: maxLength,
+      style: TextStyle(color: _textColor),
+      inputFormatters: inputFormatters,
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required List<String> items,
+    required String label,
+    required IconData icon,
+    required void Function(String?) onChanged,
+    Widget Function(String)? itemBuilder,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items.map((item) {
+        return DropdownMenuItem(
+          value: item,
+          child: itemBuilder != null ? itemBuilder(item) : Text(item),
+        );
+      }).toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: _textColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _accentColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _accentColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _primaryColor, width: 2),
+        ),
+        prefixIcon: Icon(icon, color: _accentColor),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      style: TextStyle(color: _textColor),
+      dropdownColor: _backgroundColor,
+      icon: Icon(Icons.arrow_drop_down, color: _accentColor),
+    );
+  }
+
+  Widget _buildTimeButton({
+    required String text,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.symmetric(vertical: 14),
+        side: BorderSide(color: _accentColor),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: Colors.white,
+      ),
+      child: Text(text, style: TextStyle(color: _textColor, fontSize: 15)),
+    );
+  }
 }

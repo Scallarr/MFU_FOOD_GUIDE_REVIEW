@@ -613,6 +613,7 @@ class _RestaurantListPageState extends State<RestaurantListPage> {
                                   res.name,
                                   style: TextStyle(
                                     fontSize: 20,
+                                    // color: Color(0xFF8B5A2B),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
