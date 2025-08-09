@@ -19,8 +19,6 @@
     database: 'byjsmg8vfii8dqlflpwy',
   });
 
-
-
 app.post('/user/login', (req, res) => {
   const { fullname, username, email, google_id, picture_url } = req.body;
   console.log('Login request:', req.body);
@@ -39,7 +37,7 @@ app.post('/user/login', (req, res) => {
       const userId = userResults[0].User_ID;
       const currentFullname = userResults[0].fullname;
       
-      // อัปเดตเฉพาะถ้า fullname ต่างจากเดิม (ป้องกันการอัปเดตที่ไม่จำเป็น)
+      // อัปเดตเฉพาะถ้า fullname ต่างจากเดิม
       if (currentFullname !== fullname) {
         const updateUserQuery = 'UPDATE User SET fullname = ? WHERE User_ID = ?';
         db.query(updateUserQuery, [fullname, userId], (err) => {
@@ -48,16 +46,15 @@ app.post('/user/login', (req, res) => {
       }
       
       // ดำเนินการต่อกับ profile picture และสร้าง token
-      handleProfilePictureAndToken(userId, picture_url, res);
+      handleProfilePictureAndToken(userId, username, email, picture_url, res);
     } else {
       // ผู้ใช้ยังไม่มี - สร้างผู้ใช้ใหม่
-      // สร้าง unique username ถ้ามีการซ้ำกัน
       const createUserQuery = `
         INSERT INTO User (fullname, username, email, google_id)
         VALUES (?, ?, ?, ?)
       `;
       
-      // สร้าง username ที่ไม่ซ้ำโดยเพิ่มเลขสุ่มถ้าจำเป็น
+      // สร้าง username ที่ไม่ซ้ำ
       const uniqueUsername = generateUniqueUsername(username);
       
       db.query(createUserQuery, [fullname, uniqueUsername, email, google_id], (err, result) => {
@@ -70,14 +67,14 @@ app.post('/user/login', (req, res) => {
         console.log('New user created with ID:', userId);
         
         // ดำเนินการกับ profile picture และสร้าง token
-        handleProfilePictureAndToken(userId, picture_url, res);
+        handleProfilePictureAndToken(userId, uniqueUsername, email, picture_url, res);
       });
     }
   });
 });
 
-// ฟังก์ชันช่วยจัดการ profile picture และสร้าง token
-function handleProfilePictureAndToken(userId, picture_url, res) {
+// ฟังก์ชันช่วยจัดการ profile picture และสร้าง token (แก้ไขแล้ว)
+function handleProfilePictureAndToken(userId, username, email, picture_url, res) {
   // ตรวจสอบว่ามีรูป profile อยู่แล้วหรือไม่
   const checkPictureQuery = 'SELECT * FROM user_Profile_Picture WHERE User_ID = ? LIMIT 1';
   
@@ -96,14 +93,11 @@ function handleProfilePictureAndToken(userId, picture_url, res) {
       db.query(insertPicture, [userId, picture_url], (err) => {
         if (err) console.error('Insert picture error:', err);
       });
-    } else {
-      // มีรูปอยู่แล้ว - อาจจะอัปเดตถ้าต้องการ
-      // สามารถเพิ่มโค้ดอัปเดตที่นี่ได้ถ้าต้องการ
     }
 
-    // สร้าง token
+    // สร้าง token (ใช้ username และ email จากพารามิเตอร์)
     const token = jwt.sign(
-      { userId, username: generateUniqueUsername(username), email },
+      { userId, username, email },
       SECRET_KEY,
       { expiresIn: '7d' }
     );
@@ -112,19 +106,15 @@ function handleProfilePictureAndToken(userId, picture_url, res) {
       message: 'Login successful', 
       token, 
       userId,
-      isNewUser: picResults.length === 0 // บอกว่าเป็นผู้ใช้ใหม่หรือไม่
+      isNewUser: !picResults || picResults.length === 0
     });
   });
 }
 
-// ฟังก์ชันสร้าง username ที่ไม่ซ้ำ
+// ฟังก์ชันสร้าง username ที่ไม่ซ้ำ (เหมือนเดิม)
 function generateUniqueUsername(baseUsername) {
-  // ในทางปฏิบัติควรตรวจสอบกับฐานข้อมูลว่ามี username นี้อยู่แล้วหรือไม่
-  // และเพิ่มเลขสุ่มหรือลำดับถ้าซ้ำ
-  // ตัวอย่างง่ายๆ:
   return `${baseUsername}${Math.floor(Math.random() * 1000)}`;
 }
-
   // ✅ Get User Info Route (GET)
   app.get('/user/info/:id', (req, res) => {
     const userId = req.params.id;
