@@ -549,13 +549,13 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                       controller: _nameController,
                       label: 'Restaurant Name*',
                       icon: Icons.restaurant,
-                      maxLength: 15,
+                      maxLength: 20,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter a name';
                         }
-                        if (value.length > 10) {
-                          return 'Name must be 10 characters or less';
+                        if (value.length > 20) {
+                          return 'Name must be 20 characters or less';
                         }
                         return null;
                       },

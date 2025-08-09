@@ -19,85 +19,111 @@
     database: 'byjsmg8vfii8dqlflpwy',
   });
 
-  // ✅ สร้าง Table หากยังไม่มี
-  db.query(`
-    CREATE TABLE IF NOT EXISTS User (
-      User_ID INT AUTO_INCREMENT PRIMARY KEY,
-      fullname VARCHAR(50) NOT NULL UNIQUE,
-      username VARCHAR(50) NOT NULL UNIQUE,
-      email VARCHAR(50) NOT NULL,
-      google_id VARCHAR(50) NOT NULL,
-      bio TEXT,
-      total_likes INT DEFAULT 0,
-      total_reviews INT DEFAULT 0,
-      coins INT DEFAULT 0,
-      role ENUM('User', 'Admin') DEFAULT 'User',
-      status ENUM('Active', 'Suspended', 'Banned') DEFAULT 'Active'
-  );`, (err) => {
+
+
+app.post('/user/login', (req, res) => {
+  const { fullname, username, email, google_id, picture_url } = req.body;
+  console.log('Login request:', req.body);
+
+  // 1. ตรวจสอบว่ามีผู้ใช้อยู่แล้วหรือไม่โดยใช้ google_id
+  const checkUserQuery = 'SELECT User_ID, fullname FROM User WHERE google_id = ?';
+  
+  db.query(checkUserQuery, [google_id], (err, userResults) => {
     if (err) {
-      console.error("❌ Failed to create table:", err);
+      console.error('Database error checking user:', err);
+      return res.status(500).json({ error: 'Database error checking user' });
+    }
+
+    if (userResults.length > 0) {
+      // ผู้ใช้มีอยู่แล้ว - อัปเดตข้อมูล (ถ้าจำเป็น)
+      const userId = userResults[0].User_ID;
+      const currentFullname = userResults[0].fullname;
+      
+      // อัปเดตเฉพาะถ้า fullname ต่างจากเดิม (ป้องกันการอัปเดตที่ไม่จำเป็น)
+      if (currentFullname !== fullname) {
+        const updateUserQuery = 'UPDATE User SET fullname = ? WHERE User_ID = ?';
+        db.query(updateUserQuery, [fullname, userId], (err) => {
+          if (err) console.error('Error updating user fullname:', err);
+        });
+      }
+      
+      // ดำเนินการต่อกับ profile picture และสร้าง token
+      handleProfilePictureAndToken(userId, picture_url, res);
     } else {
-      console.log("✅ User table ready");
+      // ผู้ใช้ยังไม่มี - สร้างผู้ใช้ใหม่
+      // สร้าง unique username ถ้ามีการซ้ำกัน
+      const createUserQuery = `
+        INSERT INTO User (fullname, username, email, google_id)
+        VALUES (?, ?, ?, ?)
+      `;
+      
+      // สร้าง username ที่ไม่ซ้ำโดยเพิ่มเลขสุ่มถ้าจำเป็น
+      const uniqueUsername = generateUniqueUsername(username);
+      
+      db.query(createUserQuery, [fullname, uniqueUsername, email, google_id], (err, result) => {
+        if (err) {
+          console.error('Error creating new user:', err);
+          return res.status(500).json({ error: 'Error creating new user' });
+        }
+        
+        const userId = result.insertId;
+        console.log('New user created with ID:', userId);
+        
+        // ดำเนินการกับ profile picture และสร้าง token
+        handleProfilePictureAndToken(userId, picture_url, res);
+      });
     }
   });
+});
 
+// ฟังก์ชันช่วยจัดการ profile picture และสร้าง token
+function handleProfilePictureAndToken(userId, picture_url, res) {
+  // ตรวจสอบว่ามีรูป profile อยู่แล้วหรือไม่
+  const checkPictureQuery = 'SELECT * FROM user_Profile_Picture WHERE User_ID = ? LIMIT 1';
+  
+  db.query(checkPictureQuery, [userId], (err, picResults) => {
+    if (err) {
+      console.error('Error checking profile picture:', err);
+      // ยังคงดำเนินการต่อแม้จะ error ในการตรวจสอบรูป
+    }
 
-  // ✅ Login Route (POST)
-  app.post('/user/login', (req, res) => {
-    const { fullname, username, email, google_id, picture_url } = req.body;
-  console.log(req.body);
-    const insertOrUpdateUser = `
-      INSERT INTO User (fullname, username, email, google_id)
-      VALUES (?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE fullname = VALUES(fullname), email = VALUES(email)
-    `;
-
-    db.query(insertOrUpdateUser, [fullname, username, email, google_id], (err) => {
-      if (err) return res.status(500).json({ error: 'Database error' });
-
-      const selectUserId = 'SELECT User_ID FROM User WHERE google_id = ?';
-      db.query(selectUserId, [google_id], (err, results) => {
-        if (err) return res.status(500).json({ error: 'DB error' });
-        if (results.length === 0) return res.status(404).json({ error: 'User not found' });
-
-        const userId = results[0].User_ID;
-
-        // ✅ เช็คว่ามีรูปอยู่แล้วหรือยัง
-        const checkPictureQuery = `
-          SELECT * FROM user_Profile_Picture WHERE User_ID = ? LIMIT 1
-        `;
-        db.query(checkPictureQuery, [userId], (err, picResults) => {
-          if (err) {
-            console.error('Error checking profile picture:', err);
-          }
-
-          if (picResults.length === 0) {
-            // ❇️ ถ้ายังไม่มีรูป ให้ insert
-            const insertPicture = `
-              INSERT INTO user_Profile_Picture (User_ID, picture_url, is_active)
-              VALUES (?, ?, 1)
-            `;
-            db.query(insertPicture, [userId, picture_url], (err) => {
-              if (err) console.error('Insert picture error:', err);
-            });
-          } else {
-            // 🔕 มีรูปแล้ว ไม่ต้องทำอะไร
-          }
-        });
-
-        // ✅ สร้าง token ส่งกลับ
-        const token = jwt.sign(
-          { userId, google_id, username, email },
-          SECRET_KEY,
-          { expiresIn: '7d' }
-        );
-
-        res.json({ message: 'Login successful', token, userId });
+    if (!picResults || picResults.length === 0) {
+      // ถ้ายังไม่มีรูป ให้ insert
+      const insertPicture = `
+        INSERT INTO user_Profile_Picture (User_ID, picture_url, is_active)
+        VALUES (?, ?, 1)
+      `;
+      db.query(insertPicture, [userId, picture_url], (err) => {
+        if (err) console.error('Insert picture error:', err);
       });
+    } else {
+      // มีรูปอยู่แล้ว - อาจจะอัปเดตถ้าต้องการ
+      // สามารถเพิ่มโค้ดอัปเดตที่นี่ได้ถ้าต้องการ
+    }
+
+    // สร้าง token
+    const token = jwt.sign(
+      { userId, username: generateUniqueUsername(username), email },
+      SECRET_KEY,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ 
+      message: 'Login successful', 
+      token, 
+      userId,
+      isNewUser: picResults.length === 0 // บอกว่าเป็นผู้ใช้ใหม่หรือไม่
     });
   });
+}
 
-
+// ฟังก์ชันสร้าง username ที่ไม่ซ้ำ
+function generateUniqueUsername(baseUsername) {
+  // ในทางปฏิบัติควรตรวจสอบกับฐานข้อมูลว่ามี username นี้อยู่แล้วหรือไม่
+  // และเพิ่มเลขสุ่มหรือลำดับถ้าซ้ำ
+  // ตัวอย่างง่ายๆ:
+  return `${baseUsername}${Math.floor(Math.random() * 1000)}`;
+}
 
   // ✅ Get User Info Route (GET)
   app.get('/user/info/:id', (req, res) => {

@@ -39,7 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final userPhotoUrl = googleUser?.photoUrl;
       if (googleUser == null) return;
 
-      if (!googleUser.email.endsWith('@lamduan.mfu.ac.th')) {
+      final isAdmin = googleUser.email == 'kasiditkosit@gmail.com';
+
+      if (!googleUser.email.endsWith('@lamduan.mfu.ac.th') && !isAdmin) {
         await _googleSignIn.signOut();
         setState(() => _user = null);
         ScaffoldMessenger.of(context).showSnackBar(

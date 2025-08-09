@@ -214,13 +214,17 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context, false),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.black,
                         padding: EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                         side: BorderSide(color: Colors.grey),
                       ),
-                      child: Text('Cancel'),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                   SizedBox(width: 16),
@@ -234,7 +238,10 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: Text('Delete'),
+                      child: Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -263,7 +270,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Restaurant deleted successfully!'),
-            backgroundColor: Colors.green,
+            backgroundColor: const Color.fromARGB(255, 0, 0, 0),
           ),
         );
         _refreshRestaurantData();
@@ -796,7 +803,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                     children: [
                       // Hero Image with shimmer effect
                       Container(
-                        height: 200,
+                        height: 230,
                         width: double.infinity,
                         child: ClipRRect(
                           borderRadius: BorderRadius.vertical(
