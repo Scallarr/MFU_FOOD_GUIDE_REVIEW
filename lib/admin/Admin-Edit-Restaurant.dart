@@ -620,7 +620,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 20),
 
                     // Location Dropdown
                     _buildDropdown(
@@ -634,7 +634,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                         });
                       },
                     ),
-                    SizedBox(height: 30),
+                    SizedBox(height: 35),
 
                     // Category Dropdown
                     _buildDropdown(
@@ -649,7 +649,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                       },
                       itemBuilder: (item) => Text(item.replaceAll('_', ' ')),
                     ),
-                    SizedBox(height: 30),
+                    SizedBox(height: 35),
 
                     // Phone Number
                     _buildTextField(

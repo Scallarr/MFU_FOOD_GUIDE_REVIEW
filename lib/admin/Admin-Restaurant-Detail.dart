@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:myapp/admin/Admin-Pending_Review.dart';
 import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/restaurant_model.dart';
@@ -768,14 +769,23 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
               clipBehavior: Clip.none,
               children: [
                 InkWell(
-                  onTap: () {
-                    // _showPendingVerifications();
+                  onTap: () async {
+                    final shouldRefresh = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PendingReviewsPage(restaurantId: restaurant!.id),
+                      ),
+                    );
+                    if (shouldRefresh) {
+                      fetchRestaurant();
+                    }
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Color(0xFF8D6E63), // Brown 400
+                      color: Color.fromARGB(255, 0, 0, 0), // Brown 400
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -803,24 +813,23 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                   ),
                 ),
 
-                // Notification Badge
-                if (10 > 0)
+                // Notification Badge - Fixed condition and variable
+                if (restaurant!.pendingReviewsCount > 0)
                   Positioned(
-                    right: -8,
-                    top: -8,
+                    right: -5,
+                    top: -20,
                     child: Container(
                       padding: EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.red[600],
+                        color: const Color.fromARGB(255, 219, 31, 31),
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
                       child: Text(
-                        // '$_pendingVerificationCount',
-                        '20',
+                        '${restaurant!.pendingReviewsCount}',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

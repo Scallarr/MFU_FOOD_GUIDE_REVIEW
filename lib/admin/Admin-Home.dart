@@ -1088,87 +1088,110 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Category Chip
+                            // Category Chip - Enhanced
                             Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 12,
+                                horizontal: 14,
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
-                                    const Color.fromARGB(255, 233, 200, 150)!,
-                                    const Color.fromARGB(255, 204, 153, 72)!,
+                                    Color(0xFFF5F5F5),
+                                    Color(0xFFE0E0E0),
                                   ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                                border: Border.all(
+                                  color: Color(0xFF9E9E9E),
+                                  width: 0.5,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.restaurant_menu_rounded,
-                                    size: 16,
-                                    color: const Color.fromARGB(
-                                      255,
-                                      255,
-                                      255,
-                                      255,
-                                    ),
+                                    size: 18,
+                                    color: Color(0xFF5D4037),
                                   ),
-                                  SizedBox(width: 6),
+                                  SizedBox(width: 8),
                                   Text(
                                     res.category.replaceAll('_', ' '),
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color.fromARGB(
-                                        255,
-                                        255,
-                                        255,
-                                        255,
-                                      ),
+                                      color: Color(0xFF3E2723),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
 
-                            // Reviews Count
+                            // Reviews Count - Enhanced
                             Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 12,
+                                horizontal: 16,
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: Color.fromARGB(255, 114, 111, 108),
-                                borderRadius: BorderRadius.circular(7),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF424242),
+                                    Color(0xFF212121),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 6,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     Icons.reviews_rounded,
-                                    size: 16,
-                                    color: const Color.fromARGB(
-                                      255,
-                                      255,
-                                      255,
-                                      255,
+                                    size: 20,
+                                    color: Color.fromARGB(255, 255, 254, 252),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    '${res.postedReviewsCount}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black.withOpacity(0.3),
+                                          blurRadius: 2,
+                                          offset: Offset(1, 1),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  SizedBox(width: 6),
+                                  SizedBox(width: 4),
                                   Text(
-                                    '${res.postedReviewsCount} ',
+                                    'reviews',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color.fromARGB(
-                                        255,
-                                        255,
-                                        255,
-                                        255,
-                                      ),
+                                      fontWeight: FontWeight.w500,
+                                      color: Color.fromARGB(255, 255, 255, 255),
                                     ),
                                   ),
                                 ],

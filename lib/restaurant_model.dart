@@ -13,6 +13,7 @@ class Restaurant {
   final double ratingService;
   final List<Review> reviews;
   final List<Menu> menus;
+  final int pendingReviewsCount;
 
   Restaurant({
     required this.id,
@@ -29,6 +30,7 @@ class Restaurant {
     required this.ratingService,
     required this.reviews,
     required this.menus,
+    required this.pendingReviewsCount,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> json) {
@@ -43,6 +45,8 @@ class Restaurant {
       ratingOverall: double.parse(json['rating_overall_avg']),
       ratingHygiene: double.parse(json['rating_hygiene_avg']),
       ratingFlavor: double.parse(json['rating_flavor_avg']),
+      pendingReviewsCount:
+          json['pending_reviews_count'] ?? 0, // Handle null case
       ratingService: double.parse(json['rating_service_avg']),
       reviews: (json['reviews'] as List)
           .map((e) => Review.fromJson(e))
