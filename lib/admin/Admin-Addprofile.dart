@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 class AddProfilePage extends StatefulWidget {
   @override
@@ -11,6 +12,12 @@ class AddProfilePage extends StatefulWidget {
 }
 
 class _AddProfilePageState extends State<AddProfilePage> {
+  final Color _primaryColor = Color(0xFF8B5A2B); // Rich brown
+  final Color _secondaryColor = Color(0xFFD2B48C); // Tan
+  final Color _accentColor = Color(0xFFA67C52); // Medium brown
+  final Color _backgroundColor = Color(0xFFF5F0E6); // Cream
+  final Color _textColor = Color(0xFF5D4037); // Dark brown
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _profileNameController = TextEditingController();
   final TextEditingController _requiredCoinsController =
@@ -20,131 +27,242 @@ class _AddProfilePageState extends State<AddProfilePage> {
   File? _imageFile;
   String? _imageUrl;
   bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
 
   // Cloudinary configuration
-  final String _cloudName = 'your_cloud_name';
-  final String _uploadPreset = 'your_upload_preset';
+  final String _cloudName = 'doyeaento';
+  final String _uploadPreset = 'flutter_upload';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Add New Profile'), centerTitle: true),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Profile Image Section
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: _imageFile != null
-                      ? Image.file(_imageFile!, fit: BoxFit.cover)
-                      : _imageUrl != null
-                      ? Image.network(_imageUrl!, fit: BoxFit.cover)
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+      appBar: AppBar(
+        title: Text('Add New Profile', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color(0xFFCEBFA3),
+        iconTheme: IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: _isUploading
+                ? CircularProgressIndicator(color: Colors.white)
+                : Icon(Icons.save),
+            onPressed: _isUploading ? null : _submitForm,
+          ),
+        ],
+      ),
+      backgroundColor: _backgroundColor,
+      body: _isUploading
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header
+                    Text(
+                      'Profile Image',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                    SizedBox(height: 20),
+
+                    // Image Upload Section
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: Column(
                           children: [
-                            Icon(
-                              Icons.add_a_photo,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 10),
-                            Text(
-                              'Tap to add profile image',
-                              style: TextStyle(color: Colors.grey),
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                height: 220,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: _secondaryColor.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: _accentColor,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: _imageFile != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.file(
+                                          _imageFile!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_a_photo,
+                                            size: 50,
+                                            color: _accentColor,
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Tap to add profile photo',
+                                            style: TextStyle(color: _textColor),
+                                          ),
+                                        ],
+                                      ),
+                              ),
                             ),
                           ],
                         ),
-                ),
-              ),
-              SizedBox(height: 20),
+                      ),
+                    ),
+                    SizedBox(height: 25),
 
-              // Profile Name Field
-              TextFormField(
-                controller: _profileNameController,
-                decoration: InputDecoration(
-                  labelText: 'Profile Name',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter profile name';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 15),
+                    // Profile Name
+                    _buildSectionTitle('Profile Information'),
+                    _buildTextField(
+                      controller: _profileNameController,
+                      label: 'Profile Name*',
+                      icon: Icons.person,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter profile name';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
 
-              // Description Field
-              TextFormField(
-                controller: _descriptionController,
-                decoration: InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter description';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 15),
+                    // Description
+                    _buildTextField(
+                      controller: _descriptionController,
+                      label: 'Description*',
+                      icon: Icons.description,
+                      maxLines: 3,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter description';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 16),
 
-              // Required Coins Field
-              TextFormField(
-                controller: _requiredCoinsController,
-                decoration: InputDecoration(
-                  labelText: 'Required Coins',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.monetization_on),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter required coins';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 25),
+                    // Required Coins
+                    _buildTextField(
+                      controller: _requiredCoinsController,
+                      label: 'Required Coins*',
+                      icon: Icons.monetization_on,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter required coins';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 25),
 
-              // Submit Button
-              ElevatedButton(
-                onPressed: _isUploading ? null : _submitForm,
-                child: _isUploading
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Text('Add Profile'),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 15),
+                    // Submit Button
+                    ElevatedButton(
+                      onPressed: _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color.fromARGB(255, 77, 76, 75),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      child: Text(
+                        'Add Profile',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: const Color.fromARGB(255, 233, 224, 224),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: _primaryColor,
         ),
       ),
     );
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    int? maxLines,
+    List<TextInputFormatter>? inputFormatters, // เพิ่มพารามิเตอร์นี้
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: _textColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _accentColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _accentColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: _primaryColor, width: 2),
+        ),
+        prefixIcon: Icon(icon, color: _accentColor),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLines: maxLines,
+      style: TextStyle(color: _textColor),
+      inputFormatters: inputFormatters, // เพิ่มส่วนนี้
+    );
+  }
 
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
@@ -155,9 +273,12 @@ class _AddProfilePageState extends State<AddProfilePage> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_imageFile == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please select an image')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please upload an image'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -172,20 +293,30 @@ class _AddProfilePageState extends State<AddProfilePage> {
       // Then insert data to database
       await _insertProfileToDatabase();
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Profile added successfully!')));
-
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Profile added successfully!'),
+          backgroundColor: const Color.fromARGB(255, 22, 22, 22),
+        ),
+      );
+      Navigator.pop(context, true);
       // Clear form after successful submission
-      _formKey.currentState!.reset();
+
       setState(() {
         _imageFile = null;
         _imageUrl = null;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     } finally {
       setState(() {
         _isUploading = false;

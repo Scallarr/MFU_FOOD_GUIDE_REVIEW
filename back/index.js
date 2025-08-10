@@ -2209,7 +2209,46 @@ app.post('/Add/profiles', async (req, res) => {
   }
 });
 
-
+app.delete('/delete_profile/:id', async (req, res) => {
+ const connection = await db.promise().getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { id } = req.params;
+    
+    // 1. ลบข้อมูลโปรไฟล์
+    await connection.execute(
+      'DELETE FROM exchange_coin_Shop WHERE Profile_Shop_ID = ?',
+      [id]
+    );
+    
+    // 2. ลบข้อมูลที่เกี่ยวข้อง (ถ้ามี)
+    // เช่น ลบประวัติการซื้อโปรไฟล์นี้
+    await connection.execute(
+      'DELETE FROM user_profiles WHERE profile_id = ?',
+      [id]
+    );
+    
+    await connection.commit();
+    connection.release();
+    
+    res.status(200).json({ 
+      success: true,
+      message: 'Profile deleted successfully'
+    });
+  } catch (error) {
+    await connection.rollback();
+    connection.release();
+    
+    console.error('Error deleting profile:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+});
 
 
 
