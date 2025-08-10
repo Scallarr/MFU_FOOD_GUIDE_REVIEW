@@ -38,6 +38,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
   Future<void> _fetchPendingReviews() async {
     final prefs = await SharedPreferences.getInstance();
     userId = prefs.getInt('user_id');
+    print(userId);
     try {
       final response = await http.get(
         Uri.parse(
@@ -492,29 +493,48 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
 
   Future<void> _approveReview(int reviewId) async {
     try {
-      final response = await http.put(
-        Uri.parse('https://your-api.com/reviews/$reviewId/approve'),
+      final response = await http.post(
+        // Changed from put to post to match backend
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/api/reviews/approve',
+        ),
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'admin_user_id':
-              userId, // The User_ID of the admin (from your auth system)
+          'reviewId': reviewId,
+          'adminId': userId, // Make sure this is the admin's user ID
         }),
       );
 
+      final responseData = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        _showSnackBar('Review approved successfully');
+        _showSnackBar(
+          responseData['message'] ?? 'Review approved successfully',
+        );
         _fetchPendingReviews();
       } else {
-        throw Exception('Failed to approve review');
+        // Handle specific error messages from backend
+        final errorMessage =
+            responseData['message'] ?? 'Failed to approve review';
+        throw Exception(errorMessage);
       }
+    } on http.ClientException catch (e) {
+      _showSnackBar('Network error: ${e.message}');
+    } on FormatException catch (e) {
+      _showSnackBar('Data parsing error: ${e.message}');
     } catch (e) {
-      _showSnackBar('Error approving review: ${e.toString()}');
+      _showSnackBar('Failed to approve review: ${e.toString()}');
     }
   }
+
+  // Improved snackbar display
 
   Future<void> _rejectReview(int reviewId) async {
     try {
       final response = await http.put(
-        Uri.parse('https://your-api.com/reviews/$reviewId'),
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/reviews/$reviewId',
+        ),
         body: jsonEncode({
           'admin_user_id':
               userId, // The User_ID of the admin (from your auth system)

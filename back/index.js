@@ -1509,13 +1509,13 @@ app.post('/api/reviews/approve', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
 
-  const connection = await pool.getConnection();
+  
   
   try {
-    await connection.beginTransaction();
+  
 
     // 1. Update review status to 'Posted'
-const [updateResult] = await connection.execute(
+const [updateResult] = await db.promise().execute(
   `UPDATE Review 
    SET message_status = 'Posted', created_at = NOW() 
    WHERE Review_ID = ?`, 
@@ -1527,21 +1527,19 @@ const [updateResult] = await connection.execute(
     }
 
     // 2. Record admin action
-    await connection.execute(
+   await db.promise().execute(
       `INSERT INTO Admin_check_inappropriate_review 
        (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
        VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
       [reviewId, adminId || 1]  // Default to admin ID 1 if not provided
     );
 
-    await connection.commit();
+    
     res.status(200).json({ success: true, message: 'Review approved successfully' });
   } catch (error) {
-    await connection.rollback();
+   
     console.error('Approval error:', error);
     res.status(500).json({ success: false, message: 'Failed to approve review' });
-  } finally {
-    connection.release();
   }
 });
 
@@ -1553,13 +1551,13 @@ app.post('/api/reviews/reject', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
 
-  const connection = await pool.getConnection();
+
   
   try {
-    await connection.beginTransaction();
+   
 
     // 1. Update review status to 'Banned'
-    const [updateResult] = await connection.execute(
+    const [updateResult] = await db.promise().execute(
       `UPDATE Review 
        SET message_status = 'Banned', created_at = NOW() 
        WHERE Review_ID = ?`, 
@@ -1572,22 +1570,20 @@ app.post('/api/reviews/reject', async (req, res) => {
     }
 
     // 2. Record admin action
-    await connection.execute(
+   await db.promise().execute(
       `INSERT INTO Admin_check_inappropriate_review 
        (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
        VALUES (?, ?, 'Banned', NOW(), ?)`,
       [reviewId, adminId || 1, reason || 'Inappropriate message']
     );
 
-    await connection.commit();
+   
     res.status(200).json({ success: true, message: 'Review rejected successfully' });
   } catch (error) {
-    await connection.rollback();
+   
     console.error('Rejection error:', error);
     res.status(500).json({ success: false, message: 'Failed to reject review' });
-  } finally {
-    connection.release();
-  }
+  } 
 });
 
 
