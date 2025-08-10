@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/threads.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class Restaurant {
   final int id;
@@ -33,7 +34,6 @@ class Restaurant {
   final String category;
   final int pendingReviewsCount;
   final int postedReviewsCount;
-  // Added to track who created the restaurant
 
   Restaurant({
     required this.id,
@@ -122,11 +122,20 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   void _precacheRestaurantImages() {
     for (var restaurant in allRestaurants) {
       try {
-        precacheImage(NetworkImage(restaurant.photoUrl), context);
+        precacheImage(
+          CachedNetworkImageProvider(_validateImageUrl(restaurant.photoUrl)),
+          context,
+        );
       } catch (e) {
-        print('Failed to precache image: ${restaurant.photoUrl}');
+        debugPrint('Failed to precache image: ${restaurant.photoUrl}');
       }
     }
+  }
+
+  String _validateImageUrl(String url) {
+    if (url.isEmpty) return 'https://via.placeholder.com/400';
+    if (!url.startsWith('http')) return 'https://$url';
+    return url;
   }
 
   Future<void> loadUserIdAndFetchProfile() async {
@@ -153,25 +162,30 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          profileImageUrl = data['picture_url'];
+          profileImageUrl = _validateImageUrl(data['picture_url']);
         });
       } else {
-        print('Failed to load profile picture');
+        debugPrint('Failed to load profile picture');
       }
     } catch (e) {
-      print('Error fetching profile picture: $e');
+      debugPrint('Error fetching profile picture: $e');
     }
   }
 
   Future<List<Restaurant>> fetchRestaurants() async {
-    final response = await http.get(
-      Uri.parse('https://mfu-food-guide-review.onrender.com/restaurants'),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('https://mfu-food-guide-review.onrender.com/restaurants'),
+      );
 
-    if (response.statusCode == 200) {
-      List jsonList = json.decode(response.body);
-      return jsonList.map((json) => Restaurant.fromJson(json)).toList();
-    } else {
+      if (response.statusCode == 200) {
+        List jsonList = json.decode(response.body);
+        return jsonList.map((json) => Restaurant.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load restaurants: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching restaurants: $e');
       throw Exception('Failed to load restaurants');
     }
   }
@@ -436,7 +450,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
           // Search Bar
           SliverPadding(
-            padding: const EdgeInsets.only(left: 6, right: 6, top: 14),
+            padding: const EdgeInsets.only(left: 10, right: 10, top: 14),
             sliver: SliverToBoxAdapter(
               child: TextField(
                 decoration: InputDecoration(
@@ -485,7 +499,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
           // Filter Buttons
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             sliver: SliverToBoxAdapter(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -522,7 +536,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         },
                       ),
                     ),
-                    SizedBox(width: 13),
+                    SizedBox(width: 7),
                     SizedBox(
                       width: buttonWidth,
                       child: Container(
@@ -615,7 +629,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 22),
+                    SizedBox(width: 7),
                     SizedBox(
                       width: 125,
                       child: Container(
@@ -784,11 +798,11 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       delegate: SliverChildBuilderDelegate((context, index) {
         final res = filteredAndSortedRestaurants[index];
         return Container(
-          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          margin: EdgeInsets.symmetric(horizontal: 12, vertical: 20),
           child: Material(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
             clipBehavior: Clip.antiAlias,
-            elevation: 8,
+            elevation: 14,
             child: InkWell(
               borderRadius: BorderRadius.circular(5),
               onTap: () async {
@@ -806,7 +820,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                   }
                 } catch (e) {
                   debugPrint('Navigation error: $e');
-                  // Optionally show error to user
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error during navigation')),
                   );
@@ -818,7 +831,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                   // Image Section
                   Stack(
                     children: [
-                      // Hero Image with shimmer effect
+                      // Hero Image with retryable cached network image
                       Container(
                         height: 230,
                         width: double.infinity,
@@ -826,28 +839,9 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(12),
                           ),
-                          child: Image.network(
-                            res.photoUrl,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Shimmer.fromColors(
-                                baseColor: Colors.grey[300]!,
-                                highlightColor: Colors.grey[100]!,
-                                child: Container(color: Colors.white),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                                  color: Colors.grey[200],
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.restaurant,
-                                      size: 50,
-                                      color: Colors.grey[400],
-                                    ),
-                                  ),
-                                ),
+                          child: RetryableCachedImage(
+                            imageUrl: res.photoUrl,
+                            maxRetry: 3,
                           ),
                         ),
                       ),
@@ -1343,9 +1337,115 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       futureRestaurants.then((list) {
         setState(() {
           allRestaurants = list;
+          _precacheRestaurantImages();
         });
       });
     });
+  }
+}
+
+class RetryableCachedImage extends StatefulWidget {
+  final String imageUrl;
+  final int maxRetry;
+  final double? width;
+  final double? height;
+  final BoxFit? fit;
+  final Widget? placeholder;
+  final Widget? errorWidget;
+
+  const RetryableCachedImage({
+    required this.imageUrl,
+    this.maxRetry = 3,
+    this.width,
+    this.height,
+    this.fit,
+    this.placeholder,
+    this.errorWidget,
+  });
+
+  @override
+  _RetryableCachedImageState createState() => _RetryableCachedImageState();
+}
+
+class _RetryableCachedImageState extends State<RetryableCachedImage> {
+  int _retryCount = 0;
+  bool _hasError = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return widget.errorWidget ?? _buildDefaultErrorWidget();
+    }
+
+    return CachedNetworkImage(
+      imageUrl: _validateImageUrl(widget.imageUrl),
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit ?? BoxFit.cover,
+      cacheManager:
+          RestaurantCacheManager.instance, // ใช้ Cache Manager ที่กำหนดเอง
+      placeholder: (context, url) =>
+          widget.placeholder ?? _buildDefaultPlaceholder(),
+      errorWidget: (context, url, error) {
+        if (_retryCount < widget.maxRetry) {
+          Future.delayed(Duration(seconds: 1), () {
+            _retryCount++;
+            setState(() {});
+          });
+          return widget.placeholder ?? _buildDefaultPlaceholder();
+        } else {
+          _hasError = true;
+          return widget.errorWidget ?? _buildDefaultErrorWidget();
+        }
+      },
+      fadeInDuration: Duration(milliseconds: 300),
+      fadeOutDuration: Duration(milliseconds: 300),
+      httpHeaders: {'Cache-Control': 'max-age=31536000'}, // 1 ปีในหน่วยวินาที
+    );
+  }
+
+  String _validateImageUrl(String url) {
+    if (url.isEmpty) return 'https://via.placeholder.com/400';
+    if (!url.startsWith('http')) return 'https://$url';
+    return url;
+  }
+
+  Widget _buildDefaultPlaceholder() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        color: Colors.white,
+        width: widget.width,
+        height: widget.height,
+      ),
+    );
+  }
+
+  Widget _buildDefaultErrorWidget() {
+    return Container(
+      color: Colors.grey[200],
+      width: widget.width,
+      height: widget.height,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image, size: 40, color: Colors.grey[400]),
+            if (_retryCount < widget.maxRetry)
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _retryCount++;
+                    _hasError = false;
+                  });
+                },
+                child: Text('Retry'),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1378,4 +1478,19 @@ class SortButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class RestaurantCacheManager {
+  static const String key = 'restaurantImagesCache';
+  static const Duration cacheDuration = Duration(days: 365); // 1 ปี
+  static const int maxCacheObjects = 1000; // จำกัดจำนวนไฟล์สูงสุด
+
+  static final CacheManager instance = CacheManager(
+    Config(
+      key,
+      stalePeriod: cacheDuration,
+      maxNrOfCacheObjects: maxCacheObjects,
+      repo: JsonCacheInfoRepository(databaseName: key),
+    ),
+  );
 }

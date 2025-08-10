@@ -1907,6 +1907,33 @@ app.post('/api/reviews/reject', async (req, res) => {
   }
 });
 
+// API บันทึกเมนู
+app.post('/Add/menus', async (req, res) => {
+  const { restaurantId, menuThaiName, menuEnglishName, price, menuImage } = req.body;
+
+  try {
+    await connection.execute(
+      `INSERT INTO Menu (
+        Restaurant_ID,
+        menu_thai_name,
+        menu_english_name,
+        price,
+        menu_img
+      ) VALUES (?, ?, ?, ?, ?)`,
+      [restaurantId, menuThaiName, menuEnglishName, price, menuImage]
+    );
+  
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+
+
+
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));

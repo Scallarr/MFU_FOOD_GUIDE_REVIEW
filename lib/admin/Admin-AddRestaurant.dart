@@ -594,12 +594,19 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                     // Phone Number
                     _buildTextField(
                       controller: _phoneController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
                       label: 'Phone Number*',
                       icon: Icons.phone,
                       keyboardType: TextInputType.phone,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter a phone number';
+                        }
+                        if (value.length > 10 || value.length < 9) {
+                          return 'Phone number must be 9-10 digits';
                         }
                         return null;
                       },

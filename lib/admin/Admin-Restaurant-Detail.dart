@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:myapp/admin/Admin-AddMenu.dart';
 import 'package:myapp/admin/Admin-Pending_Review.dart';
 import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/restaurant_model.dart';
+import 'package:myapp/admin/Admin-AddMenu.dart';
+
 // import 'package:myapp/admin/Admin-Home.dart';
 
 class RestaurantDetailAdminPage extends StatefulWidget {
@@ -597,30 +600,112 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: '📋 Menu ',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                  color: Colors.black87,
-                ),
-              ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '📋 Menu ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Colors.black87,
+                    ),
+                  ),
 
-              TextSpan(
-                text: '(${restaurant!.menus.length} items)',
-                style: TextStyle(
-                  fontWeight: FontWeight.normal, // ✅ ตัวบาง
-                  fontSize: 20,
-                  color: Colors.grey[700],
-                ),
+                  TextSpan(
+                    text: '(${restaurant!.menus.length} items)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.normal, // ✅ ตัวบาง
+                      fontSize: 20,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ), // Verify Button with Notification Badge
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                InkWell(
+                  onTap: () async {
+                    final shouldRefresh = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            Addmenu(restaurantId: restaurant!.id),
+                      ),
+                    );
+                    if (shouldRefresh) {
+                      fetchRestaurant();
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Color.fromARGB(124, 0, 0, 0), // Brown 400
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color.fromARGB(
+                            255,
+                            0,
+                            0,
+                            0,
+                          ).withOpacity(0.3),
+                          blurRadius: 6,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add, size: 20, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Add ',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Notification Badge - Fixed condition and variable
+                // if (restaurant!.pendingReviewsCount > 0)
+                //   Positioned(
+                //     right: -5,
+                //     top: -20,
+                //     child:
+                //     Container(
+                //       padding: EdgeInsets.all(6),
+                //       decoration: BoxDecoration(
+                //         color: const Color.fromARGB(255, 219, 31, 31),
+                //         shape: BoxShape.circle,
+                //         border: Border.all(color: Colors.white, width: 2),
+                //       ),
+                //       child: Text(
+                //         '${restaurant!.pendingReviewsCount}',
+                //         style: TextStyle(
+                //           color: Colors.white,
+                //           fontSize: 15,
+                //           fontWeight: FontWeight.bold,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+              ],
+            ),
+          ],
         ),
-
         SizedBox(height: 12),
 
         // แสดงเมนู
@@ -763,8 +848,6 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                 ],
               ),
             ),
-
-            // Verify Button with Notification Badge
             Stack(
               clipBehavior: Clip.none,
               children: [
