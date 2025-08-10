@@ -99,6 +99,16 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
         backgroundColor: const Color(0xFFCEBFA3),
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            // Refresh the previous page and go back
+            Navigator.pop(
+              context,
+              true,
+            ); // 'true' indicates a refresh is needed
+          },
+        ),
       ),
       body: isLoading
           ? _buildLoadingView()
@@ -531,13 +541,14 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
 
   Future<void> _rejectReview(int reviewId) async {
     try {
-      final response = await http.put(
+      final response = await http.post(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/reviews/$reviewId',
+          'https://mfu-food-guide-review.onrender.com/api/reviews/reject',
         ),
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'admin_user_id':
-              userId, // The User_ID of the admin (from your auth system)
+          'reviewId': reviewId,
+          'adminId': userId, // Make sure this is the admin's user ID
         }),
       );
 

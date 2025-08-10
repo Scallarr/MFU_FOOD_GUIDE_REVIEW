@@ -1501,6 +1501,7 @@ app.get('/reviews/pending', async (req, res) => {
   }
 });
 
+
 // Approve review endpoint
 app.post('/api/reviews/approve', async (req, res) => {
   const { reviewId, adminId } = req.body;
@@ -1509,43 +1510,83 @@ app.post('/api/reviews/approve', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
 
-  
-  
   try {
-  
+    // Start transaction
+    await db.promise().execute('START TRANSACTION');
 
-    // 1. Update review status to 'Posted'
-const [updateResult] = await db.promise().execute(
-  `UPDATE Review 
-   SET message_status = 'Posted', created_at = NOW() 
-   WHERE Review_ID = ?`, 
-  [reviewId]
-);
-    if (updateResult.affectedRows === 0) {
-      await connection.rollback();
+    // 1. Get the user ID associated with this review
+    const [reviewResult] = await db.promise().execute(
+      `SELECT User_ID FROM Review WHERE Review_ID = ?`,
+      [reviewId]
+    );
+
+    if (reviewResult.length === 0) {
+      await db.promise().execute('ROLLBACK');
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
-    // 2. Record admin action
-   await db.promise().execute(
+    const userId = reviewResult[0].User_ID;
+
+    // 2. Update review status to 'Posted'
+    const [updateResult] = await db.promise().execute(
+      `UPDATE Review 
+       SET message_status = 'Posted', created_at = NOW() 
+       WHERE Review_ID = ?`, 
+      [reviewId]
+    );
+
+    if (updateResult.affectedRows === 0) {
+      await db.promise().execute('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    // 3. Count all posted reviews for this user
+    const [countResult] = await db.promise().execute(
+      `SELECT COUNT(*) AS totalPostedReviews 
+       FROM Review 
+       WHERE User_ID = ? AND message_status = 'Posted'`,
+      [userId]
+    );
+
+    const totalPostedReviews = countResult[0].totalPostedReviews;
+
+    // 4. Update user's total_reviews count with the accurate number
+    await db.promise().execute(
+      `UPDATE User 
+       SET total_reviews = ? 
+       WHERE User_ID = ?`,
+      [totalPostedReviews, userId]
+    );
+
+    // 5. Record admin action
+    await db.promise().execute(
       `INSERT INTO Admin_check_inappropriate_review 
        (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
        VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
       [reviewId, adminId || 1]  // Default to admin ID 1 if not provided
     );
 
+    // Commit transaction
+    await db.promise().execute('COMMIT');
     
-    res.status(200).json({ success: true, message: 'Review approved successfully' });
+    res.status(200).json({ 
+      success: true, 
+      message: 'Review approved successfully',
+      totalPostedReviews: totalPostedReviews
+    });
   } catch (error) {
-   
+    await db.promise().execute('ROLLBACK');
     console.error('Approval error:', error);
     res.status(500).json({ success: false, message: 'Failed to approve review' });
   }
 });
 
+
+
+
 // Reject review endpoint
 app.post('/api/reviews/reject', async (req, res) => {
-  const { reviewId, adminId, reason } = req.body;
+  const { reviewId,adminId, reason } = req.body;
   
   if (!reviewId) {
     return res.status(400).json({ success: false, message: 'Review ID is required' });

@@ -791,13 +791,27 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
             elevation: 8,
             child: InkWell(
               borderRadius: BorderRadius.circular(5),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      RestaurantDetailAdminPage(restaurantId: res.id),
-                ),
-              ),
+              onTap: () async {
+                try {
+                  final shouldRefresh = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          RestaurantDetailAdminPage(restaurantId: res.id),
+                    ),
+                  );
+
+                  if (shouldRefresh == true) {
+                    _refreshRestaurantData();
+                  }
+                } catch (e) {
+                  debugPrint('Navigation error: $e');
+                  // Optionally show error to user
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error during navigation')),
+                  );
+                }
+              },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -900,8 +914,8 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                             // Left side - Pending reviews or empty container
                             if (res.pendingReviewsCount > 0)
                               GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
+                                onTap: () async {
+                                  final shouldRefresh = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => PendingReviewsPage(
@@ -909,6 +923,9 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                       ),
                                     ),
                                   );
+                                  if (shouldRefresh) {
+                                    _refreshRestaurantData();
+                                  }
                                 },
                                 child: Container(
                                   padding: EdgeInsets.symmetric(

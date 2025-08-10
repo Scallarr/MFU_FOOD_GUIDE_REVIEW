@@ -197,6 +197,16 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
             floating: true, // ทำให้เลื่อนขึ้นมาได้ทันที
             snap: true, // เลื่อนลงซ่อนทันที
             elevation: 4,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                // Refresh the previous page and go back
+                Navigator.pop(
+                  context,
+                  true,
+                ); // 'true' indicates a refresh is needed
+              },
+            ),
           ),
           SliverToBoxAdapter(
             child: Column(
