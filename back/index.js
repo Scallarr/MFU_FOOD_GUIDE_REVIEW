@@ -2226,7 +2226,7 @@ app.delete('/delete_profile/:id', async (req, res) => {
     // 2. ลบข้อมูลที่เกี่ยวข้อง (ถ้ามี)
     // เช่น ลบประวัติการซื้อโปรไฟล์นี้
     await connection.execute(
-      'DELETE FROM user_profiles WHERE profile_id = ?',
+      'DELETE FROM user_Profile_Picture WHERE Picture_ID = ?',
       [id]
     );
     
