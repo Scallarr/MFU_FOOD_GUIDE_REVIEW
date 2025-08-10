@@ -1909,10 +1909,45 @@ app.post('/api/reviews/reject', async (req, res) => {
 
 // API บันทึกเมนู
 app.post('/Add/menus', async (req, res) => {
+  // ตรวจสอบข้อมูลที่จำเป็น
   const { restaurantId, menuThaiName, menuEnglishName, price, menuImage } = req.body;
 
+  // ตรวจสอบว่ามีข้อมูลครบถ้วน
+  if (!restaurantId || !menuThaiName || !price || !menuImage) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Missing required fields (restaurantId, menuThaiName, price, menuImage)' 
+    });
+  }
+
+  // ตรวจสอบว่า price เป็นตัวเลข
+  if (isNaN(parseFloat(price))) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Price must be a number' 
+    });
+  }
+
+  const connection = await db.promise().getConnection();
+  
   try {
-    await connection.execute(
+    await connection.beginTransaction();
+    
+    // ตรวจสอบว่า restaurant มีอยู่จริง
+    const [restaurantRows] = await connection.execute(
+      'SELECT 1 FROM Restaurant WHERE Restaurant_ID = ? LIMIT 1',
+      [restaurantId]
+    );
+    
+    if (restaurantRows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Restaurant not found' 
+      });
+    }
+
+    // เพิ่มเมนูใหม่
+    const [result] = await connection.execute(
       `INSERT INTO Menu (
         Restaurant_ID,
         menu_thai_name,
@@ -1920,13 +1955,40 @@ app.post('/Add/menus', async (req, res) => {
         price,
         menu_img
       ) VALUES (?, ?, ?, ?, ?)`,
-      [restaurantId, menuThaiName, menuEnglishName, price, menuImage]
+      [restaurantId, menuThaiName, menuEnglishName || null, parseFloat(price), menuImage]
     );
-  
-    res.status(200).json({ success: true });
+
+    await connection.commit();
+    
+    // ส่งข้อมูลเมนูที่เพิ่งสร้างกลับไป
+    const [newMenu] = await connection.execute(
+      'SELECT * FROM Menu WHERE Menu_ID = ?',
+      [result.insertId]
+    );
+
+    res.status(201).json({ 
+      success: true,
+      menu: newMenu[0]
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+    await connection.rollback();
+    console.error('Error adding menu:', error);
+    
+    // ตรวจสอบว่าเป็น error จาก MySQL
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'Menu already exists for this restaurant' 
+      });
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } finally {
+    connection.release();
   }
 });
 

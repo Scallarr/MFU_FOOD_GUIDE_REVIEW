@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "519804538878",
+    "project_id": "mfuimageupload",
+    "storage_bucket": "mfuimageupload.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519804538878:android:56df85324fbfa8e0c0faaf",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIcSv79C0Nw322l4JQUuC12pHEvTOPrsE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

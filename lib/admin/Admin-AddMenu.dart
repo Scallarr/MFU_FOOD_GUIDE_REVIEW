@@ -16,11 +16,11 @@ class Addmenu extends StatefulWidget {
 }
 
 class _AddmenuState extends State<Addmenu> {
-  final Color _primaryColor = Color(0xFF8B5A2B); // Rich brown
-  final Color _secondaryColor = Color(0xFFD2B48C); // Tan
-  final Color _accentColor = Color(0xFFA67C52); // Medium brown
-  final Color _backgroundColor = Color(0xFFF5F0E6); // Cream
-  final Color _textColor = Color(0xFF5D4037); // Dark brown
+  final Color _primaryColor = Color(0xFF8B5A2B);
+  final Color _secondaryColor = Color(0xFFD2B48C);
+  final Color _accentColor = Color(0xFFA67C52);
+  final Color _backgroundColor = Color(0xFFF5F0E6);
+  final Color _textColor = Color(0xFF5D4037);
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _thaiNameController = TextEditingController();
@@ -33,7 +33,11 @@ class _AddmenuState extends State<Addmenu> {
   bool _isSaving = false;
 
   final ImagePicker _picker = ImagePicker();
-  final String _imgbbApiKey = '762958d4dfc64c8a75fe00a0359c6b05';
+
+  // Cloudinary Configuration
+  final String _cloudName = 'doyeaento'; // เปลี่ยนเป็น Cloud Name ของคุณ
+  final String _uploadPreset =
+      'flutter_upload'; // เปลี่ยนเป็น Upload Preset ของคุณ
 
   @override
   void dispose() {
@@ -50,33 +54,43 @@ class _AddmenuState extends State<Addmenu> {
         _imageFile = File(pickedFile.path);
         _isUploading = true;
       });
-      await _uploadImage();
+      await _uploadToCloudinary();
     }
   }
 
-  Future<void> _uploadImage() async {
+  Future<void> _uploadToCloudinary() async {
     try {
-      final uri = Uri.parse('https://api.imgbb.com/1/upload?key=$_imgbbApiKey');
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        await http.MultipartFile.fromPath('image', _imageFile!.path),
+      if (_imageFile == null) return;
+
+      final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$_cloudName/image/upload',
       );
 
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final jsonResponse = json.decode(responseData);
+      var request = http.MultipartRequest('POST', uri)
+        ..fields['upload_preset'] = _uploadPreset
+        ..files.add(
+          await http.MultipartFile.fromPath('file', _imageFile!.path),
+        );
 
-      if (jsonResponse['success'] == true) {
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var jsonResponse = json.decode(responseData);
+
+      if (jsonResponse['secure_url'] != null) {
         setState(() {
-          _imageUrl = jsonResponse['data']['url'];
+          _imageUrl = jsonResponse['secure_url'];
         });
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('อัปโหลดรูปภาพสำเร็จ')));
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('อัปโหลดรูปภาพล้มเหลว')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'อัปโหลดรูปภาพล้มเหลว: ${jsonResponse['error']?.toString() ?? 'Unknown error'}',
+            ),
+          ),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(
@@ -133,6 +147,7 @@ class _AddmenuState extends State<Addmenu> {
     }
   }
 
+  // ส่วน build widget เหมือนเดิม...
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,7 +178,6 @@ class _AddmenuState extends State<Addmenu> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Header
                     Text(
                       'รูปภาพเมนู',
                       style: TextStyle(
@@ -174,8 +188,6 @@ class _AddmenuState extends State<Addmenu> {
                       textAlign: TextAlign.start,
                     ),
                     SizedBox(height: 20),
-
-                    // Image Upload Section
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(
@@ -257,11 +269,7 @@ class _AddmenuState extends State<Addmenu> {
                         ),
                       ),
                     SizedBox(height: 25),
-
-                    // Menu Information
                     _buildSectionTitle('ข้อมูลเมนู'),
-
-                    // Thai Name
                     _buildTextField(
                       controller: _thaiNameController,
                       label: 'ชื่อเมนู (ไทย)*',
@@ -274,16 +282,12 @@ class _AddmenuState extends State<Addmenu> {
                       },
                     ),
                     SizedBox(height: 16),
-
-                    // English Name
                     _buildTextField(
                       controller: _englishNameController,
                       label: 'ชื่อเมนู (อังกฤษ)',
                       icon: Icons.food_bank_outlined,
                     ),
                     SizedBox(height: 16),
-
-                    // Price
                     _buildTextField(
                       controller: _priceController,
                       label: 'ราคา*',
@@ -307,8 +311,6 @@ class _AddmenuState extends State<Addmenu> {
                       },
                     ),
                     SizedBox(height: 30),
-
-                    // Submit Button
                     ElevatedButton(
                       onPressed: _submitMenu,
                       style: ElevatedButton.styleFrom(
