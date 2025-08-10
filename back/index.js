@@ -1510,18 +1510,22 @@ app.post('/api/reviews/approve', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
 
+  // Get a connection from the pool
+  
+
   try {
-    // Start transaction
-    await db.promise().execute('START TRANSACTION');
+    // Start transaction using connection method
+    
 
     // 1. Get the user ID associated with this review
-    const [reviewResult] = await db.promise().execute(
+    const [reviewResult] =await db.promise().execute(
       `SELECT User_ID FROM Review WHERE Review_ID = ?`,
       [reviewId]
     );
 
     if (reviewResult.length === 0) {
-      await db.promise().execute('ROLLBACK');
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
@@ -1536,7 +1540,8 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     if (updateResult.affectedRows === 0) {
-      await db.promise().execute('ROLLBACK');
+     
+
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
@@ -1551,7 +1556,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     const totalPostedReviews = countResult[0].totalPostedReviews;
 
     // 4. Update user's total_reviews count with the accurate number
-    await db.promise().execute(
+   await db.promise().execute(
       `UPDATE User 
        SET total_reviews = ? 
        WHERE User_ID = ?`,
@@ -1559,7 +1564,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     // 5. Record admin action
-    await db.promise().execute(
+   await db.promise().execute(
       `INSERT INTO Admin_check_inappropriate_review 
        (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
        VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
@@ -1567,7 +1572,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     // Commit transaction
-    await db.promise().execute('COMMIT');
+  
     
     res.status(200).json({ 
       success: true, 
@@ -1575,13 +1580,16 @@ app.post('/api/reviews/approve', async (req, res) => {
       totalPostedReviews: totalPostedReviews
     });
   } catch (error) {
-    await db.promise().execute('ROLLBACK');
+   
+  
     console.error('Approval error:', error);
-    res.status(500).json({ success: false, message: 'Failed to approve review' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to approve review',
+      error: error.message 
+    });
   }
 });
-
-
 
 
 // Reject review endpoint
