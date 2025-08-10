@@ -306,7 +306,7 @@ app.get('/restaurant/:id', (req, res) => {
   JOIN User u ON r.User_ID = u.User_ID
   LEFT JOIN user_Profile_Picture p 
     ON r.User_ID = p.User_ID AND p.is_active = 1
-  WHERE r.restaurant_id = ? AND r.ai_evaluation = 'Safe'
+  WHERE r.restaurant_id = ? AND r.message_status= 'Posted'
   ORDER BY r.created_at DESC
 `;
 
