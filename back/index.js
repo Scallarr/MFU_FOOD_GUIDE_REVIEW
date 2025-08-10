@@ -1345,45 +1345,165 @@ app.put('/edit/restaurants/:id', async (req, res) => {
 });
 
 // DELETE /Delete/restaurants/:id
+// app.delete('/Delete/restaurants/:id', async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     // 1. ตรวจสอบว่ามีร้านอาหารนี้อยู่จริงหรือไม่
+//     const [checkResult] = await db.promise().execute(
+//       'SELECT * FROM Restaurant WHERE Restaurant_ID = ?',
+//       [id]
+//     );
+
+//     if (checkResult.length === 0) {
+//       return res.status(404).json({ 
+//         success: false,
+//         message: 'ไม่พบร้านอาหารที่ต้องการลบ' 
+//       });
+//     }
+
+//     // 2. ทำการลบร้านอาหาร
+//     const [deleteResult] = await db.promise().execute(
+//       'DELETE FROM Restaurant WHERE Restaurant_ID = ?',
+//       [id]
+//     );
+
+//     // 3. ตรวจสอบว่าลบสำเร็จหรือไม่
+//     if (deleteResult.affectedRows === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Delete Restaurant Failed'
+//       });
+//     }
+
+//     // 4. ส่ง response กลับ
+//     res.status(200).json({
+//       success: true,
+//       message: 'Delete Restaurant Successfull',
+//       deletedId: id
+//     });
+
+//   } catch (err) {
+//     console.error('Error deleting restaurant:', err);
+//     res.status(500).json({
+//       success: false,
+//       message: 'เกิดข้อผิดพลาดในการลบร้านอาหาร',
+//       error: err.message
+//     });
+//   }
+// });
+
 app.delete('/Delete/restaurants/:id', async (req, res) => {
   const { id } = req.params;
+  const connection = await db.promise().getConnection();
 
   try {
-    // 1. ตรวจสอบว่ามีร้านอาหารนี้อยู่จริงหรือไม่
-    const [checkResult] = await db.promise().execute(
+    await connection.beginTransaction();
+
+    // 1. Check if restaurant exists
+    const [checkResult] = await connection.execute(
       'SELECT * FROM Restaurant WHERE Restaurant_ID = ?',
       [id]
     );
 
     if (checkResult.length === 0) {
+      connection.release();
       return res.status(404).json({ 
         success: false,
         message: 'ไม่พบร้านอาหารที่ต้องการลบ' 
       });
     }
 
-    // 2. ทำการลบร้านอาหาร
-    const [deleteResult] = await db.promise().execute(
+    // 2. Get all users who reviewed this restaurant
+    const [reviewers] = await connection.execute(
+      'SELECT DISTINCT User_ID FROM Review WHERE Restaurant_ID = ?',
+      [id]
+    );
+
+    // 3. Get all users who liked reviews of this restaurant
+    const [likers] = await connection.execute(
+      `SELECT DISTINCT l.User_ID 
+       FROM Review_Likes l
+       JOIN Review r ON l.Review_ID = r.Review_ID
+       WHERE r.Restaurant_ID = ?`,
+      [id]
+    );
+
+    // 4. Delete all likes for reviews of this restaurant
+    await connection.execute(
+      `DELETE l FROM Review_Likes l
+       JOIN Review r ON l.Review_ID = r.Review_ID
+       WHERE r.Restaurant_ID = ?`,
+      [id]
+    );
+
+    // 5. Delete all reviews for this restaurant
+    const [deleteReviewsResult] = await connection.execute(
+      'DELETE FROM Review WHERE Restaurant_ID = ?',
+      [id]
+    );
+
+    // 6. Delete the restaurant
+    const [deleteResult] = await connection.execute(
       'DELETE FROM Restaurant WHERE Restaurant_ID = ?',
       [id]
     );
 
-    // 3. ตรวจสอบว่าลบสำเร็จหรือไม่
     if (deleteResult.affectedRows === 0) {
+      await connection.rollback();
+      connection.release();
       return res.status(400).json({
         success: false,
         message: 'Delete Restaurant Failed'
       });
     }
 
-    // 4. ส่ง response กลับ
+    // 7. Update review counts for all affected users
+    for (const user of reviewers) {
+      const [countResult] = await connection.execute(
+        'SELECT COUNT(*) AS reviewCount FROM Review WHERE User_ID = ? AND message_status = "Posted"',
+        [user.User_ID]
+      );
+      
+      await connection.execute(
+        'UPDATE User SET total_reviews = ? WHERE User_ID = ?',
+        [countResult[0].reviewCount, user.User_ID]
+      );
+    }
+
+    // 8. Update like counts for all affected users
+    for (const user of likers) {
+      const [countResult] = await connection.execute(
+        `SELECT COUNT(*) AS likeCount 
+         FROM Review_Likes l
+         JOIN Review r ON l.Review_ID = r.Review_ID
+         WHERE l.User_ID = ? AND r.message_status = "Posted"`,
+        [user.User_ID]
+      );
+      
+      await connection.execute(
+        'UPDATE User SET total_likes = ? WHERE User_ID = ?',
+        [countResult[0].likeCount, user.User_ID]
+      );
+    }
+
+    await connection.commit();
+    connection.release();
+
     res.status(200).json({
       success: true,
-      message: 'Delete Restaurant Successfull',
-      deletedId: id
+      message: 'Delete Restaurant Successfully',
+      deletedId: id,
+      deletedReviews: deleteReviewsResult.affectedRows,
+      affectedUsers: {
+        reviewers: reviewers.length,
+        likers: likers.length
+      }
     });
 
   } catch (err) {
+    await connection.rollback();
+    connection.release();
     console.error('Error deleting restaurant:', err);
     res.status(500).json({
       success: false,
@@ -1392,9 +1512,6 @@ app.delete('/Delete/restaurants/:id', async (req, res) => {
     });
   }
 });
-
-
-
 
 
 // Add Restaurant Endpoint
@@ -1628,40 +1745,56 @@ app.post('/api/reviews/approve', async (req, res) => {
 
 // Reject review endpoint
 app.post('/api/reviews/reject', async (req, res) => {
-  const { reviewId,adminId, reason } = req.body;
+  const { reviewId, adminId, reason } = req.body;
   
   if (!reviewId) {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
 
+  const connection = await db.promise().getConnection();
 
-  
   try {
-   
+    await connection.beginTransaction();
 
-    // 1. Update review status to 'Banned'
-    const [updateResult] = await db.promise().execute(
+    // 1. Get review details including user and restaurant IDs
+    const [reviewDetails] = await connection.execute(
+      `SELECT User_ID, Restaurant_ID FROM Review WHERE Review_ID = ?`,
+      [reviewId]
+    );
+
+    if (reviewDetails.length === 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(404).json({ success: false, message: 'Review not found' });
+    }
+
+    const userId = reviewDetails[0].User_ID;
+    const restaurantId = reviewDetails[0].Restaurant_ID;
+
+    // 2. Update review status to 'Banned'
+    const [updateResult] = await connection.execute(
       `UPDATE Review 
-       SET message_status = 'Banned', created_at = NOW() 
+       SET message_status = 'Banned'
        WHERE Review_ID = ?`, 
       [reviewId]
     );
 
     if (updateResult.affectedRows === 0) {
       await connection.rollback();
+      connection.release();
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
-    // 2. Record admin action
-   await db.promise().execute(
+    // 3. Record admin action
+    await connection.execute(
       `INSERT INTO Admin_check_inappropriate_review 
        (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
        VALUES (?, ?, 'Banned', NOW(), ?)`,
       [reviewId, adminId || 1, reason || 'Inappropriate message']
     );
 
-     // 3. Count all posted reviews for this user
-    const [countResult] = await db.promise().execute(
+    // 4. Count all posted reviews for this user
+    const [countResult] = await connection.execute(
       `SELECT COUNT(*) AS totalPostedReviews 
        FROM Review 
        WHERE User_ID = ? AND message_status = 'Posted'`,
@@ -1670,16 +1803,16 @@ app.post('/api/reviews/reject', async (req, res) => {
 
     const totalPostedReviews = countResult[0].totalPostedReviews;
 
-    // 4. Update user's total_reviews count
-   await db.promise().execute(
+    // 5. Update user's total_reviews count
+    await connection.execute(
       `UPDATE User 
        SET total_reviews = ? 
        WHERE User_ID = ?`,
       [totalPostedReviews, userId]
     );
 
-    // 5. Calculate new averages for the restaurant
-    const [avgResult] = await db.promise().execute(
+    // 6. Calculate new averages for the restaurant
+    const [avgResult] = await connection.execute(
       `SELECT 
         AVG(rating_overall) AS avg_overall,
         AVG(rating_hygiene) AS avg_hygiene,
@@ -1690,8 +1823,8 @@ app.post('/api/reviews/reject', async (req, res) => {
       [restaurantId]
     );
 
-    // 6. Update restaurant averages
-   await db.promise().execute(
+    // 7. Update restaurant averages
+    await connection.execute(
       `UPDATE Restaurant SET
         rating_overall_avg = ?,
         rating_hygiene_avg = ?,
@@ -1707,16 +1840,27 @@ app.post('/api/reviews/reject', async (req, res) => {
       ]
     );
 
-
-   
-    res.status(200).json({ success: true, message: 'Review rejected successfully' });
+    await connection.commit();
+    connection.release();
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Review rejected successfully',
+      userId: userId,
+      restaurantId: restaurantId,
+      newReviewCount: totalPostedReviews
+    });
   } catch (error) {
-   
+    await connection.rollback();
+    connection.release();
     console.error('Rejection error:', error);
-    res.status(500).json({ success: false, message: 'Failed to reject review' });
-  } 
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to reject review',
+      error: error.message 
+    });
+  }
 });
-
 
 
 
