@@ -1246,7 +1246,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Future<void> _deleteMenu(int menuId) async {
     try {
       final response = await http.delete(
-        Uri.parse('https://your-api.com/menus/$menuId'),
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/Delete/menus/$menuId',
+        ),
       );
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(

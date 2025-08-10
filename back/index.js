@@ -2050,7 +2050,7 @@ app.delete('/Delete/menus/:id', async (req, res) => {
 
 
 // แก้ไขเมนู (ใช้ PUT)
-app.put('/:menuId', async (req, res) => {
+app.put('/Edit/Menu/:menuId', async (req, res) => {
   const { menuId } = req.params;
   const { 
     restaurantId,
