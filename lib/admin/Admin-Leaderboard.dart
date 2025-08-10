@@ -567,7 +567,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'LEADERBOARD',
+                      'Leaderboard',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 28,

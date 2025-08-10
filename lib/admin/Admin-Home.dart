@@ -402,10 +402,10 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                     const Padding(
                       padding: EdgeInsets.only(left: 20),
                       child: Text(
-                        'MFU Food Guide For Admin',
+                        'MFU Food Guide ',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 25,
                           color: Colors.white,
                           shadows: [
                             Shadow(
@@ -417,30 +417,33 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                         ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfilePageAdmin(),
-                          ),
-                        );
-                      },
-                      child: profileImageUrl == null
-                          ? CircleAvatar(
-                              backgroundColor: Colors.grey[300],
-                              child: Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                              radius: 27,
-                            )
-                          : CircleAvatar(
-                              backgroundImage: NetworkImage(profileImageUrl!),
-                              radius: 27,
-                              backgroundColor: Colors.grey[300],
+                    Padding(
+                      padding: EdgeInsetsGeometry.only(right: 17),
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfilePageAdmin(),
                             ),
+                          );
+                        },
+                        child: profileImageUrl == null
+                            ? CircleAvatar(
+                                backgroundColor: Colors.grey[300],
+                                child: Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 40,
+                                ),
+                                radius: 27,
+                              )
+                            : CircleAvatar(
+                                backgroundImage: NetworkImage(profileImageUrl!),
+                                radius: 27,
+                                backgroundColor: Colors.grey[300],
+                              ),
+                      ),
                     ),
                   ],
                 ),
@@ -499,7 +502,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
           // Filter Buttons
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.only(top: 15, left: 14),
             sliver: SliverToBoxAdapter(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -929,9 +932,9 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                   decoration: BoxDecoration(
                                     color: const Color.fromARGB(
                                       255,
-                                      38,
-                                      38,
-                                      38,
+                                      224,
+                                      50,
+                                      50,
                                     ),
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
@@ -1134,7 +1137,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                             // Reviews Count - Enhanced
                             Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 16,
+                                horizontal: 10,
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
@@ -1180,14 +1183,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                                     ),
                                   ),
                                   SizedBox(width: 4),
-                                  Text(
-                                    'reviews',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color.fromARGB(255, 255, 255, 255),
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -1219,7 +1214,9 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   }
 
   Widget _buildRatingIndicator(String label, double rating) {
-    final ratingColor = _getRatingColor(rating);
+    final color = _getRatingColor(rating);
+    final segments = 5;
+    final segmentValue = rating / segments;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1230,88 +1227,67 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
               ),
             ),
             Text(
               rating.toStringAsFixed(1),
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: ratingColor,
+                color: color,
               ),
             ),
           ],
         ),
         SizedBox(height: 6),
-        Container(
-          height: 9,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // Background track
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 218, 218, 218),
-                  borderRadius: BorderRadius.circular(6),
+        Row(
+          children: List.generate(segments, (index) {
+            final segmentWidth =
+                (MediaQuery.of(context).size.width - 70) / segments;
+            final segmentRating = (rating - index).clamp(0.0, 1.0);
+
+            return Container(
+              height: 12,
+              width: segmentWidth,
+              margin: EdgeInsets.only(right: index == segments - 1 ? 0 : 2),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(index == 0 ? 6 : 0),
+                  right: Radius.circular(index == segments - 1 ? 6 : 0),
                 ),
               ),
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: AnimatedContainer(
-                  duration: Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                  width: (rating / 5) * MediaQuery.of(context).size.width,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        ratingColor.withOpacity(0.9),
-                        ratingColor.withOpacity(0.7),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Inner highlight
-              Positioned.fill(
+              child: Align(
+                alignment: Alignment.centerLeft,
                 child: Container(
+                  width: segmentWidth * segmentRating,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1.5,
+                    color: color,
+                    borderRadius: BorderRadius.horizontal(
+                      left: Radius.circular(index == 0 ? 6 : 0),
+                      right: Radius.circular(index == segments - 1 ? 6 : 0),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            );
+          }),
         ),
       ],
     );
   }
 
   Color _getRatingColor(double rating) {
-    if (rating >= 4.5) return Color(0xFF3E2723);
-    if (rating >= 4.0) return Color(0xFF3E2723);
-    if (rating >= 3.5) return Color(0xFF3E2723);
-    if (rating >= 3.0) return Color(0xFF3E2723);
-    if (rating >= 2.5) return Color(0xFF3E2723);
-    if (rating >= 2.0) return Color(0xFF3E2723);
-    return Color(0xFF3E2723);
+    if (rating >= 4.5) return Colors.green[800]!; // Excellent
+    if (rating >= 4.0) return Colors.lightGreen[600]!; // Very Good
+    if (rating >= 3.5) return Colors.lime[600]!; // Good
+    if (rating >= 3.0) return Colors.amber[600]!; // Average
+    if (rating >= 2.5) return Colors.orange[600]!; // Below Average
+    if (rating >= 2.0) return Colors.deepOrange[600]!; // Poor
+    return Colors.red[700]!; // Very Poor
   }
 
   void _navigateToEditRestaurant(Restaurant restaurant) {

@@ -367,7 +367,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'FOOD THREADS',
+                    'Food Threads',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 28,

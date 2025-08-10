@@ -2160,6 +2160,61 @@ app.put('/Edit/Menu/:menuId', async (req, res) => {
 
 
 
+
+// POST endpoint สำหรับเพิ่มโปรไฟล์ใหม่ (รับ URL รูปภาพจาก Frontend)
+app.post('/Add/profiles', async (req, res) => {
+  const connection = await db.promise().getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { profileName, description, imageUrl, requiredCoins } = req.body;
+
+    // ตรวจสอบข้อมูลที่จำเป็น
+    if (!profileName || !description || !imageUrl || !requiredCoins) {
+      await connection.rollback();
+      connection.release();
+      return res.status(400).json({ 
+        error: 'Missing required fields: profileName, description, imageUrl, requiredCoins' 
+      });
+    }
+
+    // เพิ่มข้อมูลลงฐานข้อมูล
+    const [result] = await connection.execute(
+      `INSERT INTO exchange_coin_Shop 
+       (Profile_Name, Description, Image_URL, Required_Coins, Created_At)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [profileName, description, imageUrl, requiredCoins]
+    );
+
+    // ดึงข้อมูลโปรไฟล์ที่เพิ่งสร้างเพื่อส่งกลับ
+    const [newProfile] = await connection.execute(
+      'SELECT * FROM exchange_coin_Shop WHERE Profile_Shop_ID = ?',
+      [result.insertId]
+    );
+
+    await connection.commit();
+    connection.release();
+    
+    res.status(201).json(newProfile[0]);
+  } catch (error) {
+    await connection.rollback();
+    connection.release();
+    
+    console.error('Error creating profile:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+});
+
+
+
+
+
+
+
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));

@@ -901,8 +901,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Color.fromARGB(255, 0, 0, 0), // Brown 400
-                      borderRadius: BorderRadius.circular(20),
+                      color: Color.fromARGB(255, 76, 74, 74), // Brown 400
+                      borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.brown.withOpacity(0.3),

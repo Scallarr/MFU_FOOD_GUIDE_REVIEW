@@ -155,7 +155,7 @@ class _DashboardPageAdminState extends State<DashboardAdmin> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'DASHBOARD',
+                    'Dashboard',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 32,

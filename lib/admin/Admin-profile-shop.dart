@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/admin/Admin-Addprofile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -452,6 +453,20 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
               ),
             ),
           ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color.fromARGB(255, 235, 188, 117),
+          child: Icon(Icons.add, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddProfilePage()),
+            ).then((shouldRefresh) {
+              if (shouldRefresh == true) {
+                loadUserAndFetchProfiles();
+              }
+            });
+          },
         ),
       ),
     );
