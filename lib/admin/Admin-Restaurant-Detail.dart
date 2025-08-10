@@ -1254,6 +1254,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('ลบเมนูสำเร็จ')));
+        fetchRestaurant();
       }
     } catch (e) {
       ScaffoldMessenger.of(

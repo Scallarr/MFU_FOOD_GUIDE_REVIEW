@@ -2064,12 +2064,14 @@ app.put('/Edit/Menu/:menuId', async (req, res) => {
   if (!menuThaiName || !price || isNaN(price)) {
     return res.status(400).json({ 
       success: false,
-      message: 'Please Enter All Field'
+      message: 'กรุณากรอกข้อมูลให้ครบถ้วน'
     });
   }
-const connection = await db.promise().getConnection();
+
+  const connection = await db.promise().getConnection();
   try {
-         await connection.beginTransaction();
+    await connection.beginTransaction();
+
     // ตรวจสอบว่าเมนูมีอยู่จริง
     const [existingMenu] = await connection.execute(
       'SELECT * FROM Menu WHERE Menu_ID = ?', 
@@ -2077,6 +2079,8 @@ const connection = await db.promise().getConnection();
     );
 
     if (existingMenu.length === 0) {
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({ 
         success: false,
         message: 'ไม่พบเมนูนี้ในระบบ'
@@ -2091,7 +2095,6 @@ const connection = await db.promise().getConnection();
         menu_english_name = ?,
         price = ?,
         menu_img = ?
-        
       WHERE Menu_ID = ?`,
       [
         restaurantId,
@@ -2104,6 +2107,8 @@ const connection = await db.promise().getConnection();
     );
 
     if (result.affectedRows === 0) {
+      await connection.rollback();
+      connection.release();
       return res.status(500).json({ 
         success: false,
         message: 'อัพเดทเมนูไม่สำเร็จ'
@@ -2116,6 +2121,9 @@ const connection = await db.promise().getConnection();
       [menuId]
     );
 
+    await connection.commit();
+    connection.release();
+
     res.status(200).json({
       success: true,
       data: updatedMenu[0]
@@ -2123,6 +2131,12 @@ const connection = await db.promise().getConnection();
 
   } catch (error) {
     console.error('Error updating menu:', error);
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      console.error('Rollback failed:', rollbackError);
+    }
+    connection.release();
     res.status(500).json({ 
       success: false,
       message: 'เกิดข้อผิดพลาดในการอัพเดทเมนู'
