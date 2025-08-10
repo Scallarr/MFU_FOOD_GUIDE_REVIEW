@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:myapp/admin/Admin-AddRestaurant.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
+import 'package:myapp/admin/Admin-Pending_Review.dart';
+import 'package:myapp/admin/Admin-Restaurant-Detail.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
@@ -10,6 +12,7 @@ import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/restaurantDetail.dart';
 import 'package:myapp/admin/Admin-Edit-Restaurant.dart';
+
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/threads.dart';
@@ -792,7 +795,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                 context,
                 MaterialPageRoute(
                   builder: (context) =>
-                      RestaurantDetailPage(restaurantId: res.id),
+                      RestaurantDetailAdminPage(restaurantId: res.id),
                 ),
               ),
               child: Column(
@@ -896,40 +899,57 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                           children: [
                             // Left side - Pending reviews or empty container
                             if (res.pendingReviewsCount > 0)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 38, 38, 38),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.hourglass_top_rounded,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      '${res.pendingReviewsCount} Pending',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PendingReviewsPage(
+                                        restaurantId: res.id,
                                       ),
                                     ),
-                                  ],
+                                  );
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromARGB(
+                                      255,
+                                      38,
+                                      38,
+                                      38,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.hourglass_top_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        '${res.pendingReviewsCount} Pending',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               )
                             else

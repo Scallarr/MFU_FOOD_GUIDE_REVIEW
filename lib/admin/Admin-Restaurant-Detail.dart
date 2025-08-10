@@ -4,17 +4,19 @@ import 'package:http/http.dart' as http;
 import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/restaurant_model.dart';
+// import 'package:myapp/admin/Admin-Home.dart';
 
-class RestaurantDetailPage extends StatefulWidget {
+class RestaurantDetailAdminPage extends StatefulWidget {
   final int restaurantId;
 
-  const RestaurantDetailPage({super.key, required this.restaurantId});
+  const RestaurantDetailAdminPage({super.key, required this.restaurantId});
 
   @override
-  State<RestaurantDetailPage> createState() => _RestaurantDetailPageState();
+  State<RestaurantDetailAdminPage> createState() =>
+      _RestaurantDetailPageState();
 }
 
-class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
+class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Restaurant? restaurant;
   bool isLoading = true;
   bool isExpanded = false;
@@ -184,10 +186,10 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
         slivers: [
           SliverAppBar(
             title: Text(
-              restaurant!.name,
+              'Restaurant Management',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 25,
+                fontSize: 21,
                 fontWeight: FontWeight.bold,
               ),
             ),

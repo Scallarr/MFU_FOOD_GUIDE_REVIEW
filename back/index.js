@@ -1458,6 +1458,50 @@ app.post('/Add/restaurants', async (req, res) => {
 
 // Error handling middleware
 
+// GET /reviews/pending?restaurantId={restaurantId}
+app.get('/reviews/pending', async (req, res) => {
+  const { restaurantId } = req.query;
+
+  try {
+    const query = `
+      SELECT 
+        r.Review_ID,
+        r.rating_overall,
+        r.rating_hygiene,
+        r.rating_flavor,
+        r.rating_service,
+        r.comment,
+        r.created_at,
+        r.ai_evaluation,
+        r.message_status,
+        u.User_ID,
+        u.fullname,
+        u.username,
+        u.email,
+        p.picture_url
+      FROM 
+        Review r
+      JOIN 
+        User u ON r.User_ID = u.User_ID
+      LEFT JOIN 
+        user_Profile_Picture p ON u.User_ID = p.User_ID AND p.is_active = 1
+      WHERE 
+        r.Restaurant_ID = ? 
+        AND r.message_status = 'Pending'
+      ORDER BY 
+        r.created_at DESC
+    `;
+
+    const [results] = await db.promise().execute(query, [restaurantId]);
+
+    res.json(results);
+  } catch (err) {
+    console.error('Error fetching pending reviews:', err);
+    res.status(500).json({ error: 'Failed to fetch pending reviews' });
+  }
+});
+
+
 
 
   // ✅ Start Server
