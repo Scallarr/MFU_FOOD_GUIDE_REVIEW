@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:myapp/admin/Admin-AddMenu.dart';
+import 'package:myapp/admin/Admin-EditMenu.dart';
 import 'package:myapp/admin/Admin-Pending_Review.dart';
 import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -678,30 +679,6 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                     ),
                   ),
                 ),
-
-                // Notification Badge - Fixed condition and variable
-                // if (restaurant!.pendingReviewsCount > 0)
-                //   Positioned(
-                //     right: -5,
-                //     top: -20,
-                //     child:
-                //     Container(
-                //       padding: EdgeInsets.all(6),
-                //       decoration: BoxDecoration(
-                //         color: const Color.fromARGB(255, 219, 31, 31),
-                //         shape: BoxShape.circle,
-                //         border: Border.all(color: Colors.white, width: 2),
-                //       ),
-                //       child: Text(
-                //         '${restaurant!.pendingReviewsCount}',
-                //         style: TextStyle(
-                //           color: Colors.white,
-                //           fontSize: 15,
-                //           fontWeight: FontWeight.bold,
-                //         ),
-                //       ),
-                //     ),
-                //   ),
               ],
             ),
           ],
@@ -711,62 +688,118 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
         // แสดงเมนู
         ...menusToShow.map(
           (menu) => Card(
-            // color: const Color.fromARGB(255, 240, 231, 183),
             color: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
             elevation: 8,
             margin: EdgeInsets.symmetric(vertical: 15),
-            child: Padding(
-              padding: const EdgeInsets.all(0.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(10),
-                      topRight: Radius.circular(0),
-                      bottomLeft: Radius.circular(10),
-                      bottomRight: Radius.circular(0),
+            child: InkWell(
+              onTap: () {
+                // เมื่อคลิกที่ Card จะไปยังหน้าแก้ไข
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (context) => EditMenuPage(menuId: menu.id),
+                //   ),
+                // );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(0.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ส่วนแสดงรูปภาพ
+                    ClipRRect(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        bottomLeft: Radius.circular(10),
+                      ),
+                      child: Image.network(
+                        menu.imageUrl,
+                        width: 180,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    child: Image.network(
-                      menu.imageUrl,
-                      width: 180,
-                      height: 100,
-                      fit: BoxFit.cover,
+                    SizedBox(width: 16),
+                    // ส่วนแสดงข้อมูลเมนู
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            menu.nameTH,
+                            style: TextStyle(fontSize: 15, color: Colors.black),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            "฿ ${menu.price}",
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 94, 66, 31),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          menu.nameTH,
-                          style: TextStyle(fontSize: 15, color: Colors.black),
+                    // ปุ่มเมนูแบบ Popup
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: Color.fromARGB(255, 162, 95, 7),
+                        size: 28,
+                      ),
+                      onSelected: (value) async {
+                        if (value == 'edit') {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditMenuPage(
+                                menuId: menu.id,
+                                currentThaiName: menu.nameTH,
+                                currentEnglishName: menu
+                                    .nameEN, // Make sure your model has this
+                                currentPrice: menu.price,
+                                currentImageUrl: menu.imageUrl,
+                                restaurantId: restaurant!.id,
+                              ),
+                            ),
+                          );
+
+                          if (result == true) {
+                            fetchRestaurant(); // Refresh the menu list
+                          }
+                        } else if (value == 'delete') {
+                          _showDeleteDialog(context, menu.id);
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<String>(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text('แก้ไขเมนู'),
+                            ],
+                          ),
                         ),
-                        SizedBox(height: 6),
-                        Text(
-                          "฿ ${menu.price}",
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 94, 66, 31), // ชมพูเข้ม
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('ลบเมนู'),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(right: 25),
-                    child: Icon(
-                      Icons.local_dining_rounded,
-                      color: Color.fromARGB(255, 162, 95, 7), // ชมพูเข้ม,
-                      size: 28,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1183,6 +1216,48 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
           ),
       ],
     );
+  }
+
+  void _showDeleteDialog(BuildContext context, int menuId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('ยืนยันการลบ'),
+          content: Text('คุณแน่ใจว่าต้องการลบเมนูนี้หรือไม่?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('ยกเลิก'),
+            ),
+            TextButton(
+              onPressed: () {
+                _deleteMenu(menuId); // เรียกฟังก์ชันลบเมนู
+                Navigator.pop(context);
+              },
+              child: Text('ลบ', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteMenu(int menuId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('https://your-api.com/menus/$menuId'),
+      );
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ลบเมนูสำเร็จ')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
+    }
   }
 
   String _formatDate(String rawDate) {

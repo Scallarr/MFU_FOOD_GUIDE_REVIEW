@@ -44,7 +44,10 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
     'LAMDUAN',
   ];
   final ImagePicker _picker = ImagePicker();
-  final String _imgbbApiKey = '762958d4dfc64c8a75fe00a0359c6b05';
+  // Cloudinary Configuration
+  final String _cloudName = 'doyeaento'; // เปลี่ยนเป็น Cloud Name ของคุณ
+  final String _uploadPreset =
+      'flutter_upload'; // เปลี่ยนเป็น Upload Preset ของคุณ
 
   @override
   void dispose() {
@@ -59,44 +62,48 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
       setState(() {
         _imageFile = File(pickedFile.path);
       });
-      await _uploadImage();
+      await _uploadToCloudinary();
     }
   }
 
-  Future<void> _uploadImage() async {
-    if (_imageFile == null) return;
-
-    setState(() {
-      _isUploading = true;
-    });
-
+  Future<void> _uploadToCloudinary() async {
     try {
-      final uri = Uri.parse('https://api.imgbb.com/1/upload?key=$_imgbbApiKey');
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        await http.MultipartFile.fromPath('image', _imageFile!.path),
+      if (_imageFile == null) return;
+
+      final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$_cloudName/image/upload',
       );
 
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final jsonResponse = json.decode(responseData);
+      var request = http.MultipartRequest('POST', uri)
+        ..fields['upload_preset'] = _uploadPreset
+        ..files.add(
+          await http.MultipartFile.fromPath('file', _imageFile!.path),
+        );
 
-      if (jsonResponse['success'] == true) {
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var jsonResponse = json.decode(responseData);
+
+      if (jsonResponse['secure_url'] != null) {
         setState(() {
-          _imageUrl = jsonResponse['data']['url'];
+          _imageUrl = jsonResponse['secure_url'];
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Image uploaded successfully')));
+        ).showSnackBar(SnackBar(content: Text('อัปโหลดรูปภาพสำเร็จ')));
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to upload image')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'อัปโหลดรูปภาพล้มเหลว: ${jsonResponse['error']?.toString() ?? 'Unknown error'}',
+            ),
+          ),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error uploading image: $e')));
+      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
     } finally {
       setState(() {
         _isUploading = false;

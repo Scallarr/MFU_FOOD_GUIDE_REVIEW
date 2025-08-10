@@ -3,19 +3,31 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 
-class Addmenu extends StatefulWidget {
+class EditMenuPage extends StatefulWidget {
+  final int menuId;
+  final String currentThaiName;
+  final String currentEnglishName;
+  final String currentPrice;
+  final String currentImageUrl;
   final int restaurantId;
 
-  const Addmenu({Key? key, required this.restaurantId}) : super(key: key);
+  const EditMenuPage({
+    Key? key,
+    required this.menuId,
+    required this.currentThaiName,
+    required this.currentEnglishName,
+    required this.currentPrice,
+    required this.currentImageUrl,
+    required this.restaurantId,
+  }) : super(key: key);
 
   @override
-  _AddmenuState createState() => _AddmenuState();
+  _EditMenuPageState createState() => _EditMenuPageState();
 }
 
-class _AddmenuState extends State<Addmenu> {
+class _EditMenuPageState extends State<EditMenuPage> {
   final Color _primaryColor = Color(0xFF8B5A2B);
   final Color _secondaryColor = Color(0xFFD2B48C);
   final Color _accentColor = Color(0xFFA67C52);
@@ -35,9 +47,18 @@ class _AddmenuState extends State<Addmenu> {
   final ImagePicker _picker = ImagePicker();
 
   // Cloudinary Configuration
-  final String _cloudName = 'doyeaento'; // เปลี่ยนเป็น Cloud Name ของคุณ
+  final String _cloudName = 'doyeaento'; // Replace with your Cloud Name
   final String _uploadPreset =
-      'flutter_upload'; // เปลี่ยนเป็น Upload Preset ของคุณ
+      'flutter_upload'; // Replace with your Upload Preset
+
+  @override
+  void initState() {
+    super.initState();
+    _thaiNameController.text = widget.currentThaiName;
+    _englishNameController.text = widget.currentEnglishName;
+    _priceController.text = widget.currentPrice;
+    _imageUrl = widget.currentImageUrl;
+  }
 
   @override
   void dispose() {
@@ -103,37 +124,33 @@ class _AddmenuState extends State<Addmenu> {
     }
   }
 
-  Future<void> _submitMenu() async {
+  Future<void> _updateMenu() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_imageUrl == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('กรุณาเลือกรูปภาพ')));
-      return;
-    }
 
     setState(() {
       _isSaving = true;
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/Add/menus'),
+      final response = await http.put(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/menu/${widget.menuId}',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'restaurantId': widget.restaurantId,
           'menuThaiName': _thaiNameController.text,
           'menuEnglishName': _englishNameController.text,
           'price': double.parse(_priceController.text),
-          'menuImage': _imageUrl,
+          'menuImage': _imageUrl ?? widget.currentImageUrl,
         }),
       );
 
-      if (response.statusCode == 201) {
-        Navigator.pop(context, true);
+      if (response.statusCode == 200) {
+        Navigator.pop(context, true); // Return true to indicate success
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('บันทึกข้อมูลล้มเหลว: ${response.body}')),
+          SnackBar(content: Text('อัปเดตเมนูล้มเหลว: ${response.body}')),
         );
       }
     } catch (e) {
@@ -147,12 +164,11 @@ class _AddmenuState extends State<Addmenu> {
     }
   }
 
-  // ส่วน build widget เหมือนเดิม...
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('เพิ่มเมนูใหม่', style: TextStyle(color: Colors.white)),
+        title: Text('แก้ไขเมนู', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFFCEBFA3),
         iconTheme: IconThemeData(color: Colors.white),
         actions: [
@@ -160,7 +176,7 @@ class _AddmenuState extends State<Addmenu> {
             icon: _isSaving
                 ? CircularProgressIndicator(color: Colors.white)
                 : Icon(Icons.save),
-            onPressed: _isSaving ? null : _submitMenu,
+            onPressed: _isSaving ? null : _updateMenu,
           ),
         ],
       ),
@@ -237,22 +253,34 @@ class _AddmenuState extends State<Addmenu> {
                                             ),
                                         ],
                                       )
-                                    : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_a_photo,
-                                            size: 50,
-                                            color: _accentColor,
-                                          ),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            'แตะเพื่อเพิ่มรูปภาพเมนู',
-                                            style: TextStyle(color: _textColor),
-                                          ),
-                                        ],
-                                      ),
+                                    : (_imageUrl != null
+                                          ? ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              child: Image.network(
+                                                _imageUrl!,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            )
+                                          : Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.add_a_photo,
+                                                  size: 50,
+                                                  color: _accentColor,
+                                                ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'แตะเพื่อเปลี่ยนรูปภาพเมนู',
+                                                  style: TextStyle(
+                                                    color: _textColor,
+                                                  ),
+                                                ),
+                                              ],
+                                            )),
                               ),
                             ),
                           ],
@@ -263,7 +291,9 @@ class _AddmenuState extends State<Addmenu> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
-                          'อัปโหลดรูปภาพเรียบร้อยแล้ว',
+                          _imageFile != null
+                              ? 'อัปโหลดรูปภาพเรียบร้อยแล้ว'
+                              : 'รูปภาพปัจจุบัน',
                           style: TextStyle(color: Colors.green, fontSize: 14),
                           textAlign: TextAlign.center,
                         ),
@@ -312,7 +342,7 @@ class _AddmenuState extends State<Addmenu> {
                     ),
                     SizedBox(height: 30),
                     ElevatedButton(
-                      onPressed: _submitMenu,
+                      onPressed: _updateMenu,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color.fromARGB(255, 77, 76, 75),
                         padding: EdgeInsets.symmetric(vertical: 16),
@@ -322,7 +352,7 @@ class _AddmenuState extends State<Addmenu> {
                         elevation: 3,
                       ),
                       child: Text(
-                        'บันทึกเมนู',
+                        'บันทึกการเปลี่ยนแปลง',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,

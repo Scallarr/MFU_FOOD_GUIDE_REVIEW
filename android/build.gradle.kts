@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath ("com.android.tools.build:gradle:7.2.1")  // หรือเวอร์ชันล่าสุด
+       classpath("com.android.tools.build:gradle:8.2.2")  // หรือเวอร์ชันล่าสุด
         classpath ("com.google.gms:google-services:4.3.15")  // Firebase Plugin
     }
 }
@@ -18,6 +18,7 @@ allprojects {
         mavenCentral()
     }
 }
+
 
 
 

@@ -1992,7 +1992,143 @@ app.post('/Add/menus', async (req, res) => {
   }
 });
 
+// API ลบเมนู (ใช้ DELETE)
+app.delete('/Delete/menus/:id', async (req, res) => {
+  const connection = await db.promise().getConnection();
+  
+  try {
+    const menuId = req.params.id;
+     await connection.beginTransaction();
+    // ตรวจสอบ ID
+    if (!menuId || isNaN(menuId)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'รหัสเมนูไม่ถูกต้อง' 
+      });
+    }
 
+    // เช็คว่าเมนูมีอยู่จริง
+    const [checkMenu] = await connection.execute(
+      'SELECT Menu_ID, menu_thai_name FROM menus WHERE Menu_ID = ?',
+      [menuId]
+    );
+
+    if (checkMenu.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'ไม่พบเมนูนี้ในระบบ' 
+      });
+    }
+
+    // ลบเมนูจากฐานข้อมูล
+    const [result] = await connection.execute(
+      'DELETE FROM Menu WHERE Menu_ID = ?',
+      [menuId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(500).json({ 
+        success: false,
+        message: 'ลบเมนูไม่สำเร็จ' 
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      message: `Delete "${checkMenu[0].name_th}" Menu Successfull`
+    });
+
+  } catch (error) {
+    console.error('Error deleting menu:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการลบเมนู' 
+    });
+  }
+});
+
+
+
+// แก้ไขเมนู (ใช้ PUT)
+app.put('/:menuId', async (req, res) => {
+  const { menuId } = req.params;
+  const { 
+    restaurantId,
+    menuThaiName, 
+    menuEnglishName, 
+    price, 
+    menuImage 
+  } = req.body;
+
+  // Validate input
+  if (!menuThaiName || !price || isNaN(price)) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Please Enter All Field'
+    });
+  }
+const connection = await db.promise().getConnection();
+  try {
+         await connection.beginTransaction();
+    // ตรวจสอบว่าเมนูมีอยู่จริง
+    const [existingMenu] = await connection.execute(
+      'SELECT * FROM Menu WHERE Munu_ID = ?', 
+      [menuId]
+    );
+
+    if (existingMenu.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'ไม่พบเมนูนี้ในระบบ'
+      });
+    }
+
+    // อัพเดทข้อมูลใน MySQL
+    const [result] = await connection.execute(
+      `UPDATE Menu SET 
+        Restaurant_ID = ?,
+        menu_thai_name = ?,
+        menu_english_name = ?,
+        price = ?,
+        menu_img = ?
+        
+      WHERE Menu_ID = ?`,
+      [
+        restaurantId,
+        menuThaiName,
+        menuEnglishName || null,
+        parseFloat(price),
+        menuImage,
+        menuId
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(500).json({ 
+        success: false,
+        message: 'อัพเดทเมนูไม่สำเร็จ'
+      });
+    }
+
+    // ดึงข้อมูลเมนูที่อัพเดทแล้ว
+    const [updatedMenu] = await connection.execute(
+      'SELECT * FROM Menu WHERE Menu_ID = ?',
+      [menuId]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: updatedMenu[0]
+    });
+
+  } catch (error) {
+    console.error('Error updating menu:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'เกิดข้อผิดพลาดในการอัพเดทเมนู'
+    });
+  }
+});
 
 
 
