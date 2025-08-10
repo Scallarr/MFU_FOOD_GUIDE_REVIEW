@@ -134,7 +134,7 @@ class _EditMenuPageState extends State<EditMenuPage> {
     try {
       final response = await http.put(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/menu/${widget.menuId}',
+          'https://mfu-food-guide-review.onrender.com/Edit/Menu/${widget.menuId}',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({

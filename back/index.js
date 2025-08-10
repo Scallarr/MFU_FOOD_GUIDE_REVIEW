@@ -2009,7 +2009,7 @@ app.delete('/Delete/menus/:id', async (req, res) => {
 
     // เช็คว่าเมนูมีอยู่จริง
     const [checkMenu] = await connection.execute(
-      'SELECT Menu_ID, menu_thai_name FROM menus WHERE Menu_ID = ?',
+      'SELECT Menu_ID, menu_thai_name FROM Menu WHERE Menu_ID = ?',
       [menuId]
     );
 
@@ -2072,7 +2072,7 @@ const connection = await db.promise().getConnection();
          await connection.beginTransaction();
     // ตรวจสอบว่าเมนูมีอยู่จริง
     const [existingMenu] = await connection.execute(
-      'SELECT * FROM Menu WHERE Munu_ID = ?', 
+      'SELECT * FROM Menu WHERE Menu_ID = ?', 
       [menuId]
     );
 
