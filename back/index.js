@@ -1514,22 +1514,22 @@ app.post('/api/reviews/approve', async (req, res) => {
   
 
   try {
-    // Start transaction using connection method
-    
+    // Start transaction
+  
 
-    // 1. Get the user ID associated with this review
-    const [reviewResult] =await db.promise().execute(
-      `SELECT User_ID FROM Review WHERE Review_ID = ?`,
+    // 1. Get review details including restaurant ID
+    const [reviewResult] = await db.promise().execute(
+      `SELECT User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service 
+       FROM Review WHERE Review_ID = ?`,
       [reviewId]
     );
 
     if (reviewResult.length === 0) {
-      await connection.rollback();
-      connection.release();
+   
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
-    const userId = reviewResult[0].User_ID;
+    const { User_ID: userId, Restaurant_ID: restaurantId } = reviewResult[0];
 
     // 2. Update review status to 'Posted'
     const [updateResult] = await db.promise().execute(
@@ -1540,8 +1540,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     if (updateResult.affectedRows === 0) {
-     
-
+      
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
@@ -1555,7 +1554,7 @@ app.post('/api/reviews/approve', async (req, res) => {
 
     const totalPostedReviews = countResult[0].totalPostedReviews;
 
-    // 4. Update user's total_reviews count with the accurate number
+    // 4. Update user's total_reviews count
    await db.promise().execute(
       `UPDATE User 
        SET total_reviews = ? 
@@ -1563,25 +1562,60 @@ app.post('/api/reviews/approve', async (req, res) => {
       [totalPostedReviews, userId]
     );
 
-    // 5. Record admin action
+    // 5. Calculate new averages for the restaurant
+    const [avgResult] = await db.promise().execute(
+      `SELECT 
+        AVG(rating_overall) AS avg_overall,
+        AVG(rating_hygiene) AS avg_hygiene,
+        AVG(rating_flavor) AS avg_flavor,
+        AVG(rating_service) AS avg_service
+       FROM Review 
+       WHERE Restaurant_ID = ? AND message_status = 'Posted'`,
+      [restaurantId]
+    );
+
+    // 6. Update restaurant averages
+   await db.promise().execute(
+      `UPDATE Restaurant SET
+        rating_overall_avg = ?,
+        rating_hygiene_avg = ?,
+        rating_flavor_avg = ?,
+        rating_service_avg = ?
+       WHERE Restaurant_ID = ?`,
+      [
+        avgResult[0].avg_overall || 0,
+        avgResult[0].avg_hygiene || 0,
+        avgResult[0].avg_flavor || 0,
+        avgResult[0].avg_service || 0,
+        restaurantId
+      ]
+    );
+
+    // 7. Record admin action
    await db.promise().execute(
       `INSERT INTO Admin_check_inappropriate_review 
        (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
        VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
-      [reviewId, adminId || 1]  // Default to admin ID 1 if not provided
+      [reviewId, adminId || 1]
     );
 
     // Commit transaction
-  
+   
     
     res.status(200).json({ 
       success: true, 
       message: 'Review approved successfully',
-      totalPostedReviews: totalPostedReviews
+      totalPostedReviews: totalPostedReviews,
+      restaurantId: restaurantId,
+      newAverages: {
+        overall: avgResult[0].avg_overall,
+        hygiene: avgResult[0].avg_hygiene,
+        flavor: avgResult[0].avg_flavor,
+        service: avgResult[0].avg_service
+      }
     });
   } catch (error) {
    
-  
     console.error('Approval error:', error);
     res.status(500).json({ 
       success: false, 
@@ -1625,6 +1659,54 @@ app.post('/api/reviews/reject', async (req, res) => {
        VALUES (?, ?, 'Banned', NOW(), ?)`,
       [reviewId, adminId || 1, reason || 'Inappropriate message']
     );
+
+     // 3. Count all posted reviews for this user
+    const [countResult] = await db.promise().execute(
+      `SELECT COUNT(*) AS totalPostedReviews 
+       FROM Review 
+       WHERE User_ID = ? AND message_status = 'Posted'`,
+      [userId]
+    );
+
+    const totalPostedReviews = countResult[0].totalPostedReviews;
+
+    // 4. Update user's total_reviews count
+   await db.promise().execute(
+      `UPDATE User 
+       SET total_reviews = ? 
+       WHERE User_ID = ?`,
+      [totalPostedReviews, userId]
+    );
+
+    // 5. Calculate new averages for the restaurant
+    const [avgResult] = await db.promise().execute(
+      `SELECT 
+        AVG(rating_overall) AS avg_overall,
+        AVG(rating_hygiene) AS avg_hygiene,
+        AVG(rating_flavor) AS avg_flavor,
+        AVG(rating_service) AS avg_service
+       FROM Review 
+       WHERE Restaurant_ID = ? AND message_status = 'Posted'`,
+      [restaurantId]
+    );
+
+    // 6. Update restaurant averages
+   await db.promise().execute(
+      `UPDATE Restaurant SET
+        rating_overall_avg = ?,
+        rating_hygiene_avg = ?,
+        rating_flavor_avg = ?,
+        rating_service_avg = ?
+       WHERE Restaurant_ID = ?`,
+      [
+        avgResult[0].avg_overall || 0,
+        avgResult[0].avg_hygiene || 0,
+        avgResult[0].avg_flavor || 0,
+        avgResult[0].avg_service || 0,
+        restaurantId
+      ]
+    );
+
 
    
     res.status(200).json({ success: true, message: 'Review rejected successfully' });
