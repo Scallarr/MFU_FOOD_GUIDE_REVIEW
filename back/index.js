@@ -283,7 +283,7 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
 app.get('/restaurant/:id', (req, res) => {
   const restaurantId = parseInt(req.params.id);
   console.log("restaurantId from params:", restaurantId);
-  const userId = parseInt(req.query.user_id); // รับ user_id จาก Flutter
+  const userId = parseInt(req.query.user_id);
 
   const restaurantQuery = `
     SELECT Restaurant_ID, restaurant_name, location, operating_hours,
@@ -294,22 +294,27 @@ app.get('/restaurant/:id', (req, res) => {
   `;
 
   const reviewQuery = `
-  SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
-         r.rating_service, r.comment, r.total_likes, r.created_at,
-         r.message_status,  -- ✅ ดึงสถานะด้วย
-         u.username,u.email, p.picture_url,
-         EXISTS (
-           SELECT 1 FROM Review_Likes rl
-           WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
-         ) AS isLiked
-  FROM Review r
-  JOIN User u ON r.User_ID = u.User_ID
-  LEFT JOIN user_Profile_Picture p 
-    ON r.User_ID = p.User_ID AND p.is_active = 1
-  WHERE r.restaurant_id = ? AND r.message_status= 'Posted'
-  ORDER BY r.created_at DESC
-`;
+    SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
+           r.rating_service, r.comment, r.total_likes, r.created_at,
+           r.message_status,
+           u.username, u.email, p.picture_url,
+           EXISTS (
+             SELECT 1 FROM Review_Likes rl
+             WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
+           ) AS isLiked
+    FROM Review r
+    JOIN User u ON r.User_ID = u.User_ID
+    LEFT JOIN user_Profile_Picture p 
+      ON r.User_ID = p.User_ID AND p.is_active = 1
+    WHERE r.restaurant_id = ? AND r.message_status = 'Posted'
+    ORDER BY r.created_at DESC
+  `;
 
+  const pendingReviewCountQuery = `
+    SELECT COUNT(*) AS pending_count
+    FROM Review
+    WHERE restaurant_id = ? AND message_status = 'Pending'
+  `;
 
   const menuQuery = `
     SELECT Menu_ID, menu_thai_name, menu_english_name, price, menu_img
@@ -321,20 +326,29 @@ app.get('/restaurant/:id', (req, res) => {
     if (err || restRes.length === 0) return res.status(500).json({ error: 'Error fetching restaurant' });
 
     const restaurant = restRes[0];
-    db.query(reviewQuery, [userId, restaurantId], (err2, revRes) => {
-      if (err2) return res.status(500).json({ error: 'Error fetching reviews' });
+    
+    // Get pending review count
+    db.query(pendingReviewCountQuery, [restaurantId], (errPending, pendingRes) => {
+      if (errPending) return res.status(500).json({ error: 'Error fetching pending reviews count' });
 
-      db.query(menuQuery, [restaurantId], (err3, menuRes) => {
-        if (err3) return res.status(500).json({ error: 'Error fetching menu' });
+      const pendingCount = pendingRes[0].pending_count || 0;
+      restaurant.pending_reviews_count = pendingCount;
 
-        restaurant.reviews = revRes.map(r => ({
-          ...r,
-          isLiked: !!r.isLiked
-        }));
-        restaurant.menus = menuRes;
+      db.query(reviewQuery, [userId, restaurantId], (err2, revRes) => {
+        if (err2) return res.status(500).json({ error: 'Error fetching reviews' });
 
-        res.json(restaurant);
-        console.log(restaurant);
+        db.query(menuQuery, [restaurantId], (err3, menuRes) => {
+          if (err3) return res.status(500).json({ error: 'Error fetching menu' });
+
+          restaurant.reviews = revRes.map(r => ({
+            ...r,
+            isLiked: !!r.isLiked
+          }));
+          restaurant.menus = menuRes;
+
+          res.json(restaurant);
+          console.log(restaurant);
+        });
       });
     });
   });

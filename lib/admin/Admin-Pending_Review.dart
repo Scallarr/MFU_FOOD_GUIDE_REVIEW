@@ -84,11 +84,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: _primaryColor,
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.black),
     );
   }
 
@@ -180,8 +176,9 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: _dangerColor,
-                          side: BorderSide(color: _dangerColor),
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black,
+                          side: BorderSide(color: Colors.black),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -203,7 +200,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                           _approveReview(reviewId);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _successColor,
+                          backgroundColor: Colors.red,
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -335,7 +332,8 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: _textColor,
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black,
                           side: BorderSide(color: Colors.grey.shade300),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -676,12 +674,13 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
 
               // Action Buttons
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(
                     onPressed: () => _showRejectDialog(review['Review_ID']),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: _dangerColor,
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.red,
                       side: BorderSide(color: _dangerColor),
                       padding: EdgeInsets.symmetric(
                         horizontal: 20,
@@ -693,11 +692,11 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                     ),
                     child: Text('Reject'),
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(width: 25),
                   ElevatedButton(
                     onPressed: () => _showApproveDialog(review['Review_ID']),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _successColor,
+                      backgroundColor: Colors.blueAccent,
                       padding: EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 10,
@@ -787,30 +786,33 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
       'Undetermined': Icons.help_outline,
     };
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colors[status]!.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icons[status], size: 18, color: colors[status]),
-          SizedBox(width: 8),
-          Text(
-            'AI Analysis: ',
-            style: TextStyle(color: _secondaryTextColor, fontSize: 14),
-          ),
-          Text(
-            status,
-            style: TextStyle(
-              color: colors[status],
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
+    return Center(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: colors[status]!.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Icon(icons[status], size: 18, color: colors[status]),
+            SizedBox(width: 8),
+            Text(
+              'AI Analysis: ',
+              style: TextStyle(color: _secondaryTextColor, fontSize: 14),
             ),
-          ),
-        ],
+            Text(
+              status,
+              style: TextStyle(
+                color: colors[status],
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

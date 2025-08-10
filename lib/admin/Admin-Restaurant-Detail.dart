@@ -735,32 +735,101 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+
       children: [
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: '📝 Reviews ',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: Colors.black,
-                ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '📝 Reviews ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: Colors.black,
+                    ),
+                  ),
+                  TextSpan(
+                    text: '(${restaurant!.reviews.length} items)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
               ),
-              TextSpan(
-                text: '(${restaurant!.reviews.length} items)',
-                style: TextStyle(
-                  fontWeight: FontWeight.normal,
-                  fontSize: 16,
-                  color: Colors.grey[600],
+            ),
+
+            // Verify Button with Notification Badge
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                InkWell(
+                  onTap: () {
+                    // _showPendingVerifications();
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF8D6E63), // Brown 400
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.brown.withOpacity(0.3),
+                          blurRadius: 6,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified, size: 20, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Verify',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+
+                // Notification Badge
+                if (10 > 0)
+                  Positioned(
+                    right: -8,
+                    top: -8,
+                    child: Container(
+                      padding: EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.red[600],
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Text(
+                        // '$_pendingVerificationCount',
+                        '20',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
-
-        SizedBox(height: 16),
-
         ...reviewsToShow.map((review) {
           final isLiked = likedReviews[review.id] ?? false;
 
