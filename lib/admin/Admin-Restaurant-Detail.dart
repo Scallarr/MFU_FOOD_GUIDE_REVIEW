@@ -395,6 +395,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
                       _buildReviewSection(),
                       SizedBox(height: 20),
+
                       Center(
                         child: SizedBox(
                           width: double.infinity, // เต็มความกว้าง
@@ -757,6 +758,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
             ],
           ),
         ),
+
         SizedBox(height: 16),
 
         ...reviewsToShow.map((review) {

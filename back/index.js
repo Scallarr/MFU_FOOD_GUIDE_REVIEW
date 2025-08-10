@@ -1627,29 +1627,27 @@ app.post('/api/reviews/approve', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
 
-  // Get a connection from the pool
-  
+  const connection = await db.promise().getConnection();
 
   try {
-    // Start transaction
-  
+    await connection.beginTransaction();
 
     // 1. Get review details including restaurant ID
-    const [reviewResult] = await db.promise().execute(
+    const [reviewResult] = await connection.execute(
       `SELECT User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service 
        FROM Review WHERE Review_ID = ?`,
       [reviewId]
     );
 
     if (reviewResult.length === 0) {
-   
+      connection.release();
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
     const { User_ID: userId, Restaurant_ID: restaurantId } = reviewResult[0];
 
     // 2. Update review status to 'Posted'
-    const [updateResult] = await db.promise().execute(
+    const [updateResult] = await connection.execute(
       `UPDATE Review 
        SET message_status = 'Posted', created_at = NOW() 
        WHERE Review_ID = ?`, 
@@ -1657,12 +1655,13 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     if (updateResult.affectedRows === 0) {
-      
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
     // 3. Count all posted reviews for this user
-    const [countResult] = await db.promise().execute(
+    const [countResult] = await connection.execute(
       `SELECT COUNT(*) AS totalPostedReviews 
        FROM Review 
        WHERE User_ID = ? AND message_status = 'Posted'`,
@@ -1672,7 +1671,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     const totalPostedReviews = countResult[0].totalPostedReviews;
 
     // 4. Update user's total_reviews count
-   await db.promise().execute(
+    await connection.execute(
       `UPDATE User 
        SET total_reviews = ? 
        WHERE User_ID = ?`,
@@ -1680,7 +1679,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     // 5. Calculate new averages for the restaurant
-    const [avgResult] = await db.promise().execute(
+    const [avgResult] = await connection.execute(
       `SELECT 
         AVG(rating_overall) AS avg_overall,
         AVG(rating_hygiene) AS avg_hygiene,
@@ -1692,7 +1691,7 @@ app.post('/api/reviews/approve', async (req, res) => {
     );
 
     // 6. Update restaurant averages
-   await db.promise().execute(
+    await connection.execute(
       `UPDATE Restaurant SET
         rating_overall_avg = ?,
         rating_hygiene_avg = ?,
@@ -1708,16 +1707,29 @@ app.post('/api/reviews/approve', async (req, res) => {
       ]
     );
 
-    // 7. Record admin action
-   await db.promise().execute(
-      `INSERT INTO Admin_check_inappropriate_review 
-       (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
-       VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
-      [reviewId, adminId || 1]
+    // 7. Update existing admin action record instead of inserting
+    const [updateAdminResult] = await connection.execute(
+      `UPDATE Admin_check_inappropriate_review 
+       SET admin_action_taken = 'Safe',
+           admin_checked_at = NOW(),
+           reason_for_taken = 'Appropriate message',
+           Admin_ID = ?
+       WHERE Review_ID = ?`,
+      [adminId || 1, reviewId]
     );
 
-    // Commit transaction
-   
+    // If no existing record was found, insert a new one
+    if (updateAdminResult.affectedRows === 0) {
+      await connection.execute(
+        `INSERT INTO Admin_check_inappropriate_review 
+         (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
+         VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
+        [reviewId, adminId || 1]
+      );
+    }
+
+    await connection.commit();
+    connection.release();
     
     res.status(200).json({ 
       success: true, 
@@ -1732,7 +1744,8 @@ app.post('/api/reviews/approve', async (req, res) => {
       }
     });
   } catch (error) {
-   
+    await connection.rollback();
+    connection.release();
     console.error('Approval error:', error);
     res.status(500).json({ 
       success: false, 
@@ -1741,7 +1754,6 @@ app.post('/api/reviews/approve', async (req, res) => {
     });
   }
 });
-
 
 // Reject review endpoint
 app.post('/api/reviews/reject', async (req, res) => {
@@ -1785,13 +1797,26 @@ app.post('/api/reviews/reject', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Review not found' });
     }
 
-    // 3. Record admin action
-    await connection.execute(
-      `INSERT INTO Admin_check_inappropriate_review 
-       (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
-       VALUES (?, ?, 'Banned', NOW(), ?)`,
-      [reviewId, adminId || 1, reason || 'Inappropriate message']
+    // 3. Update existing admin action record or insert if not exists
+    const [updateAdminResult] = await connection.execute(
+      `UPDATE Admin_check_inappropriate_review 
+       SET admin_action_taken = 'Banned',
+           admin_checked_at = NOW(),
+           reason_for_taken = ?,
+           Admin_ID = ?
+       WHERE Review_ID = ?`,
+      [reason || 'Inappropriate message', adminId || 1, reviewId]
     );
+
+    // If no existing record was updated, insert a new one
+    if (updateAdminResult.affectedRows === 0) {
+      await connection.execute(
+        `INSERT INTO Admin_check_inappropriate_review 
+         (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
+         VALUES (?, ?, 'Banned', NOW(), ?)`,
+        [reviewId, adminId || 1, reason || 'Inappropriate message']
+      );
+    }
 
     // 4. Count all posted reviews for this user
     const [countResult] = await connection.execute(
@@ -1848,7 +1873,13 @@ app.post('/api/reviews/reject', async (req, res) => {
       message: 'Review rejected successfully',
       userId: userId,
       restaurantId: restaurantId,
-      newReviewCount: totalPostedReviews
+      newReviewCount: totalPostedReviews,
+      newAverages: {
+        overall: avgResult[0].avg_overall,
+        hygiene: avgResult[0].avg_hygiene,
+        flavor: avgResult[0].avg_flavor,
+        service: avgResult[0].avg_service
+      }
     });
   } catch (error) {
     await connection.rollback();
@@ -1861,9 +1892,6 @@ app.post('/api/reviews/reject', async (req, res) => {
     });
   }
 });
-
-
-
 
   // ✅ Start Server
   const PORT = process.env.PORT || 8080;

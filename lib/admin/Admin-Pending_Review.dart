@@ -16,15 +16,17 @@ class PendingReviewsPage extends StatefulWidget {
 
 class _PendingReviewsPageState extends State<PendingReviewsPage> {
   List<dynamic> pendingReviews = [];
+  List<dynamic> filteredReviews = [];
   bool isLoading = true;
   int? _expandedReviewId;
-  int? userId; // Track which review is expanded
+  int? userId;
+  TextEditingController searchController = TextEditingController();
 
   // Colors
-  final Color _primaryColor = Color(0xFF4285F4); // Blue
-  final Color _successColor = Color(0xFF34A853); // Green
-  final Color _warningColor = Color(0xFFFBBC05); // Yellow
-  final Color _dangerColor = Color(0xFFEA4335); // Red
+  final Color _primaryColor = Color(0xFF4285F4);
+  final Color _successColor = Color(0xFF34A853);
+  final Color _warningColor = Color(0xFFFBBC05);
+  final Color _dangerColor = Color(0xFFEA4335);
   final Color _cardColor = Colors.white;
   final Color _textColor = Color(0xFF202124);
   final Color _secondaryTextColor = Color(0xFF5F6368);
@@ -33,12 +35,29 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
   void initState() {
     super.initState();
     _fetchPendingReviews();
+    searchController.addListener(_filterReviews);
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterReviews() {
+    final query = searchController.text.toLowerCase();
+    setState(() {
+      filteredReviews = pendingReviews.where((review) {
+        final username = review['username']?.toString().toLowerCase() ?? '';
+        return username.contains(query);
+      }).toList();
+    });
   }
 
   Future<void> _fetchPendingReviews() async {
     final prefs = await SharedPreferences.getInstance();
     userId = prefs.getInt('user_id');
-    print(userId);
+
     try {
       final response = await http.get(
         Uri.parse(
@@ -49,6 +68,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
       if (response.statusCode == 200) {
         setState(() {
           pendingReviews = jsonDecode(response.body);
+          filteredReviews = pendingReviews;
           isLoading = false;
         });
       } else {
@@ -74,12 +94,297 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
 
   void _toggleReviewExpansion(int reviewId) {
     setState(() {
-      if (_expandedReviewId == reviewId) {
-        _expandedReviewId = null; // Collapse if already expanded
-      } else {
-        _expandedReviewId = reviewId; // Expand this review
-      }
+      _expandedReviewId = _expandedReviewId == reviewId ? null : reviewId;
     });
+  }
+
+  Future<void> _showApproveDialog(int reviewId) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated Icon
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _successColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check_circle_outline,
+                          size: 40,
+                          color: _successColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+
+                // Title
+                Text(
+                  'Confirm Approval',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Are you sure you want to approve this review?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 24),
+
+                // Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Cancel Button
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _dangerColor,
+                          side: BorderSide(color: _dangerColor),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+
+                    // Approve Button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _approveReview(reviewId);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _successColor,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Approve',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showRejectDialog(int reviewId) async {
+    final reasonController = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated Warning Icon
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _dangerColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 40,
+                          color: _dangerColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+
+                // Title
+                Text(
+                  'Confirm Rejection',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Are you sure you want to reject this review?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 20),
+
+                // Reason Input Field
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    labelText: 'Reason (optional)',
+                    labelStyle: TextStyle(color: _secondaryTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  maxLines: 2,
+                  style: TextStyle(color: _textColor),
+                ),
+                SizedBox(height: 24),
+
+                // Buttons Row
+                Row(
+                  children: [
+                    // Cancel Button
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _textColor,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+
+                    // Reject Button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _rejectReview(
+                            reviewId,
+                            reason: reasonController.text,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Reject',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -87,41 +392,56 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF),
       appBar: AppBar(
-        title: Text(
-          'Pending Reviews',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        title: Text('Pending Reviews', style: TextStyle(color: Colors.white)),
         centerTitle: true,
         backgroundColor: const Color(0xFFCEBFA3),
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            // Refresh the previous page and go back
-            Navigator.pop(
-              context,
-              true,
-            ); // 'true' indicates a refresh is needed
-          },
+          onPressed: () => Navigator.pop(context, true),
         ),
       ),
-      body: isLoading
-          ? _buildLoadingView()
-          : pendingReviews.isEmpty
-          ? _buildEmptyView()
-          : ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 15),
-              itemCount: pendingReviews.length,
-              itemBuilder: (context, index) {
-                final review = pendingReviews[index];
-                return _buildReviewCard(review);
-              },
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by username...',
+                prefixIcon: Icon(Icons.search, color: _secondaryTextColor),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
+              ),
             ),
+          ),
+          // Reviews List
+          Expanded(
+            child: isLoading
+                ? _buildLoadingView()
+                : filteredReviews.isEmpty
+                ? _buildEmptyView()
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                    itemCount: filteredReviews.length,
+                    itemBuilder: (context, index) {
+                      final review = filteredReviews[index];
+                      return _buildReviewCard(review);
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -177,6 +497,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
     final overallRating =
         double.tryParse(review['rating_overall'].toString()) ?? 0.0;
     final isExpanded = _expandedReviewId == review['Review_ID'];
+
     return Container(
       margin: EdgeInsets.only(bottom: 16, top: 5),
       decoration: BoxDecoration(
@@ -197,7 +518,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
         ],
       ),
       child: Card(
-        shadowColor: Colors.transparent, // Disable Card's default shadow
+        shadowColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
@@ -220,19 +541,19 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                     child: review['picture_url'] != null
                         ? ClipOval(
                             child: Container(
-                              width: 60, // Explicit width
-                              height: 60, // Explicit height
+                              width: 60,
+                              height: 60,
                               child: Image.network(
                                 review['picture_url'],
                                 fit: BoxFit.cover,
-                                width: 66, // Match container size
-                                height: 48, // Match container size
+                                width: 66,
+                                height: 48,
                                 errorBuilder: (context, error, stackTrace) =>
                                     Center(
                                       child: Icon(
                                         Icons.person,
                                         color: _primaryColor,
-                                        size: 24, // Adjusted icon size
+                                        size: 24,
                                       ),
                                     ),
                                 loadingBuilder:
@@ -358,7 +679,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   OutlinedButton(
-                    onPressed: () => _rejectReview(review['Review_ID']),
+                    onPressed: () => _showRejectDialog(review['Review_ID']),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _dangerColor,
                       side: BorderSide(color: _dangerColor),
@@ -374,7 +695,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                   ),
                   SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: () => _approveReview(review['Review_ID']),
+                    onPressed: () => _showApproveDialog(review['Review_ID']),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _successColor,
                       padding: EdgeInsets.symmetric(
@@ -426,7 +747,6 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: _secondaryTextColor, fontSize: 14)),
-
         Row(
           children: [
             _buildStars(value),
@@ -495,24 +815,14 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
     );
   }
 
-  Color _getRatingColor(double rating) {
-    if (rating >= 4) return Colors.black;
-    if (rating >= 2.5) return _warningColor;
-    return _dangerColor;
-  }
-
   Future<void> _approveReview(int reviewId) async {
     try {
       final response = await http.post(
-        // Changed from put to post to match backend
         Uri.parse(
           'https://mfu-food-guide-review.onrender.com/api/reviews/approve',
         ),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'reviewId': reviewId,
-          'adminId': userId, // Make sure this is the admin's user ID
-        }),
+        body: jsonEncode({'reviewId': reviewId, 'adminId': userId}),
       );
 
       final responseData = jsonDecode(response.body);
@@ -523,23 +833,14 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
         );
         _fetchPendingReviews();
       } else {
-        // Handle specific error messages from backend
-        final errorMessage =
-            responseData['message'] ?? 'Failed to approve review';
-        throw Exception(errorMessage);
+        throw Exception(responseData['message'] ?? 'Failed to approve review');
       }
-    } on http.ClientException catch (e) {
-      _showSnackBar('Network error: ${e.message}');
-    } on FormatException catch (e) {
-      _showSnackBar('Data parsing error: ${e.message}');
     } catch (e) {
-      _showSnackBar('Failed to approve review: ${e.toString()}');
+      _showSnackBar('Error: ${e.toString()}');
     }
   }
 
-  // Improved snackbar display
-
-  Future<void> _rejectReview(int reviewId) async {
+  Future<void> _rejectReview(int reviewId, {String reason = ''}) async {
     try {
       final response = await http.post(
         Uri.parse(
@@ -548,7 +849,8 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reviewId': reviewId,
-          'adminId': userId, // Make sure this is the admin's user ID
+          'adminId': userId,
+          'reason': reason,
         }),
       );
 
@@ -559,7 +861,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
         throw Exception('Failed to reject review');
       }
     } catch (e) {
-      _showSnackBar('Error rejecting review: ${e.toString()}');
+      _showSnackBar('Error: ${e.toString()}');
     }
   }
 }
