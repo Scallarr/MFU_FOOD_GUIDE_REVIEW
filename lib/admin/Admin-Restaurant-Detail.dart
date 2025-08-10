@@ -1251,10 +1251,10 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
         ),
       );
       if (response.statusCode == 200) {
+        fetchRestaurant();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('ลบเมนูสำเร็จ')));
-        fetchRestaurant();
       }
     } catch (e) {
       ScaffoldMessenger.of(

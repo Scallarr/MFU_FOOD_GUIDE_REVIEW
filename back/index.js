@@ -1998,14 +1998,17 @@ app.delete('/Delete/menus/:id', async (req, res) => {
   
   try {
     const menuId = req.params.id;
-     await connection.beginTransaction();
+    
     // ตรวจสอบ ID
     if (!menuId || isNaN(menuId)) {
+      connection.release();
       return res.status(400).json({ 
         success: false,
         message: 'รหัสเมนูไม่ถูกต้อง' 
       });
     }
+
+    await connection.beginTransaction();
 
     // เช็คว่าเมนูมีอยู่จริง
     const [checkMenu] = await connection.execute(
@@ -2014,6 +2017,8 @@ app.delete('/Delete/menus/:id', async (req, res) => {
     );
 
     if (checkMenu.length === 0) {
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({ 
         success: false,
         message: 'ไม่พบเมนูนี้ในระบบ' 
@@ -2027,27 +2032,36 @@ app.delete('/Delete/menus/:id', async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
+      await connection.rollback();
+      connection.release();
       return res.status(500).json({ 
         success: false,
         message: 'ลบเมนูไม่สำเร็จ' 
       });
     }
 
+    await connection.commit();
+    connection.release();
+
     res.status(200).json({ 
       success: true,
-      message: `Delete "${checkMenu[0].name_th}" Menu Successfull`
+      message: `ลบเมนู "${checkMenu[0].menu_thai_name}" สำเร็จแล้ว`
     });
 
   } catch (error) {
     console.error('Error deleting menu:', error);
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      console.error('Rollback failed:', rollbackError);
+    }
+    connection.release();
     res.status(500).json({ 
       success: false,
       message: 'เกิดข้อผิดพลาดในการลบเมนู' 
     });
   }
 });
-
-
 
 // แก้ไขเมนู (ใช้ PUT)
 app.put('/Edit/Menu/:menuId', async (req, res) => {

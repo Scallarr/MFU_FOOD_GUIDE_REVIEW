@@ -147,6 +147,9 @@ class _EditMenuPageState extends State<EditMenuPage> {
       );
 
       if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Edit Menu Successfull')));
         Navigator.pop(context, true); // Return true to indicate success
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
