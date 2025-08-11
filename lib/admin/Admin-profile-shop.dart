@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/admin/Admin-Addprofile.dart';
+import 'package:myapp/admin/Admin-Editprofile-picture.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -401,18 +402,71 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
               ],
             ),
           ),
-          // เพิ่มปุ่มลบที่มุมบนขวา
+          // เปลี่ยนจาก IconButton เป็น PopupMenuButton
+          // ในเมธอด buildProfileCard
           Positioned(
             top: 8,
             right: 8,
-            child: IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _showDeleteConfirmation(profile['id']),
+            child: PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: Colors.grey[700]),
+              onSelected: (value) {
+                if (value == 'edit') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProfilePage(profile: profile),
+                    ),
+                  ).then((shouldRefresh) {
+                    if (shouldRefresh == true) {
+                      fetchProfiles();
+                    }
+                  });
+                } else if (value == 'delete') {
+                  _showDeleteConfirmation(profile['id']);
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem<String>(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Edit Profile'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Delete Profile'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _navigateToEditProfile(Map<String, dynamic> profile) async {
+    // final result = await Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => AddProfilePage(
+    //       profileToEdit: profile,
+    //     ),
+    //   ),
+    // );
+
+    // if (result == true) {
+    //   await fetchProfiles();
+    // }
   }
 
   Future<void> _showDeleteConfirmation(int profileId) async {

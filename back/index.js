@@ -2251,6 +2251,65 @@ app.delete('/delete_profile/:id', async (req, res) => {
 });
 
 
+app.put('/api/profiles/:id', async (req, res) => {
+  const connection = await db.promise().getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const { id } = req.params;
+    const { profileName, description, imageUrl, requiredCoins } = req.body;
+
+    // ตรวจสอบข้อมูลที่จำเป็น
+    if (!profileName || !description || !imageUrl || !requiredCoins) {
+      await connection.rollback();
+      connection.release();
+      return res.status(400).json({ 
+        error: 'Missing required fields: profileName, description, imageUrl, requiredCoins' 
+      });
+    }
+
+    // อัพเดทข้อมูลในฐานข้อมูล
+    const [result] = await connection.execute(
+      `UPDATE exchange_coin_Shop 
+       SET Profile_Name = ?, Description = ?, Image_URL = ?, Required_Coins = ?
+       WHERE Profile_Shop_ID = ?`,
+      [profileName, description, imageUrl, requiredCoins, id]
+    );
+
+    // ตรวจสอบว่ามีแถวถูกอัพเดทหรือไม่
+    if (result.affectedRows === 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    await connection.commit();
+    connection.release();
+    
+    res.status(200).json({ 
+      success: true,
+      message: 'Profile updated successfully',
+      updatedProfile: {
+        id,
+        profileName,
+        description,
+        imageUrl,
+        requiredCoins
+      }
+    });
+  } catch (error) {
+    await connection.rollback();
+    connection.release();
+    
+    console.error('Error updating profile:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+});
 
 
 
