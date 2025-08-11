@@ -297,15 +297,18 @@ class _AddmenuState extends State<Addmenu> {
                       ),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}'),
+                          RegExp(r'^\d{0,4}(\.\d{0,2})?'),
                         ),
                       ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกราคา';
+                          return 'Must fill the Price';
                         }
                         if (double.tryParse(value) == null) {
-                          return 'กรุณากรอกตัวเลขที่ถูกต้อง';
+                          return 'Must fill correct Format';
+                        }
+                        if (value.replaceAll('.', '').length > 4) {
+                          return 'Digit1-4';
                         }
                         return null;
                       },

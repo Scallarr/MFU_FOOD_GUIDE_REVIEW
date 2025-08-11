@@ -166,11 +166,15 @@ class _DashboardPageState extends State<Dashboard> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      final shouldRefresh = await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => ProfilePage()),
                       );
+
+                      if (shouldRefresh == true) {
+                        fetchProfilePicture(userId!);
+                      }
                     },
                     child: profileImageUrl == null
                         ? CircleAvatar(
@@ -453,7 +457,7 @@ class _DashboardPageState extends State<Dashboard> {
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantListPage()),
+          MaterialPageRoute(builder: (context) => RestaurantListPageUser()),
         );
         break;
       case 1:

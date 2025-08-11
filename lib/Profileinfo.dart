@@ -567,14 +567,14 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RestaurantListPage(reload: true),
-                ),
-                (route) => false,
-              ),
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                // Refresh the previous page and go back
+                Navigator.pop(
+                  context,
+                  true,
+                ); // 'true' indicates a refresh is needed
+              },
             ),
           ),
           SliverToBoxAdapter(
@@ -686,7 +686,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProfileShopPage(),
+                            builder: (context) => ProfileShopUserPage(),
                           ),
                         ).then((shouldRefresh) {
                           if (shouldRefresh == true) {

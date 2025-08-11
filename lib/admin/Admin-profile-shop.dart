@@ -39,6 +39,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     await fetchProfiles();
   }
 
+  // ในส่วนของ fetchProfiles() ให้ปรับการเรียงลำดับข้อมูล
   Future<void> fetchProfiles() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
@@ -53,11 +54,20 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
         final List<dynamic> data = json.decode(response.body);
 
         if (data.isNotEmpty) {
-          // ดึง coins จาก record แรก (เพราะ user_coins จะเหมือนกันทุกรายการ)
           int userCoinsFromApi = data[0]['user_coins'] ?? 0;
 
+          // เรียงลำดับโดยให้โปรไฟล์ที่ยังไม่ซื้อแสดงก่อน
+          data.sort((a, b) {
+            if (a['is_purchased'] == 0 && b['is_purchased'] == 1) {
+              return -1; // a มาก่อน b
+            } else if (a['is_purchased'] == 1 && b['is_purchased'] == 0) {
+              return 1; // b มาก่อน a
+            }
+            return 0; // ไม่มีการเปลี่ยนแปลงลำดับ
+          });
+
           setState(() {
-            currentCoins = userCoinsFromApi; // อัพเดต coins จริง
+            currentCoins = userCoinsFromApi;
             profiles = data
                 .map(
                   (item) => {
@@ -71,7 +81,6 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
                 )
                 .toList();
             isLoading = false;
-            print('f'); // debug ก่อนว่ามีค่าอะไร
           });
         } else {
           setState(() {

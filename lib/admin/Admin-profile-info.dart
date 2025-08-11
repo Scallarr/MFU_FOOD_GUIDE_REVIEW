@@ -699,7 +699,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                       },
 
                       child: const Text(
-                        'Profile Shop',
+                        'Profile Shop Management',
                         style: TextStyle(color: Colors.black),
                       ),
                     ),

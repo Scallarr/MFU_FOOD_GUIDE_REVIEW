@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (role == 'User') {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => RestaurantListPage()),
+              MaterialPageRoute(builder: (_) => RestaurantListPageUser()),
             );
           } else if (role == 'Admin') {
             Navigator.pushReplacement(
