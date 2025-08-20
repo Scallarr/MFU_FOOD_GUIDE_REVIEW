@@ -52,7 +52,10 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
     'LAMDUAN',
   ];
   final ImagePicker _picker = ImagePicker();
-  final String _imgbbApiKey = '762958d4dfc64c8a75fe00a0359c6b05';
+
+  // Cloudinary configuration
+  final String _cloudName = 'doyeaento';
+  final String _uploadPreset = 'flutter_upload';
 
   @override
   void initState() {
@@ -110,28 +113,10 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
     });
 
     try {
-      final uri = Uri.parse('https://api.imgbb.com/1/upload?key=$_imgbbApiKey');
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(
-        await http.MultipartFile.fromPath('image', _imageFile!.path),
-      );
-
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final jsonResponse = json.decode(responseData);
-
-      if (jsonResponse['success'] == true) {
-        setState(() {
-          _imageUrl = jsonResponse['data']['url'];
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Image uploaded successfully')));
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to upload image')));
-      }
+      await _uploadToCloudinary();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Image uploaded successfully')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -140,6 +125,38 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
       setState(() {
         _isUploading = false;
       });
+    }
+  }
+
+  Future<void> _uploadToCloudinary() async {
+    try {
+      if (_imageFile == null) return;
+
+      final uri = Uri.parse(
+        'https://api.cloudinary.com/v1_1/$_cloudName/image/upload',
+      );
+
+      var request = http.MultipartRequest('POST', uri)
+        ..fields['upload_preset'] = _uploadPreset
+        ..files.add(
+          await http.MultipartFile.fromPath('file', _imageFile!.path),
+        );
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      var jsonResponse = json.decode(responseData);
+
+      if (jsonResponse['secure_url'] != null) {
+        setState(() {
+          _imageUrl = jsonResponse['secure_url'];
+        });
+      } else {
+        throw Exception(
+          'Upload failed: ${jsonResponse['error']?.toString() ?? 'Unknown error'}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Image upload error: $e');
     }
   }
 
