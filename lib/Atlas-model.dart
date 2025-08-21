@@ -6,7 +6,8 @@ import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
-import 'package:myapp/chatsystem.dart';
+import 'package:myapp/Nexus-model.dart';
+import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Cohere API function
@@ -77,6 +78,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   late Animation<double> _typingAnimation;
   FocusNode _focusNode = FocusNode();
   bool _showAppBar = true;
+  bool _showModelSelector = false;
+  String _currentModel = 'Atlas'; // โมเดลเริ่มต้น
 
   @override
   void initState() {
@@ -154,7 +157,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
   void _addWelcomeMessage() {
     final welcomeMessage =
-        "สวัสดีครับ! ผมเป็นผู้ช่วย Food Threads ที่นี่เพื่อตอบคำถามเกี่ยวกับร้านอาหารและบริการต่างๆ ในมหาวิทยาลัยแม่ฟ้าหลวง ถ้าคุณมีคำถามอะไร ถามได้เลยนะครับ";
+        "👋 Hello!  I am Atlas  \n"
+        "My role is to help you with other topics outside your personal account 💡\n\n"
+        "If you want to know about your account or app-specific info, you can switch to the Nexus model!";
 
     setState(() {
       _messages.add({
@@ -183,7 +188,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       _controller.clear();
     });
 
-    scrollToBottom();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToBottom();
+    });
 
     // ตรวจสอบว่าผู้ใช้พิมพ์คำว่า "dashboard" หรือไม่
     if (message.toLowerCase().contains('dashboard') ||
@@ -197,7 +204,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           "timestamp": DateTime.now().toString(),
         });
       });
-
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
       // รอสักครู่แล้วนำทางไปยังหน้า Dashboard
       Future.delayed(Duration(milliseconds: 1500), () {
         Navigator.push(
@@ -205,13 +214,16 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           MaterialPageRoute(builder: (context) => DashboardAdmin()),
         );
       });
-    } else if (message.toLowerCase().contains('system')) {
+    } else if (message.toLowerCase().contains('nexus')) {
       setState(() {
         _messages.add({
           "role": "bot",
-          "content": "Redirect To  Chat system",
+          "content": "🔄 Switching to Nexus model ....",
           "timestamp": DateTime.now().toString(),
         });
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
       });
 
       // รอสักครู่แล้วนำทางไปยังหน้า Dashboard
@@ -220,6 +232,23 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           context,
           MaterialPageRoute(builder: (context) => Chatbot2Screen()),
         );
+      });
+    } else if (message.toLowerCase().contains('atlas')
+    // message.toLowerCase() == ''
+    // message.toLowerCase().contains('gmail') ||
+    // message.toLowerCase().contains('เมล') ||
+    // message.toLowerCase().contains('อีเมล'))
+    ) {
+      setState(() {
+        _messages.add({
+          "role": "bot",
+          "content": "Atlus model is Use Now",
+          "timestamp": DateTime.now().toString(),
+        });
+        _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
       });
     } else {
       // ถ้าไม่ใช่คำว่า dashboard ให้ส่งไปยัง Cohere API ตามปกติ
@@ -238,7 +267,9 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         _isLoading = false;
       });
 
-      scrollToBottom();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
     }
   }
 
@@ -276,7 +307,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                     Row(
                       children: [
                         Text(
-                          'Food  Assistant',
+                          'Atlas Model',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 25,
@@ -293,13 +324,17 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                       ],
                     ),
                     GestureDetector(
-                      onTap: () {
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => ProfilePageAdmin(),
-                        //   ),
-                        // );
+                      onTap: () async {
+                        final shouldRefresh = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePageAdmin(),
+                          ),
+                        );
+
+                        if (shouldRefresh == true) {
+                          fetchProfilePicture(userId!);
+                        }
                       },
                       child: profileImageUrl == null
                           ? CircleAvatar(
@@ -322,7 +357,40 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
             ),
           ),
+          if (_showModelSelector)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              color: Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Choose A Model',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  SizedBox(height: 12),
 
+                  // โมเดลปัจจุบัน
+                  _buildModelOption(
+                    'Atlas',
+                    'Atlas',
+                    'Your all-around companion.\nAsk about anything outside the app.',
+                  ),
+                  SizedBox(height: 12),
+
+                  // โมเดลสำหรับแอป
+                  _buildModelOption(
+                    'Nexus',
+                    'Nexus',
+                    'Your personal app assistant.\nAnswers about your account & data.',
+                  ),
+                ],
+              ),
+            ),
           // ส่วนแสดงข้อความแชท
           Expanded(
             child: NotificationListener<ScrollNotification>(
@@ -406,6 +474,18 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                             isError: content.toLowerCase().contains('error'),
                             timestamp: timestamp,
                             userId: userId,
+                            showModelSelector: _showModelSelector,
+                            onToggleModelSelector: (value) {
+                              setState(() {
+                                _showModelSelector = value;
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  scrollToBottom();
+                                }); // Update state from parent
+                              });
+                            },
+                            current_model: _currentModel,
                           ),
                         ],
                       );
@@ -433,6 +513,109 @@ class _ChatbotScreenState extends State<ChatbotScreen>
         ],
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildModelOption(String id, String title, String description) {
+    bool isSelected = _currentModel == id;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentModel = id;
+        });
+
+        if (id == 'Nexus') {
+          _messages.add({
+            "role": "bot",
+            "content": "🔄 Switching to Nexus model ....",
+            "timestamp": DateTime.now().toString(),
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            scrollToBottom();
+          });
+
+          Future.delayed(const Duration(milliseconds: 3000), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => Chatbot2Screen()),
+            );
+          });
+        } else if (id == 'Atlas') {
+          // แสดงข้อความเล็กๆ ก่อนปิด
+          _messages.add({
+            "role": "bot",
+            "content": "Atlas model is Use Now",
+            "timestamp": DateTime.now().toString(),
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            scrollToBottom();
+          });
+
+          // ปิด dropdown
+          setState(() {
+            _showModelSelector = false; // ทำให้ container หายไป
+          });
+
+          // สามารถเรียก Navigator.push หรืออะไรก็ได้ถ้าต้องการ
+          // Future.delayed(Duration(milliseconds: 300), () { ... });
+        } else {
+          print("Selected: $id");
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(20),
+        margin: EdgeInsets.only(bottom: 0, top: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue[50] : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? Colors.blueAccent! : Colors.grey[300]!,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              color: isSelected ? Colors.blueAccent : Colors.grey[600],
+              size: 26,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -531,9 +714,9 @@ String _formatDate(DateTime date) {
   final messageDate = DateTime(date.year, date.month, date.day);
 
   if (messageDate == today) {
-    return 'วันนี้';
+    return 'Today';
   } else if (messageDate == yesterday) {
-    return 'เมื่อวาน';
+    return 'Yesterday';
   } else {
     return '${date.day}/${date.month}/${date.year + 543}'; // แปลงเป็น พ.ศ.
   }
@@ -547,6 +730,9 @@ class ChatBubble extends StatelessWidget {
   final bool isError;
   final String timestamp;
   final int? userId;
+  final bool showModelSelector; // Add this
+  final Function(bool) onToggleModelSelector; // Add this
+  final String current_model;
 
   const ChatBubble({
     Key? key,
@@ -555,6 +741,9 @@ class ChatBubble extends StatelessWidget {
     this.isError = false,
     required this.timestamp,
     required this.userId,
+    required this.showModelSelector, // Add this
+    required this.onToggleModelSelector, // Add this
+    required this.current_model, // Add this
   }) : super(key: key);
 
   String _formatTime(String timestamp) {
@@ -585,30 +774,40 @@ class ChatBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Avatar สำหรับบอท (ด้านซ้าย)
+              // Avatar สำหรับบอท (ด้านซ้าย)
               if (!isUser && !isError)
-                Container(
-                  width: 40,
-                  height: 40,
-                  margin: EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6A7DE9), Color(0xFF9D50BB)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                GestureDetector(
+                  onTap: () {
+                    // เปิด/ปิดตัวเลือกโมเดลเมื่อกดที่ Avatar AI
+                    onToggleModelSelector(!showModelSelector);
+                  },
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    margin: EdgeInsets.only(right: 10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color.fromARGB(255, 53, 53, 53),
+                          Color.fromARGB(255, 255, 38, 38),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.smart_toy_rounded,
-                    color: Colors.white,
-                    size: 22,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.rocket_launch_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ),
 
@@ -683,8 +882,8 @@ class ChatBubble extends StatelessWidget {
                               : isUser
                               ? Colors.white
                               : Colors.black87,
-                          fontSize: 16,
-                          height: 1.4,
+                          fontSize: 14,
+                          height: 1.5,
                         ),
                       ),
                     ),
@@ -934,9 +1133,41 @@ class _TypingIndicatorState extends State<TypingIndicator>
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(left: 60, right: 16, bottom: 8),
+      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Avatar สำหรับ AI (ด้านซ้าย)
+          Container(
+            width: 40,
+            height: 40,
+            margin: EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color.fromARGB(255, 53, 53, 53),
+                  Color.fromARGB(255, 255, 38, 38),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.rocket_launch_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+
+          // ข้อความกำลังพิมพ์
           Container(
             padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(

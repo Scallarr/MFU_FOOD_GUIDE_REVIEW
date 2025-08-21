@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
@@ -6,34 +7,72 @@ import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
-import 'package:myapp/chatbot.dart';
+import 'package:myapp/Atlas-model.dart';
+import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Cohere API function
-Future<String> fetchCohere(String message) async {
-  final apiKey = 'jg9xhX0cMSv6eZxA9VWLYed39ADtKjenJuWyIYgs';
-  final url = Uri.parse('https://api.cohere.com/v1/chat');
-  final payload = {'model': 'command-r-plus', 'message': message};
+// Restaurant Model
+class Restaurant {
+  final int restaurantId;
+  final String restaurantName;
+  final String location;
+  final String? operatingHours;
+  final String? phoneNumber;
+  final String? photos;
+  final double? ratingOverallAvg;
+  final double? ratingHygieneAvg;
+  final double? ratingFlavorAvg;
+  final double? ratingServiceAvg;
+  final String? category;
+  final int postedReviewsCount;
+  final int pendingReviewsCount;
+  final int bannedReviewsCount;
+  final int totalReviewsCount;
 
-  try {
-    final res = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(payload),
+  Restaurant({
+    required this.restaurantId,
+    required this.restaurantName,
+    required this.location,
+    this.operatingHours,
+    this.phoneNumber,
+    this.photos,
+    this.ratingOverallAvg,
+    this.ratingHygieneAvg,
+    this.ratingFlavorAvg,
+    this.ratingServiceAvg,
+    this.category,
+    required this.postedReviewsCount,
+    required this.pendingReviewsCount,
+    required this.bannedReviewsCount,
+    required this.totalReviewsCount,
+  });
+
+  factory Restaurant.fromJson(Map<String, dynamic> json) {
+    return Restaurant(
+      restaurantId: json['Restaurant_ID'] ?? 0,
+      restaurantName: json['restaurant_name'] ?? '',
+      location: json['location'] ?? '',
+      operatingHours: json['operating_hours'],
+      phoneNumber: json['phone_number'],
+      photos: json['photos'],
+      ratingOverallAvg: json['rating_overall_avg'] != null
+          ? double.tryParse(json['rating_overall_avg'].toString())
+          : null,
+      ratingHygieneAvg: json['rating_hygiene_avg'] != null
+          ? double.tryParse(json['rating_hygiene_avg'].toString())
+          : null,
+      ratingFlavorAvg: json['rating_flavor_avg'] != null
+          ? double.tryParse(json['rating_flavor_avg'].toString())
+          : null,
+      ratingServiceAvg: json['rating_service_avg'] != null
+          ? double.tryParse(json['rating_service_avg'].toString())
+          : null,
+      category: json['category'],
+      postedReviewsCount: json['posted_reviews_count'] ?? 0,
+      pendingReviewsCount: json['pending_reviews_count'] ?? 0,
+      bannedReviewsCount: json['banned_reviews_count'] ?? 0,
+      totalReviewsCount: json['total_reviews_count'] ?? 0,
     );
-
-    if (res.statusCode == 200) {
-      final decoded = utf8.decode(res.bodyBytes);
-      final data = jsonDecode(decoded);
-      return data['text'] ?? 'No response from AI';
-    } else {
-      return 'Error: ${res.statusCode} ${res.body}';
-    }
-  } catch (e) {
-    return 'Connection error: $e';
   }
 }
 
@@ -80,6 +119,25 @@ Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
   }
 }
 
+// ฟังก์ชันสำหรับดึงข้อมูลร้านอาหาร
+Future<List<Restaurant>> fetchRestaurants() async {
+  try {
+    final response = await http.get(
+      Uri.parse('https://mfu-food-guide-review.onrender.com/restaurants'),
+    );
+
+    if (response.statusCode == 200) {
+      List jsonList = json.decode(response.body);
+      return jsonList.map((json) => Restaurant.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load restaurants: ${response.statusCode}');
+    }
+  } catch (e) {
+    debugPrint('Error fetching restaurants: $e');
+    throw Exception('Failed to load restaurants');
+  }
+}
+
 class Chatbot2Screen extends StatefulWidget {
   @override
   _ChatbotScreenState createState() => _ChatbotScreenState();
@@ -99,12 +157,26 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
   FocusNode _focusNode = FocusNode();
   bool _showAppBar = true;
   Map<String, dynamic>? userProfile;
+  String _currentModel = 'Nexus'; // โมเดลเริ่มต้น
+  bool _showModelSelector = false;
+  List<Restaurant> allRestaurants = [];
 
   @override
   void initState() {
     super.initState();
     loadUserIdAndFetchProfile();
     _addWelcomeMessage();
+
+    // ดึงข้อมูลร้านอาหาร
+    fetchRestaurants()
+        .then((restaurants) {
+          setState(() {
+            allRestaurants = restaurants;
+          });
+        })
+        .catchError((error) {
+          print('Error loading restaurants: $error');
+        });
 
     _typingAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
@@ -178,7 +250,11 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
 
   void _addWelcomeMessage() {
     final welcomeMessage =
-        "สวัสดีครับ! ผมเป็นผู้ช่วย Food Threads ที่นี่เพื่อตอบคำถามเกี่ยวกับร้านอาหารและบริการต่างๆ ในมหาวิทยาลัยแม่ฟ้าหลวง ถ้าคุณมีคำถามอะไร ถามได้เลยนะครับ";
+        "👋 Hello!\n"
+        "I'm Nexus, your assistant in the MFU Food Guide & Review app 🥘✨\n\n"
+        "I can help you with restaurants, reviews, profiles, coins, "
+        "and other app services 💡\n"
+        "Ask me anytime!";
 
     setState(() {
       _messages.add({
@@ -194,6 +270,112 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
     });
   }
 
+  // ฟังก์ชันสร้างคำตอบเกี่ยวกับร้านอาหาร
+  String _generateRestaurantResponse(String userMessage) {
+    userMessage = userMessage.toLowerCase();
+
+    // ค้นหาร้านอาหารโดยชื่อ
+    if (userMessage.contains('ชื่อ') || userMessage.contains('name')) {
+      final regex = RegExp(r'ชื่อ(.+)|name(.+)');
+      final match = regex.firstMatch(userMessage);
+      if (match != null) {
+        final searchTerm = (match.group(1) ?? match.group(2))?.trim();
+        if (searchTerm != null && searchTerm.isNotEmpty) {
+          final foundRestaurants = allRestaurants
+              .where(
+                (restaurant) => restaurant.restaurantName
+                    .toLowerCase()
+                    .contains(searchTerm),
+              )
+              .toList();
+
+          if (foundRestaurants.isNotEmpty) {
+            if (foundRestaurants.length == 1) {
+              final restaurant = foundRestaurants.first;
+              return "🍽️ พบร้านอาหาร: ${restaurant.restaurantName}\n"
+                  "📍 ตำแหน่ง: ${restaurant.location}\n"
+                  "⭐ คะแนนรวม: ${restaurant.ratingOverallAvg?.toStringAsFixed(1) ?? 'N/A'}\n"
+                  "🕒 เวลาเปิด: ${restaurant.operatingHours ?? 'ไม่ระบุ'}\n"
+                  "📞 โทร: ${restaurant.phoneNumber ?? 'ไม่ระบุ'}\n"
+                  "📝 มีรีวิวทั้งหมด: ${restaurant.totalReviewsCount} รีวิว";
+            } else {
+              String response = "🍽️ พบร้านอาหารที่ตรงกับ \"$searchTerm\":\n\n";
+              for (var restaurant in foundRestaurants.take(5)) {
+                response +=
+                    "• ${restaurant.restaurantName} (⭐ ${restaurant.ratingOverallAvg?.toStringAsFixed(1) ?? 'N/A'})\n";
+              }
+              if (foundRestaurants.length > 5) {
+                response += "\nและอีก ${foundRestaurants.length - 5} ร้าน...";
+              }
+              return response;
+            }
+          } else {
+            return "ขออภัย ไม่พบร้านอาหารที่ชื่อ中包含 \"$searchTerm\"";
+          }
+        }
+      }
+    }
+
+    // แนะนำร้านอาหารที่มีคะแนนสูง
+    if (userMessage.contains('ดี') ||
+        userMessage.contains('recommend') ||
+        userMessage.contains('แนะนำ') ||
+        userMessage.contains('สูง')) {
+      final highRatedRestaurants =
+          allRestaurants.where((r) => r.ratingOverallAvg != null).toList()
+            ..sort(
+              (a, b) =>
+                  (b.ratingOverallAvg ?? 0).compareTo(a.ratingOverallAvg ?? 0),
+            );
+
+      if (highRatedRestaurants.isNotEmpty) {
+        String response = "🏆 ร้านอาหารที่มีคะแนนสูงสุด:\n\n";
+        for (var i = 0; i < min(3, highRatedRestaurants.length); i++) {
+          final restaurant = highRatedRestaurants[i];
+          response +=
+              "${i + 1}. ${restaurant.restaurantName} - ⭐ ${restaurant.ratingOverallAvg?.toStringAsFixed(1)}\n"
+              "   📍 ${restaurant.location}\n\n";
+        }
+        return response;
+      }
+    }
+
+    // นับจำนวนร้านอาหารทั้งหมด
+    if (userMessage.contains('กี่ร้าน') ||
+        userMessage.contains('ทั้งหมด') ||
+        userMessage.contains('total')) {
+      return "🍽️ มีร้านอาหารทั้งหมด ${allRestaurants.length} ร้านในระบบ";
+    }
+
+    // แสดงร้านอาหารทั้งหมด (จำกัดจำนวน)
+    if
+    // (userMessage.contains('ทั้งหมด') ||
+    (userMessage.contains('all') || userMessage.contains('list')) {
+      String response = "📋 รายการร้านอาหารทั้งหมด (แสดง 10 ร้านแรก):\n\n";
+      for (var i = 0; i < min(10, allRestaurants.length); i++) {
+        final restaurant = allRestaurants[i];
+        response +=
+            "• ${restaurant.restaurantName} (⭐ ${restaurant.ratingOverallAvg?.toStringAsFixed(1) ?? 'N/A'})\n";
+      }
+      if (allRestaurants.length > 10) {
+        response += "\nและอีก ${allRestaurants.length - 10} ร้าน...";
+      }
+      return response;
+    }
+
+    // คำตอบเริ่มต้นเกี่ยวกับร้านอาหาร
+    return "🍽️ ฉันสามารถช่วยคุณเกี่ยวกับร้านอาหารได้!\n\n"
+        "คุณสามารถถามฉันเกี่ยวกับ:\n"
+        "• ร้านอาหารที่มีคะแนนสูง\n"
+        "• ร้านอาหารตามชื่อ\n"
+        "• จำนวนร้านอาหารทั้งหมด\n"
+        "• รายการร้านอาหาร\n\n"
+        "ลองถามเช่น:\n"
+        "- \"ร้านอาหารที่มีคะแนนสูงสุด\"\n"
+        "- \"ร้านชื่อว่า [ชื่อร้าน]\"\n"
+        "- \"มีร้านอาหารทั้งหมดกี่ร้าน\"";
+  }
+
   void sendMessage() async {
     final message = _controller.text.trim();
     if (message.isEmpty) return;
@@ -207,48 +389,11 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
       _controller.clear();
     });
 
-    scrollToBottom();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      scrollToBottom();
+    });
 
-    // // ตรวจสอบว่าผู้ใช้ต้องการดูข้อมูลโปรไฟล์
-    // if (message.toLowerCase().contains('profile') ||
-    //     message.toLowerCase().contains('โปรไฟล์') ||
-    //     message.toLowerCase().contains('ข้อมูลส่วนตัว')) {
-    //   setState(() {
-    //     _isLoading = true;
-    //   });
-
-    //   // รอสักครู่เพื่อแสดงการโหลด
-    //   await Future.delayed(Duration(milliseconds: 500));
-
-    //   if (userProfile != null) {
-    //     setState(() {
-    //       _messages.add({
-    //         "role": "bot",
-    //         "content": "นี่คือข้อมูลโปรไฟล์ของคุณ",
-    //         "timestamp": DateTime.now().toString(),
-    //       });
-    //       _isLoading = false;
-    //     });
-
-    //     // เลื่อนไปยังส่วนบนเพื่อแสดงข้อมูลโปรไฟล์
-    //     _scrollController.animateTo(
-    //       0,
-    //       duration: Duration(milliseconds: 500),
-    //       curve: Curves.easeOut,
-    //     );
-    //   } else {
-    //     setState(() {
-    //       _messages.add({
-    //         "role": "bot",
-    //         "content": "ไม่สามารถโหลดข้อมูลโปรไฟล์ได้",
-    //         "timestamp": DateTime.now().toString(),
-    //       });
-    //       _isLoading = false;
-    //     });
-    //   }
-    // }
-    // // ตรวจสอบว่าผู้ใช้ต้องการดูข้อมูล coins
-    // else
+    // ตรวจสอบคำถามเกี่ยวกับ coins
     if (message.toLowerCase().contains('coin') ||
         message.toLowerCase().contains('coins') ||
         message.toLowerCase().contains('เหรียญ') ||
@@ -268,6 +413,9 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
             "content": "You have $coins coins",
             "timestamp": DateTime.now().toString(),
           });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            scrollToBottom();
+          });
           _isLoading = false;
         });
       } else {
@@ -279,8 +427,49 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
           });
           _isLoading = false;
         });
-        scrollToBottom();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          scrollToBottom();
+        });
       }
+    }
+    // ตรวจสอบคำถามเกี่ยวกับร้านอาหาร
+    else if (message.toLowerCase().contains('restaurant') ||
+        message.toLowerCase().contains('ร้าน') ||
+        message.toLowerCase().contains('อาหาร') ||
+        message.toLowerCase().contains('กิน') ||
+        message.toLowerCase().contains('recommend') ||
+        message.toLowerCase().contains('แนะนำ')) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // รอสักครู่เพื่อแสดงการโหลด
+      await Future.delayed(Duration(milliseconds: 500));
+
+      if (allRestaurants.isNotEmpty) {
+        String response = _generateRestaurantResponse(message);
+        setState(() {
+          _messages.add({
+            "role": "bot",
+            "content": response,
+            "timestamp": DateTime.now().toString(),
+          });
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _messages.add({
+            "role": "bot",
+            "content": "ขออภัย ยังไม่สามารถโหลดข้อมูลร้านอาหารได้ในขณะนี้",
+            "timestamp": DateTime.now().toString(),
+          });
+          _isLoading = false;
+        });
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
     } else if (message.toLowerCase().contains('username') ||
         message.toLowerCase() == 'user' ||
         message.toLowerCase().contains('my username') ||
@@ -303,7 +492,9 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
           _isLoading = false;
         });
 
-        scrollToBottom();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          scrollToBottom();
+        });
       } else {
         setState(() {
           _messages.add({
@@ -314,6 +505,55 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
           _isLoading = false;
         });
       }
+    } else if (message.toLowerCase().contains('mail') ||
+        message.toLowerCase() == 'email' ||
+        message.toLowerCase().contains('gmail') ||
+        message.toLowerCase().contains('เมล') ||
+        message.toLowerCase().contains('อีเมล')) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // รอสักครู่เพื่อแสดงการโหลด
+      await Future.delayed(Duration(milliseconds: 500));
+
+      if (userProfile != null) {
+        final username = userProfile!['email'] ?? 0;
+        setState(() {
+          _messages.add({
+            "role": "bot",
+            "content": " Your Email is, $username ",
+            "timestamp": DateTime.now().toString(),
+          });
+          _isLoading = false;
+        });
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          scrollToBottom();
+        });
+      } else {
+        setState(() {
+          _messages.add({
+            "role": "bot",
+            "content": "ไม่สามารถโหลดข้อมูล coins ได้",
+            "timestamp": DateTime.now().toString(),
+          });
+          _isLoading = false;
+        });
+      }
+    } else if (message.toLowerCase().contains('nexus') ||
+        message.toLowerCase() == 'ทั่วไป') {
+      setState(() {
+        _messages.add({
+          "role": "bot",
+          "content": "Nexus model is Use Now",
+          "timestamp": DateTime.now().toString(),
+        });
+        _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
     } else if (message.toLowerCase().contains('fullname') ||
         message.toLowerCase().contains('full name') ||
         message.toLowerCase().contains('ชื่อจริง') ||
@@ -337,7 +577,9 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
           _isLoading = false;
         });
 
-        scrollToBottom();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          scrollToBottom();
+        });
       } else {
         setState(() {
           _messages.add({
@@ -348,27 +590,6 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
           _isLoading = false;
         });
       }
-    } else if (message.toLowerCase().contains('chatbot'))
-    // message.toLowerCase().contains('c') ||
-    // message.toLowerCase().contains('user') ||
-    // message.toLowerCase().contains('name'))
-    {
-      setState(() {
-        _messages.add({
-          "role": "bot",
-          "content": "Redirect To  Chat system",
-          "timestamp": DateTime.now().toString(),
-        });
-      });
-
-      // รอสักครู่เพื่อแสดงการโหลด
-
-      Future.delayed(Duration(milliseconds: 1500), () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ChatbotScreen()),
-        );
-      });
     }
     // ตรวจสอบว่าผู้ใช้พิมพ์คำว่า "dashboard" หรือไม่
     else if (message.toLowerCase().contains('dashboard') ||
@@ -395,7 +616,9 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
       setState(() {
         _isLoading = true;
       });
-
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
       // จำลองการโหลดข้อมูล
       await Future.delayed(Duration(seconds: 1));
 
@@ -403,13 +626,24 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
         _messages.add({
           "role": "bot",
           "content":
-              "ขออภัย ระบบตอบกลับอัตโนมัติไม่พร้อมใช้งานในขณะนี้ กรุณาติดต่อผู้ดูแลระบบ",
+              "⚠️ Your command is not valid.\n"
+              "You can ask about:\n"
+              "- Coins / Points\n"
+              "- Username\n"
+              "- Email\n"
+              "- Fullname\n"
+              "- Restaurants / Food recommendations\n"
+              "- Dashboard / Overview\n"
+              "\n"
+              "💡 For other questions outside your account or the app, please use the Atlas model.",
+
           "timestamp": DateTime.now().toString(),
         });
         _isLoading = false;
       });
-
-      scrollToBottom();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        scrollToBottom();
+      });
     }
   }
 
@@ -447,7 +681,7 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
                     Row(
                       children: [
                         Text(
-                          'Food  Assistant',
+                          'Nexus Model',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 25,
@@ -464,13 +698,17 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
                       ],
                     ),
                     GestureDetector(
-                      onTap: () {
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => ProfilePageAdmin(),
-                        //   ),
-                        // );
+                      onTap: () async {
+                        final shouldRefresh = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePageAdmin(),
+                          ),
+                        );
+
+                        if (shouldRefresh == true) {
+                          fetchProfilePicture(userId!);
+                        }
                       },
                       child: profileImageUrl == null
                           ? CircleAvatar(
@@ -493,6 +731,40 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
               ),
             ),
           ),
+          if (_showModelSelector)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              color: Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Choose A Model',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  // โมเดลปัจจุบัน
+                  _buildModelOption(
+                    'Atlas',
+                    'Atlas',
+                    'Your all-around companion.\nAsk about anything outside the app.',
+                  ),
+                  SizedBox(height: 12),
+
+                  // โมเดลสำหรับแอป
+                  _buildModelOption(
+                    'Nexus',
+                    'Nexus',
+                    'Your personal app assistant.\nAnswers about your account & data.',
+                  ),
+                ],
+              ),
+            ),
 
           // ส่วนแสดงข้อความแชท
           Expanded(
@@ -544,6 +816,16 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
                         isError: content.toLowerCase().contains('error'),
                         timestamp: timestamp,
                         userId: userId,
+                        showModelSelector: _showModelSelector,
+                        onToggleModelSelector: (value) {
+                          setState(() {
+                            _showModelSelector = value;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              scrollToBottom();
+                            }); // Update state from parent
+                          });
+                        },
+                        current_model: _currentModel,
                       );
                     }).toList(),
 
@@ -569,6 +851,107 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
         ],
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildModelOption(String id, String title, String description) {
+    bool isSelected = _currentModel == id;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentModel = id;
+        });
+
+        if (id == 'Atlas') {
+          _messages.add({
+            "role": "bot",
+            "content": "🔄 Switching to Atlas model....",
+            "timestamp": DateTime.now().toString(),
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            scrollToBottom();
+          });
+
+          Future.delayed(const Duration(milliseconds: 3000), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => ChatbotScreen()),
+            );
+          });
+        } else if (id == 'Nexus') {
+          // แสดงข้อความเล็กๆ ก่อนปิด
+          _messages.add({
+            "role": "bot",
+            "content": "Nexus model is Use Now",
+            "timestamp": DateTime.now().toString(),
+          });
+          scrollToBottom();
+
+          // ปิด dropdown
+          setState(() {
+            _showModelSelector = false; // ทำให้ container หายไป
+          });
+
+          // สามารถเรียก Navigator.push หรืออะไรก็ได้ถ้าต้องการ
+          // Future.delayed(Duration(milliseconds: 300), () { ... });
+        } else {
+          print("Selected: $id");
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.all(20),
+        margin: EdgeInsets.only(bottom: 0, top: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue[50] : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? Colors.blueAccent! : Colors.grey[300]!,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              color: isSelected ? Colors.blueAccent : Colors.grey[600],
+              size: 26,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -667,22 +1050,23 @@ String _formatDate(DateTime date) {
   final messageDate = DateTime(date.year, date.month, date.day);
 
   if (messageDate == today) {
-    return 'วันนี้';
+    return 'Today';
   } else if (messageDate == yesterday) {
-    return 'เมื่อวาน';
+    return 'Yesterday';
   } else {
     return '${date.day}/${date.month}/${date.year + 543}'; // แปลงเป็น พ.ศ.
   }
 }
 
-// ส่วนที่เหลือของโค้ด (ChatBubble, MessageInputField, TypingIndicator) ไม่มีการเปลี่ยนแปลง
-// [คงเหลือส่วนของโค้ดเดิมไว้ตามเดิม]
 class ChatBubble extends StatelessWidget {
   final String message;
   final bool isUser;
   final bool isError;
   final String timestamp;
   final int? userId;
+  final bool showModelSelector; // Add this
+  final Function(bool) onToggleModelSelector; // Add this
+  final String current_model;
 
   const ChatBubble({
     Key? key,
@@ -691,6 +1075,9 @@ class ChatBubble extends StatelessWidget {
     this.isError = false,
     required this.timestamp,
     required this.userId,
+    required this.showModelSelector, // Add this
+    required this.onToggleModelSelector, // Add this
+    required this.current_model, // Add this
   }) : super(key: key);
 
   String _formatTime(String timestamp) {
@@ -714,177 +1101,190 @@ class ChatBubble extends StatelessWidget {
             : CrossAxisAlignment.start,
         children: [
           // ข้อความแชท
-          Row(
-            mainAxisAlignment: isUser
-                ? MainAxisAlignment.end
-                : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Stack(
+            clipBehavior: Clip.none, // อนุญาตให้ dropdown โผล่ออกนอกกรอบได้
             children: [
-              // Avatar สำหรับบอท (ด้านซ้าย)
-              if (!isUser && !isError)
-                Container(
-                  width: 40,
-                  height: 40,
-                  margin: EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6A7DE9), Color(0xFF9D50BB)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.smart_toy_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-
-              // Avatar สำหรับ error (ด้านซ้าย)
-              if (isError)
-                Container(
-                  width: 40,
-                  height: 40,
-                  margin: EdgeInsets.only(right: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.error_outline_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-
-              // ข้อความและเวลา
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: isUser
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.75,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isError
-                            ? Colors.red[100]
-                            : isUser
-                            ? Color(0xFFB39D70)
-                            : Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(20),
-                          topRight: const Radius.circular(20),
-                          bottomLeft: isUser
-                              ? const Radius.circular(20)
-                              : const Radius.circular(6),
-                          bottomRight: isUser
-                              ? const Radius.circular(6)
-                              : const Radius.circular(20),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.4),
-                            blurRadius: 15,
-                            offset: const Offset(0, 4),
+              Row(
+                mainAxisAlignment: isUser
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Avatar สำหรับบอท (ด้านซ้าย)
+                  if (!isUser && !isError)
+                    GestureDetector(
+                      onTap: () {
+                        // เปิด/ปิดตัวเลือกโมเดลเมื่อกดที่ Avatar AI
+                        onToggleModelSelector(!showModelSelector);
+                      },
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        margin: EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color.fromARGB(255, 53, 53, 53),
+                              Color.fromARGB(255, 255, 38, 38),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        message,
-                        style: TextStyle(
-                          color: isError
-                              ? Colors.red[900]
-                              : isUser
-                              ? Colors.white
-                              : Colors.black87,
-                          fontSize: 16,
-                          height: 1.4,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.rocket_launch_rounded,
+                          color: Colors.white,
+                          size: 22,
                         ),
                       ),
                     ),
 
-                    // เวลาอยู่ใต้ข้อความ
+                  // ข้อความและเวลา
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isError
+                                ? Colors.red[100]?.withOpacity(0.9)
+                                : isUser
+                                ? Color(0xFF4A5568) // สีเทาอมน้ำเงินดูPremium
+                                : Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              topRight: Radius.circular(20),
+                              bottomLeft: isUser
+                                  ? Radius.circular(20)
+                                  : Radius.circular(8),
+                              bottomRight: isUser
+                                  ? Radius.circular(8)
+                                  : Radius.circular(20),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(
+                                  isUser ? 0.3 : 0.1,
+                                ),
+                                blurRadius: 12,
+                                offset: const Offset(0, 3),
+                                spreadRadius: 0.5,
+                              ),
+                            ],
+                            border: isUser
+                                ? null
+                                : Border.all(
+                                    color: Colors.grey[200]!,
+                                    width: 1,
+                                  ),
+                          ),
+                          child: Text(
+                            message,
+                            style: TextStyle(
+                              color: isError
+                                  ? Colors.red[900]
+                                  : isUser
+                                  ? Colors.white
+                                  : Color(
+                                      0xFF2D3748,
+                                    ), // สีข้อความเข้มขึ้นนิดหน่อย
+                              fontSize: 14,
+                              height: 1.5,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+
+                        // เวลาอยู่ใต้ข้อความ
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: 6,
+                            right: isUser ? 8 : 0,
+                            left: isUser ? 0 : 8,
+                          ),
+                          child: Text(
+                            _formatTime(timestamp),
+                            style: TextStyle(
+                              fontSize: 10, // เล็กกว่านิดหน่อย
+                              color: Colors.grey[500], // สีอ่อนลง
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ระยะห่างสำหรับ user
+                  if (isUser) SizedBox(width: 10),
+
+                  // Avatar สำหรับ user (ด้านขวา)
+                  if (isUser && !isError)
                     Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text(
-                        _formatTime(timestamp),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
+                      padding: const EdgeInsets.only(bottom: 8, left: 6),
+                      child: FutureBuilder<String?>(
+                        future: userId != null
+                            ? fetchProfilePicture(userId!)
+                            : Future.value(null),
+                        builder: (context, snapshot) {
+                          // if (snapshot.connectionState == ConnectionState.waiting) {
+                          //   return CircleAvatar(
+                          //     radius: 22,
+                          //     backgroundColor: Colors.grey.shade300,
+                          //     child: const CircularProgressIndicator(
+                          //       strokeWidth: 2,
+                          //       valueColor: AlwaysStoppedAnimation<Color>(
+                          //         Colors.white,
+                          //       ),
+                          //     ),
+                          //   );
+                          // } else
+                          if (snapshot.hasError || snapshot.data == null) {
+                            return CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Color(0xFFB39D70),
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            );
+                          } else {
+                            return CircleAvatar(
+                              radius: 22,
+                              backgroundImage: NetworkImage(snapshot.data!),
+                              backgroundColor: Colors.grey.shade300,
+                            );
+                          }
+                        },
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
-
-              // ระยะห่างสำหรับ user
-              if (isUser) SizedBox(width: 10),
-
-              // Avatar สำหรับ user (ด้านขวา)
-              if (isUser && !isError)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8, left: 6),
-                  child: FutureBuilder<String?>(
-                    future: userId != null
-                        ? fetchProfilePicture(userId!)
-                        : Future.value(null),
-                    builder: (context, snapshot) {
-                      // if (snapshot.connectionState == ConnectionState.waiting) {
-                      //   return CircleAvatar(
-                      //     radius: 22,
-                      //     backgroundColor: Colors.grey.shade300,
-                      //     child: const CircularProgressIndicator(
-                      //       strokeWidth: 2,
-                      //       valueColor: AlwaysStoppedAnimation<Color>(
-                      //         Colors.white,
-                      //       ),
-                      //     ),
-                      //   );
-                      // } else
-                      if (snapshot.hasError || snapshot.data == null) {
-                        return CircleAvatar(
-                          radius: 22,
-                          backgroundColor: Color(0xFFB39D70),
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        );
-                      } else {
-                        return CircleAvatar(
-                          radius: 22,
-                          backgroundImage: NetworkImage(snapshot.data!),
-                          backgroundColor: Colors.grey.shade300,
-                        );
-                      }
-                    },
-                  ),
-                ),
+              // if (showModelSelector && !isUser && !isError)
+              //   Positioned(
+              //     top: 200, // โผล่เหนือข้อความ
+              //     left: 50, // ชิดซ้าย avatar
+              //     child: _buildModelSelector(context),
+              //   ),
             ],
           ),
         ],
@@ -1028,6 +1428,7 @@ class MessageInputField extends StatelessWidget {
   }
 }
 
+// ในส่วนของ TypingIndicator Widget
 class TypingIndicator extends StatefulWidget {
   @override
   _TypingIndicatorState createState() => _TypingIndicatorState();
@@ -1070,9 +1471,38 @@ class _TypingIndicatorState extends State<TypingIndicator>
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(left: 60, right: 16, bottom: 8),
+      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Avatar สำหรับ AI (ด้านซ้าย)
+          Container(
+            width: 40,
+            height: 40,
+            margin: EdgeInsets.only(right: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color.fromARGB(255, 248, 2, 2), Color(0xFF9D50BB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.psychology_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+
+          // ข้อความกำลังพิมพ์
           Container(
             padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
@@ -1172,45 +1602,8 @@ class UserProfileCard extends StatelessWidget {
                   ),
                 ),
               ),
-              // profileImageUrl != null
-              //     ? CircleAvatar(
-              //         backgroundImage: NetworkImage(profileImageUrl!),
-              //         radius: 30,
-              //       )
-              //     : CircleAvatar(
-              //         backgroundColor: Color(0xFFB39D70),
-              //         child: Icon(Icons.person, color: Colors.white),
-              //         radius: 30,
-              //       ),
-              // SizedBox(width: 16),
-              // Expanded(
-              //   child: Column(
-              //     crossAxisAlignment: CrossAxisAlignment.start,
-              //     children: [
-              //       Text(
-              //         userProfile['fullname'] ?? 'No Name',
-              //         style: TextStyle(
-              //           fontSize: 18,
-              //           fontWeight: FontWeight.bold,
-              //           color: Colors.black87,
-              //         ),
-              //       ),
-              //       SizedBox(height: 4),
-              //       Text(
-              //         '@${userProfile['username'] ?? 'No username'}',
-              //         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              //       ),
-              //     ],
-              //   ),
-              // ),
             ],
           ),
-          // SizedBox(height: 16),
-          // Text(
-          //   userProfile['bio'] ?? 'No bio available',
-          //   style: TextStyle(fontSize: 14, color: Colors.black54),
-          // // ),
-          // SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [

@@ -569,14 +569,14 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
               ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RestaurantListPageAdmin(reload: true),
-                ),
-                (route) => false,
-              ),
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                // Refresh the previous page and go back
+                Navigator.pop(
+                  context,
+                  true,
+                ); // 'true' indicates a refresh is needed
+              },
             ),
           ),
           SliverToBoxAdapter(

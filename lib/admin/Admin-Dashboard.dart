@@ -170,13 +170,17 @@ class _DashboardPageAdminState extends State<DashboardAdmin> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      final shouldRefresh = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => ProfilePageAdmin(),
                         ),
                       );
+
+                      if (shouldRefresh == true) {
+                        fetchProfilePicture(userId!);
+                      }
                     },
                     child: profileImageUrl == null
                         ? CircleAvatar(

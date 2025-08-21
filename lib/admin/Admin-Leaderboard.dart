@@ -5,7 +5,7 @@ import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
-import 'package:myapp/chatbot.dart';
+import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/dashboard.dart';
 import 'dart:convert';
 import 'package:myapp/home.dart';
@@ -541,8 +541,8 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
             label: 'Leaderboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.memory),
+            label: 'AI Assistant',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
         ],
@@ -583,13 +583,17 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        final shouldRefresh = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ProfilePageAdmin(),
                           ),
                         );
+
+                        if (shouldRefresh == true) {
+                          fetchProfilePicture(userId!);
+                        }
                       },
                       child: profileImageUrl == null
                           ? CircleAvatar(

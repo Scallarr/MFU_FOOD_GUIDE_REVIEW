@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
@@ -322,7 +323,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DashboardAdmin()),
+          MaterialPageRoute(builder: (context) => ChatbotScreen()),
         );
         break;
       // case 3:
@@ -382,13 +383,17 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async {
+                      final shouldRefresh = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => ProfilePageAdmin(),
                         ),
                       );
+
+                      if (shouldRefresh == true) {
+                        fetchProfilePicture(userId!);
+                      }
                     },
                     child: profileImageUrl == null
                         ? CircleAvatar(
@@ -697,8 +702,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
             label: 'Leaderboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.memory),
+            label: 'AI Assistant',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
         ],

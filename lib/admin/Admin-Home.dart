@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/admin/Admin-AddRestaurant.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
@@ -359,7 +360,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => DashboardAdmin()),
+          MaterialPageRoute(builder: (context) => ChatbotScreen()),
         );
         break;
       case 3:
@@ -420,13 +421,17 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                     Padding(
                       padding: EdgeInsetsGeometry.only(right: 17),
                       child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          final shouldRefresh = await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ProfilePageAdmin(),
                             ),
                           );
+
+                          if (shouldRefresh == true) {
+                            fetchProfilePicture(userId!);
+                          }
                         },
                         child: profileImageUrl == null
                             ? CircleAvatar(
@@ -745,8 +750,8 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
             label: 'Leaderboard',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.memory),
+            label: 'AI Assistant',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
         ],
