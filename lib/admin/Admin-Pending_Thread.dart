@@ -747,6 +747,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
           'threadId': threadId,
           'adminId': userId,
           'status': 'Posted',
+          'reason': 'Appropriate message',
         }),
       );
 
@@ -772,13 +773,14 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
 
   Future<void> _rejectThread(int threadId, {String reason = ''}) async {
     try {
+      final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
         Uri.parse('https://mfu-food-guide-review.onrender.com/threads/reject'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,
           'adminId': userId,
-          'reason': reason,
+          'reason': rejectionReason,
           'status': 'Banned',
         }),
       );

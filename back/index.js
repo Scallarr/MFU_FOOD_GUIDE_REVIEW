@@ -2343,7 +2343,7 @@ app.post('/threads/approve', async (req, res) => {
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread SET admin_decision = "Posted" WHERE Thread_ID = ?',
+      'UPDATE Thread SET  created_at= NOW() , admin_decision = "Posted" WHERE Thread_ID = ?',
       [threadId]
     );
     
@@ -2392,7 +2392,7 @@ app.post('/threads/reject', async (req, res) => {
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread SET admin_decision = "Banned" WHERE Thread_ID = ?',
+      'UPDATE Thread SET  created_at= NOW(),  admin_decision = "Banned" WHERE Thread_ID = ?',
       [threadId]
     );
     

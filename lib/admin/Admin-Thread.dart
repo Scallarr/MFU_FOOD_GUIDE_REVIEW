@@ -25,13 +25,20 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   List threads = [];
   int? userId;
   int _selectedIndex = 3;
+  final Color _primaryColor = Color(0xFF4285F4);
+  final Color _successColor = Color(0xFF34A853);
+  final Color _warningColor = Color(0xFFFBBC05);
+  final Color _dangerColor = Color(0xFFEA4335);
+  final Color _cardColor = Colors.white;
+  final Color _textColor = Color(0xFF202124);
+  final Color _secondaryTextColor = Color(0xFF5F6368);
   TextEditingController _textController = TextEditingController();
 
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   String? profileImageUrl;
-
+  int _pendingThreadsCount = 0; // เพิ่มตัวแปรเก็บจำนวน pending threads
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -39,6 +46,32 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     super.initState();
     _loadUserID();
     loadUserIdAndFetchProfile();
+    fetchPendingThreadsCount();
+  }
+
+  Future<void> fetchPendingThreadsCount() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/pending'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> pendingThreads = json.decode(response.body);
+        setState(() {
+          _pendingThreadsCount = pendingThreads.length;
+        });
+      } else {
+        print('Failed to fetch pending threads count');
+        setState(() {
+          _pendingThreadsCount = 0;
+        });
+      }
+    } catch (e) {
+      print('Error fetching pending threads count: $e');
+      setState(() {
+        _pendingThreadsCount = 0;
+      });
+    }
   }
 
   @override
@@ -92,6 +125,183 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     }
   }
 
+  Future<void> _showRejectDialog(Map<String, dynamic> thread) async {
+    final reasonController = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _dangerColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 40,
+                          color: _dangerColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Confirm Rejection',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Are you sure you want to reject this thread?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    labelText: 'Reason (optional)',
+                    labelStyle: TextStyle(color: _secondaryTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  maxLines: 2,
+                  style: TextStyle(color: _textColor),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _banThread(thread, reason: reasonController.text);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Reject',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // เพิ่มเมธอดสำหรับเรียก API แบน
+  Future<void> _banThread(
+    Map<String, dynamic> thread, {
+    String reason = '',
+  }) async {
+    try {
+      final int threadId = int.parse(thread['Thread_ID'].toString());
+      final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
+      final response = await http.post(
+        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/reject'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'threadId': threadId,
+          'adminId': userId,
+          'reason': rejectionReason,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Thread banned successfully')));
+        fetchThreads(); // รีเฟรชรายการ threads
+      } else {
+        throw Exception('Failed to ban thread');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   Future<void> fetchThreads() async {
     if (userId == null) return;
     final response = await http.get(
@@ -106,6 +316,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       });
       print('f');
       print(threads);
+      fetchPendingThreadsCount();
     } else {
       throw Exception('Failed to load threads');
     }
@@ -519,27 +730,29 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
                       // Notification Badge
                       // if (restaurant != null && restaurant!.pendingReviewsCount > 0)
-                      Positioned(
-                        right: -5,
-                        top: -5,
-                        child: Container(
-                          padding: EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 219, 31, 31),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Text(
-                            // '${restaurant!.pendingReviewsCount}',
-                            '5', // ตัวอย่างค่า
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12, // ลดขนาดฟอนต์เล็กน้อย
-                              fontWeight: FontWeight.bold,
+                      // เปลี่ยนจาก '5' เป็น '_pendingThreadsCount'
+                      // Notification Badge
+                      if (_pendingThreadsCount > 0)
+                        Positioned(
+                          right: -5,
+                          top: -17,
+                          child: Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 219, 31, 31),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: Text(
+                              '$_pendingThreadsCount', // ใช้ค่าจริงจาก API
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ],
@@ -624,6 +837,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                             color: Colors.blue,
                                           ),
                                           Spacer(),
+
                                           Text(
                                             timeAgo(thread['created_at']),
                                             style: TextStyle(
@@ -651,10 +865,29 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                 style: const TextStyle(fontSize: 15),
                               ),
                             ),
-                            const SizedBox(height: 7),
+                            const SizedBox(height: 15),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.report,
+                                        color: const Color.fromARGB(
+                                          255,
+                                          144,
+                                          143,
+                                          143,
+                                        ),
+                                      ),
+                                      onPressed: () =>
+                                          _showRejectDialog(thread),
+                                    ),
+                                  ],
+                                ),
+                                Spacer(),
                                 InkWell(
                                   onTap: () {
                                     toggleLike(
