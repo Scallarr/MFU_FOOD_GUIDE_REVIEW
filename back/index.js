@@ -2320,7 +2320,7 @@ app.get('/threads/pending', async (req, res) => {
              t.message, t.created_at, t.Total_likes, 
              t.ai_evaluation, t.admin_decision
       FROM Thread t
-      JOIN Users u ON t.User_ID = u.User_ID
+      JOIN User u ON t.User_ID = u.User_ID
       WHERE t.admin_decision = 'Pending'
       ORDER BY t.created_at DESC
     `);
