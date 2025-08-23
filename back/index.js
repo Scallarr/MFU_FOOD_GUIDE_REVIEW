@@ -2316,11 +2316,12 @@ app.get('/threads/pending', async (req, res) => {
   try {
     const connection = await db.promise().getConnection();
     const [rows] = await connection.execute(`
-      SELECT t.Thread_ID, t.User_ID, u.username, u.picture_url, 
-             t.message, t.created_at, t.Total_likes, 
-             t.ai_evaluation, t.admin_decision
+      SELECT t.Thread_ID, t.User_ID, u.username, 
+             upp.picture_url, t.message, t.created_at, 
+             t.Total_likes, t.ai_evaluation, t.admin_decision
       FROM Thread t
       JOIN User u ON t.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
       WHERE t.admin_decision = 'Pending'
       ORDER BY t.created_at DESC
     `);
