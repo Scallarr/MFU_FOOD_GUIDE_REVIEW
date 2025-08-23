@@ -418,39 +418,131 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.5),
-                      blurRadius: 1,
-                      offset: const Offset(1, 1),
-                    ),
-                  ],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search threads...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      borderSide: BorderSide.none,
+              child: Row(
+                children: [
+                  // Search TextField
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.5),
+                            blurRadius: 1,
+                            offset: const Offset(1, 1),
+                          ),
+                        ],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search threads...',
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value.toLowerCase();
+                          });
+                        },
+                      ),
                     ),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                ),
+
+                  SizedBox(
+                    width: 16,
+                  ), // เพิ่มระยะห่างระหว่าง search และ verify button
+                  // Verify Button with Stack for badge
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      InkWell(
+                        onTap: () async {
+                          // final shouldRefresh = await Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (context) =>
+                          //         PendingReviewsPage(restaurantId: restaurant!.id),
+                          //   ),
+                          // );
+                          // if (shouldRefresh) {
+                          //   fetchRestaurant();
+                          // }
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color.fromARGB(255, 76, 74, 74),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.brown.withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Verify',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Notification Badge
+                      // if (restaurant != null && restaurant!.pendingReviewsCount > 0)
+                      Positioned(
+                        right: -5,
+                        top: -5,
+                        child: Container(
+                          padding: EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 219, 31, 31),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: Text(
+                            // '${restaurant!.pendingReviewsCount}',
+                            '5', // ตัวอย่างค่า
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12, // ลดขนาดฟอนต์เล็กน้อย
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),

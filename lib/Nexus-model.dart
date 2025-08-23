@@ -993,9 +993,8 @@ class _ChatbotScreenState extends State<Chatbot2Screen>
               label: 'Leaderboard',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
+              icon: Icon(Icons.memory),
+              label: 'AI Assistant',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.forum_outlined),

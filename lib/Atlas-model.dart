@@ -657,9 +657,8 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               label: 'Leaderboard',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
+              icon: Icon(Icons.memory),
+              label: 'AI Assistant',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.forum_outlined),
@@ -854,7 +853,7 @@ class ChatBubble extends StatelessWidget {
                         color: isError
                             ? Colors.red[100]
                             : isUser
-                            ? Color(0xFFB39D70)
+                            ? Color.fromARGB(255, 43, 41, 41)
                             : Colors.white,
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(20),
@@ -1043,6 +1042,7 @@ class MessageInputField extends StatelessWidget {
                     child: TextField(
                       controller: controller,
                       focusNode: focusNode,
+                      autofocus: true,
                       decoration: InputDecoration(
                         hintText: 'Type your message...',
                         border: InputBorder.none,
@@ -1055,8 +1055,11 @@ class MessageInputField extends StatelessWidget {
                           fontSize: 16,
                         ),
                       ),
-                      onSubmitted: (_) => onSend(),
+                      onSubmitted: isLoading
+                          ? null
+                          : (_) => onSend(), // ปิดการส่งเมื่อโหลด
                       style: TextStyle(fontSize: 16),
+                      enabled: !isLoading, // ปิดการใช้งาน TextField เมื่อโหลด
                     ),
                   ),
                   isLoading
@@ -1079,7 +1082,7 @@ class MessageInputField extends StatelessWidget {
                             color: Color(0xFFB39D70),
                             size: 26,
                           ),
-                          onPressed: onSend,
+                          onPressed: onSend, // เมื่อไม่โหลดให้ส่งได้ปกติ
                         ),
                 ],
               ),

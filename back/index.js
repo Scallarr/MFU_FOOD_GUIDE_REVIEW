@@ -2311,6 +2311,97 @@ app.put('/api/profiles/:id', async (req, res) => {
   }
 });
 
+// GET /threads/pending
+app.get('/threads/pending', async (req, res) => {
+  try {
+    const connection = await db.promise().getConnection();
+    const [rows] = await connection.execute(`
+      SELECT t.Thread_ID, t.User_ID, u.username, u.picture_url, 
+             t.message, t.created_at, t.Total_likes, 
+             t.ai_evaluation, t.admin_decision
+      FROM Threads t
+      JOIN Users u ON t.User_ID = u.User_ID
+      WHERE t.admin_decision = 'Pending'
+      ORDER BY t.created_at DESC
+    `);
+    connection.release();
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /threads/approve
+app.post('/threads/approve', async (req, res) => {
+  const { threadId, adminId } = req.body;
+  
+  try {
+      const connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+    
+    // Update thread status
+    await connection.execute(
+      'UPDATE Threads SET admin_decision = "Posted" WHERE Thread_ID = ?',
+      [threadId]
+    );
+    
+    // Log admin action
+    await connection.execute(
+      'INSERT INTO AdminActions (thread_id, admin_id, action_type) VALUES (?, ?, "approve")',
+      [threadId, adminId]
+    );
+    
+    await connection.commit();
+    connection.release();
+    
+    res.json({ success: true, message: 'Thread approved successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to approve thread' });
+  }
+});
+
+// POST /threads/reject
+app.post('/threads/reject', async (req, res) => {
+  const { threadId, adminId, reason } = req.body;
+  
+  try {
+  const connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+    
+    // Update thread status
+    await connection.execute(
+      'UPDATE Threads SET admin_decision = "Banned" WHERE Thread_ID = ?',
+      [threadId]
+    );
+    
+    // Log admin action
+    await connection.execute(
+      'INSERT INTO AdminActions (thread_id, admin_id, action_type, reason) VALUES (?, ?, "reject", ?)',
+      [threadId, adminId, reason]
+    );
+    
+    await connection.commit();
+    connection.release();
+    
+    res.json({ success: true, message: 'Thread rejected successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to reject thread' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
 
 
   // ✅ Start Server
