@@ -6,6 +6,7 @@ import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
+import 'package:myapp/admin/Admin-Pending_Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
@@ -467,16 +468,15 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                     children: [
                       InkWell(
                         onTap: () async {
-                          // final shouldRefresh = await Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (context) =>
-                          //         PendingReviewsPage(restaurantId: restaurant!.id),
-                          //   ),
-                          // );
-                          // if (shouldRefresh) {
-                          //   fetchRestaurant();
-                          // }
+                          final shouldRefresh = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PendingThreadsPage(),
+                            ),
+                          );
+                          if (shouldRefresh) {
+                            fetchThreads();
+                          }
                         },
                         borderRadius: BorderRadius.circular(10),
                         child: Container(

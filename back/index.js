@@ -2319,7 +2319,7 @@ app.get('/threads/pending', async (req, res) => {
       SELECT t.Thread_ID, t.User_ID, u.username, u.picture_url, 
              t.message, t.created_at, t.Total_likes, 
              t.ai_evaluation, t.admin_decision
-      FROM Threads t
+      FROM Thread t
       JOIN Users u ON t.User_ID = u.User_ID
       WHERE t.admin_decision = 'Pending'
       ORDER BY t.created_at DESC
@@ -2337,20 +2337,38 @@ app.post('/threads/approve', async (req, res) => {
   const { threadId, adminId } = req.body;
   
   try {
-      const connection = await db.promise().getConnection();
+    const connection = await db.promise().getConnection();
     await connection.beginTransaction();
     
-    // Update thread status
+    // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Threads SET admin_decision = "Posted" WHERE Thread_ID = ?',
+      'UPDATE Thread SET admin_decision = "Posted" WHERE Thread_ID = ?',
       [threadId]
     );
     
-    // Log admin action
-    await connection.execute(
-      'INSERT INTO AdminActions (thread_id, admin_id, action_type) VALUES (?, ?, "approve")',
-      [threadId, adminId]
+    // Update or create record in Admin_check_inappropriate_thread table
+    const [existingCheck] = await connection.execute(
+      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_ID = ?',
+      [threadId]
     );
+    
+    if (existingCheck.length > 0) {
+      // Update existing record
+      await connection.execute(
+        `UPDATE Admin_check_inappropriate_thread 
+         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = NOW() 
+         WHERE Thread_ID = ?`,
+        [adminId, threadId]
+      );
+    } else {
+      // Create new record
+      await connection.execute(
+        `INSERT INTO Admin_check_inappropriate_thread 
+         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at) 
+         VALUES (?, ?, 'Safe', NOW())`,
+        [threadId, adminId]
+      );
+    }
     
     await connection.commit();
     connection.release();
@@ -2358,6 +2376,7 @@ app.post('/threads/approve', async (req, res) => {
     res.json({ success: true, message: 'Thread approved successfully' });
   } catch (error) {
     console.error(error);
+    if (connection) await connection.rollback();
     res.status(500).json({ error: 'Failed to approve thread' });
   }
 });
@@ -2367,20 +2386,39 @@ app.post('/threads/reject', async (req, res) => {
   const { threadId, adminId, reason } = req.body;
   
   try {
-  const connection = await db.promise().getConnection();
+   const connection = await db.promise().getConnection();
     await connection.beginTransaction();
     
-    // Update thread status
+    // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Threads SET admin_decision = "Banned" WHERE Thread_ID = ?',
+      'UPDATE Thread SET admin_decision = "Banned" WHERE Thread_ID = ?',
       [threadId]
     );
     
-    // Log admin action
-    await connection.execute(
-      'INSERT INTO AdminActions (thread_id, admin_id, action_type, reason) VALUES (?, ?, "reject", ?)',
-      [threadId, adminId, reason]
+    // Update or create record in Admin_check_inappropriate_thread table
+    const [existingCheck] = await connection.execute(
+      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_ID = ?',
+      [threadId]
     );
+    
+    if (existingCheck.length > 0) {
+      // Update existing record
+      await connection.execute(
+        `UPDATE Admin_check_inappropriate_thread 
+         SET Admin_ID = ?, admin_action_taken = 'Banned', 
+         admin_checked_at = NOW(), reason_for_taken = ? 
+         WHERE Thread_ID = ?`,
+        [adminId, reason, threadId]
+      );
+    } else {
+      // Create new record
+      await connection.execute(
+        `INSERT INTO Admin_check_inappropriate_thread 
+         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
+         VALUES (?, ?, 'Banned', NOW(), ?)`,
+        [threadId, adminId, reason]
+      );
+    }
     
     await connection.commit();
     connection.release();
@@ -2388,11 +2426,10 @@ app.post('/threads/reject', async (req, res) => {
     res.json({ success: true, message: 'Thread rejected successfully' });
   } catch (error) {
     console.error(error);
+    if (connection) await connection.rollback();
     res.status(500).json({ error: 'Failed to reject thread' });
   }
 });
-
-
 
 
 
