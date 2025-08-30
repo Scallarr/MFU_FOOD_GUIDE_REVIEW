@@ -24,6 +24,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   String currentMention = '';
   String? pictureUrl;
   ScrollController _scrollController = ScrollController();
+  int pendingRepliesCount = 0;
 
   TextEditingController _replyController = TextEditingController();
   bool _isSending = false;
@@ -35,6 +36,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     loadUserId();
     fetchAllUsers();
     fetchProfilePicture();
+    fetchPendingRepliesCount();
   }
 
   @override
@@ -263,6 +265,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
               );
             },
           );
+          await fetchPendingRepliesCount();
         }
 
         await fetchReplies();
@@ -281,6 +284,26 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     setState(() {
       _isSending = false;
     });
+  }
+
+  Future<void> fetchPendingRepliesCount() async {
+    try {
+      final threadId = widget.thread['Thread_ID'];
+      final response = await http.get(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/api/pending_replies_count/$threadId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          pendingRepliesCount = data['count'] ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error fetching pending replies count: $e');
+    }
   }
 
   Future<void> refreshThreadData() async {
@@ -348,23 +371,28 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
         backgroundColor: const Color(0xFFCEBFA3),
         foregroundColor: Colors.black,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.verified_user, size: 26),
-            onPressed: () async {
-              final shouldRefresh = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PendingRepliesAdminPage(
-                    threadId: widget.thread['Thread_ID'], // ส่ง threadId ไปด้วย
-                  ),
-                ),
-              );
-              if (shouldRefresh == true) {
-                await fetchReplies();
-                await refreshThreadData(); // ฟังก์ชันโหลด thread ใหม่
-              }
-            },
-            tooltip: 'Review pending replies for this thread',
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.verified_user, size: 30),
+                onPressed: () async {
+                  final shouldRefresh = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PendingRepliesAdminPage(
+                        threadId: widget.thread['Thread_ID'],
+                      ),
+                    ),
+                  );
+                  if (shouldRefresh == true) {
+                    await fetchReplies();
+                    await refreshThreadData();
+                    await fetchPendingRepliesCount(); // รีเฟรชจำนวนหลังจากกลับมา
+                  }
+                },
+                tooltip: 'Review pending replies for this thread',
+              ),
+            ],
           ),
         ],
       ),
@@ -653,63 +681,152 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 15),
               Text(
                 thread['message'] ?? '',
                 style: const TextStyle(fontSize: 15),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.red),
-                    ),
+                  // ปุ่ม Verify อยู่ชิดซ้าย
+                  GestureDetector(
+                    onTap: () async {
+                      final shouldRefresh = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PendingRepliesAdminPage(
+                            threadId: widget.thread['Thread_ID'],
+                          ),
+                        ),
+                      );
+                      if (shouldRefresh == true) {
+                        await fetchReplies();
+                        await refreshThreadData();
+                        await fetchPendingRepliesCount();
+                      }
+                    },
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 43, 43, 43),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color.fromARGB(255, 86, 86, 86),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified,
+                                size: 20,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Verify Reply',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
-                    child: Row(
-                      children: [
-                        const Icon(Icons.favorite, size: 18, color: Colors.red),
-                        const SizedBox(width: 7),
-                        Text('${thread['total_likes'] ?? 0}'),
+                        // Notification Badge
+                        if (pendingRepliesCount > 0)
+                          Positioned(
+                            right: -5,
+                            top: -20,
+                            child: Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 219, 31, 31),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Text(
+                                '$pendingRepliesCount',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 30),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 15,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color.fromARGB(255, 73, 108, 223),
+
+                  // Like และ Comment อยู่ชิดขวา
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.red),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.favorite,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(width: 7),
+                            Text('${thread['total_likes'] ?? 0}'),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.comment,
-                          size: 20,
-                          color: Color.fromARGB(255, 11, 127, 223),
+                      const SizedBox(width: 15),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 15,
+                          vertical: 6,
                         ),
-                        const SizedBox(width: 7),
-                        Text(
-                          '${thread['total_comments'] ?? 0} ',
-                          style: TextStyle(fontSize: 15),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color.fromARGB(255, 73, 108, 223),
+                          ),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.comment,
+                              size: 20,
+                              color: Color.fromARGB(255, 11, 127, 223),
+                            ),
+                            const SizedBox(width: 7),
+                            Text(
+                              '${thread['total_comments'] ?? 0} ',
+                              style: TextStyle(fontSize: 15),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 0),
                 ],
               ),
             ],

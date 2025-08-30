@@ -2672,10 +2672,105 @@ app.post('/threads-replied/reject', async (req, res) => {
   }
 });
 
+// API สำหรับดึงประวัติการตรวจสอบ threads ของ admin
+app.get('/api/admin_thread_history/:adminId', async (req, res) => {
+  const adminId = req.params.adminId;
+
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT 
+        t.Thread_ID,
+        t.message,
+        act.admin_action_taken,
+        act.admin_checked_at,
+        act.reason_for_taken,
+        u.username as author_username
+      FROM Admin_check_inappropriate_thread act
+      JOIN Thread t ON act.Thread_ID = t.Thread_ID
+      JOIN User u ON t.User_ID = u.User_ID
+      WHERE act.Admin_ID = ?
+      ORDER BY act.admin_checked_at DESC
+    `, [adminId]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// API สำหรับดึงประวัติการตรวจสอบ replies ของ admin
+app.get('/api/admin_reply_history/:adminId', async (req, res) => {
+  const adminId = req.params.adminId;
+
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT 
+        tr.Thread_reply_ID,
+        tr.message,
+        acr.admin_action_taken,
+        acr.admin_checked_at,
+        acr.reason_for_taken,
+        u.username as author_username,
+        t.Thread_ID,
+        t.message as thread_message
+      FROM Admin_check_inappropriate_thread_reply acr
+      JOIN Thread_reply tr ON acr.Thread_reply_ID = tr.Thread_reply_ID
+      JOIN User u ON tr.User_ID = u.User_ID
+      JOIN Thread t ON tr.Thread_ID = t.Thread_ID
+      WHERE acr.Admin_ID = ?
+      ORDER BY acr.admin_checked_at DESC
+    `, [adminId]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
+app.get('/api/my_threads/:userId', async (req, res) => {
+  const userId = req.params.userId;
 
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT 
+        t.*,
+        (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count
+      FROM Thread t
+      WHERE t.User_ID = ?
+      ORDER BY t.created_at DESC
+    `, [userId]);
 
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// API สำหรับดึง replies ของผู้ใช้
+app.get('/api/my_replies/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT 
+        tr.*,
+        t.message as thread_message
+      FROM Thread_reply tr
+      JOIN Thread t ON tr.Thread_ID = t.Thread_ID
+      WHERE tr.User_ID = ?
+      ORDER BY tr.created_at DESC
+    `, [userId]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
 

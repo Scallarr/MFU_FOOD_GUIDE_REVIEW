@@ -8,6 +8,7 @@ import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Pending_Thread.dart';
 import 'package:myapp/admin/Admin-Thread-Reply.dart';
+import 'package:myapp/admin/Admin-myhistoy.dart';
 import 'package:myapp/admin/Admin-pendingThreadsReplied.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
@@ -808,10 +809,9 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                             fontSize: 13.5,
                                           ),
                                         ),
-                                        if (_pendingRepliedThreadsCount >
-                                            0) // เปลี่ยนเป็น _pendingRepliedThreadsCount
+                                        if (_pendingRepliedThreadsCount > 0)
                                           Text(
-                                            '$_pendingRepliedThreadsCount pending', // เปลี่ยนเป็น _pendingRepliedThreadsCount
+                                            '$_pendingRepliedThreadsCount pending',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey.shade600,
@@ -820,8 +820,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                       ],
                                     ),
                                   ),
-                                  if (_pendingRepliedThreadsCount >
-                                      0) // เปลี่ยนเป็น _pendingRepliedThreadsCount
+                                  if (_pendingRepliedThreadsCount > 0)
                                     Container(
                                       width: 24,
                                       height: 24,
@@ -831,7 +830,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                       ),
                                       child: Center(
                                         child: Text(
-                                          '$_pendingRepliedThreadsCount', // เปลี่ยนเป็น _pendingRepliedThreadsCount
+                                          '$_pendingRepliedThreadsCount',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 11,
@@ -844,6 +843,40 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                               ),
                             ),
                           ),
+                          // เพิ่มเมนู My History
+                          PopupMenuItem(
+                            value: 'my_history',
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.purple.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.history_rounded,
+                                      size: 18,
+                                      color: Colors.purple.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'My History',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                         onSelected: (String value) async {
                           Widget page;
@@ -852,6 +885,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                             page = PendingThreadsPage();
                           } else if (value == 'verify_threads_replied') {
                             page = PendingThreadsRepliedPage();
+                          } else if (value == 'my_history') {
+                            page = MyHistoryPage(); // หน้าใหม่สำหรับประวัติ
                           } else {
                             return;
                           }
@@ -863,8 +898,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
                           if (shouldRefresh == true) {
                             fetchThreads();
-                            fetchPendingThreadsCount(); // รีเฟรชจำนวน pending threads
-                            fetchPendingRepliedThreadsCount(); // รีเฟรชจำนวน pending replied threads
+                            fetchPendingThreadsCount();
+                            fetchPendingRepliedThreadsCount();
                           }
                         },
                       ),
