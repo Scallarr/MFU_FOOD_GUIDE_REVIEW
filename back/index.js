@@ -922,6 +922,7 @@ app.post('/submit_reviews', async (req, res) => {
   }
 
   try {
+    const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทยแบบ JS Date
     const rating_overall =
       (Number(rating_hygiene) + Number(rating_flavor) + Number(rating_service)) / 3;
 
@@ -929,23 +930,24 @@ app.post('/submit_reviews', async (req, res) => {
     const message_status = ai_evaluation === 'Safe' ? 'Posted' : 'Pending';
 
     // Insert review
-    const [insertResult] = await db.promise().execute(
-      `INSERT INTO Review 
-      (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        User_ID,
-        Restaurant_ID,
-        rating_overall.toFixed(1),
-        rating_hygiene,
-        rating_flavor,
-        rating_service,
-        comment || '',
-        0,
-        ai_evaluation,
-        message_status,
-      ]
-    );
+ const [insertResult] = await db.promise().execute(
+  `INSERT INTO Review 
+  (User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service, comment, total_likes, ai_evaluation, message_status, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  [
+    User_ID,
+    Restaurant_ID,
+    rating_overall.toFixed(1),
+    rating_hygiene,
+    rating_flavor,
+    rating_service,
+    comment || '',
+    0,
+    ai_evaluation,
+    message_status,
+    now // เพิ่มตรงนี้
+  ]
+);
 
     const reviewId = insertResult.insertId;
 
@@ -991,13 +993,13 @@ app.post('/submit_reviews', async (req, res) => {
 
     // ถ้า AI บอกว่าไม่ปลอดภัย
     if (ai_evaluation !== 'Safe') {
-      await db.promise().execute(
-        `INSERT INTO Admin_check_inappropriate_review 
-        (Review_ID, Admin_ID, admin_action_taken)
-        VALUES (?, NULL, 'Pending')`,
-        [reviewId]
-      );
-    }
+  await db.promise().execute(
+    `INSERT INTO Admin_check_inappropriate_review 
+      (Review_ID, Admin_ID, admin_action_taken, admin_checked_at)
+     VALUES (?, ?, 'Pending', ?)`,
+    [reviewId, 1, now] // 1 = admin placeholder
+  );
+}
 
     return res.json({
       message: 'Review submitted successfully',
@@ -1849,10 +1851,9 @@ const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS
   }
 });
 
-// Reject review endpoint
 app.post('/api/reviews/reject', async (req, res) => {
   const { reviewId, adminId, reason } = req.body;
-  
+
   if (!reviewId) {
     return res.status(400).json({ success: false, message: 'Review ID is required' });
   }
@@ -1861,9 +1862,10 @@ app.post('/api/reviews/reject', async (req, res) => {
 
   try {
     await connection.beginTransaction();
-    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
 
-    // 1. Get review details including user and restaurant IDs
+    const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทย กำหนดครั้งเดียว
+
+    // 1. Get review details
     const [reviewDetails] = await connection.execute(
       `SELECT User_ID, Restaurant_ID FROM Review WHERE Review_ID = ?`,
       [reviewId]
@@ -1878,21 +1880,13 @@ app.post('/api/reviews/reject', async (req, res) => {
     const userId = reviewDetails[0].User_ID;
     const restaurantId = reviewDetails[0].Restaurant_ID;
 
-    // 2. Update review status to 'Banned'
-    const [updateResult] = await connection.execute(
-      `UPDATE Review 
-       SET message_status = 'Banned'
-       WHERE Review_ID = ?`, 
-      [reviewId]
+    // 2. Update review status
+    await connection.execute(
+      `UPDATE Review SET message_status = 'Banned', created_at = ? WHERE Review_ID = ?`, 
+      [now,reviewId]
     );
 
-    if (updateResult.affectedRows === 0) {
-      await connection.rollback();
-      connection.release();
-      return res.status(404).json({ success: false, message: 'Review not found' });
-    }
-
-    // 3. Update existing admin action record or insert if not exists
+    // 3. Update or insert admin action with time
     const [updateAdminResult] = await connection.execute(
       `UPDATE Admin_check_inappropriate_review 
        SET admin_action_taken = 'Banned',
@@ -1900,20 +1894,19 @@ app.post('/api/reviews/reject', async (req, res) => {
            reason_for_taken = ?,
            Admin_ID = ?
        WHERE Review_ID = ?`,
-      [now,reason || 'Inappropriate message', adminId || 1, reviewId]
+      [now, reason || 'Inappropriate message', adminId || 1, reviewId]
     );
 
-    // If no existing record was updated, insert a new one
     if (updateAdminResult.affectedRows === 0) {
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_review 
          (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
          VALUES (?, ?, 'Banned', ?, ?)`,
-        [reviewId, adminId || 1,now, reason || 'Inappropriate message']
+        [reviewId, adminId || 1, now, reason || 'Inappropriate message']
       );
     }
 
-    // 4. Count all posted reviews for this user
+    // 4. Count posted reviews
     const [countResult] = await connection.execute(
       `SELECT COUNT(*) AS totalPostedReviews 
        FROM Review 
@@ -1923,15 +1916,13 @@ app.post('/api/reviews/reject', async (req, res) => {
 
     const totalPostedReviews = countResult[0].totalPostedReviews;
 
-    // 5. Update user's total_reviews count
+    // 5. Update user's total_reviews
     await connection.execute(
-      `UPDATE User 
-       SET total_reviews = ? 
-       WHERE User_ID = ?`,
+      `UPDATE User SET total_reviews = ? WHERE User_ID = ?`,
       [totalPostedReviews, userId]
     );
 
-    // 6. Calculate new averages for the restaurant
+    // 6. Update restaurant averages
     const [avgResult] = await connection.execute(
       `SELECT 
         AVG(rating_overall) AS avg_overall,
@@ -1943,7 +1934,6 @@ app.post('/api/reviews/reject', async (req, res) => {
       [restaurantId]
     );
 
-    // 7. Update restaurant averages
     await connection.execute(
       `UPDATE Restaurant SET
         rating_overall_avg = ?,
@@ -1962,12 +1952,12 @@ app.post('/api/reviews/reject', async (req, res) => {
 
     await connection.commit();
     connection.release();
-    
+
     res.status(200).json({ 
       success: true, 
       message: 'Review rejected successfully',
-      userId: userId,
-      restaurantId: restaurantId,
+      userId,
+      restaurantId,
       newReviewCount: totalPostedReviews,
       newAverages: {
         overall: avgResult[0].avg_overall,
