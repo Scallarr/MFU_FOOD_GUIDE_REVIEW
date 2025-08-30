@@ -118,9 +118,42 @@ class _MyHistoryPageState extends State<MyHistoryPage>
       );
 
       if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        // จัดการข้อมูลที่ได้รับจาก API
         setState(() {
-          _myThreads = json.decode(response.body);
+          _myThreads = data.map((thread) {
+            // กำหนดสถานะของโพสต์
+            String status;
+            if (thread['admin_action_taken'] == 'Banned') {
+              status = 'Banned';
+            } else if (thread['admin_decision'] == 'Posted') {
+              status = 'Posted';
+            } else {
+              status = 'Pending';
+            }
+
+            return {
+              'Thread_ID': thread['Thread_ID'],
+              'message': thread['message'],
+              'created_at': thread['created_at'],
+              'Total_likes': thread['Total_likes'],
+              'reply_count': thread['reply_count'],
+              'ai_evaluation': thread['ai_evaluation'],
+              'admin_decision': thread['admin_decision'],
+              'status': status,
+              'author_username': thread['author_username'],
+              'author_email': thread['author_email'],
+              'author_picture': thread['author_picture'],
+              'admin_username': thread['admin_username'],
+              'admin_action_taken': thread['admin_action_taken'],
+              'admin_checked_at': thread['admin_checked_at'],
+              'reason_for_taken': thread['reason_for_taken'],
+            };
+          }).toList();
         });
+      } else {
+        print('Failed to fetch threads: ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching my threads: $e');
@@ -253,24 +286,42 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
   Widget _buildEmptyView(String message) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.history_outlined,
-            size: 64,
-            color: _secondaryTextColor.withOpacity(0.3),
-          ),
-          SizedBox(height: 20),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 18,
-              color: _textColor,
-              fontWeight: FontWeight.w600,
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: _primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.history_outlined,
+                size: 60,
+                color: _primaryColor.withOpacity(0.5),
+              ),
             ),
-          ),
-        ],
+            SizedBox(height: 24),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 18,
+                color: _textColor,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Your content will appear here once created',
+              style: TextStyle(fontSize: 14, color: _secondaryTextColor),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -445,86 +496,440 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   }
 
   Widget _buildThreadItem(Map<String, dynamic> thread) {
-    final status = thread['admin_decision'];
+    final status = thread['status'];
     Color statusColor;
     String statusText;
+    Color containerColor;
+    IconData statusIcon;
+    bool isExpanded = true;
 
     switch (status) {
       case 'Posted':
         statusColor = _successColor;
         statusText = 'Posted';
+        containerColor = _successColor.withOpacity(0.05);
+        statusIcon = Icons.check_circle_outline;
         break;
       case 'Banned':
         statusColor = _dangerColor;
         statusText = 'Banned';
+        containerColor = _dangerColor.withOpacity(0.05);
+        statusIcon = Icons.block;
         break;
       default:
         statusColor = _warningColor;
         statusText = 'Pending';
+        containerColor = _warningColor.withOpacity(0.05);
+        statusIcon = Icons.access_time;
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          margin: EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              // Add border based on status
+              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+            ),
+            color: _cardColor,
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with user avatar and info
+                  Row(
+                    children: [
+                      // User Avatar
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _primaryColor.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: thread['author_picture'] != null
+                              ? Image.network(
+                                  thread['author_picture'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: _primaryColor.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.person,
+                                        color: _primaryColor,
+                                        size: 30,
+                                      ),
+                                    );
+                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                            strokeWidth: 2,
+                                            color: _primaryColor,
+                                          ),
+                                        );
+                                      },
+                                )
+                              : Container(
+                                  color: _primaryColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.person,
+                                    color: _primaryColor,
+                                    size: 30,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              thread['author_username'] ?? 'Unknown User',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: _textColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              _formatDate(thread['created_at']),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _secondaryTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Enhanced status chip with icon
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: statusColor.withOpacity(0.4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(statusIcon, size: 16, color: statusColor),
+                            SizedBox(width: 6),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Thread message with improved background and border
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      thread['message'] ?? 'No message',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: _textColor,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 22),
+
+                  // Enhanced status details container
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: containerColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    statusIcon,
+                                    size: 18,
+                                    color: statusColor,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Status Details',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                isExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                                color: statusColor,
+                                size: 22,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  isExpanded = !isExpanded;
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
+                        ),
+
+                        if (isExpanded) ...[
+                          SizedBox(height: 12),
+                          Divider(
+                            color: statusColor.withOpacity(0.2),
+                            height: 1,
+                          ),
+                          SizedBox(height: 12),
+
+                          // Status-specific information with better formatting
+                          if (status == 'Banned') ...[
+                            _buildEnhancedInfoRow(
+                              'Admin Action',
+                              'Banned by ${thread['admin_username'] ?? 'Unknown Admin'}',
+                              Icons.gavel,
+                              _dangerColor,
+                            ),
+                            if (thread['reason_for_taken'] != null)
+                              _buildEnhancedInfoRow(
+                                'Reason',
+                                thread['reason_for_taken'],
+                                Icons.info_outline,
+                                _secondaryTextColor,
+                              ),
+                            if (thread['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Action Taken',
+                                _formatDate(thread['admin_checked_at']),
+                                Icons.calendar_today,
+                                _secondaryTextColor,
+                              ),
+                          ] else if (status == 'Posted') ...[
+                            _buildEnhancedInfoRow(
+                              'Visibility',
+                              'Publicly visible to all users',
+                              Icons.visibility,
+                              _successColor,
+                            ),
+                            if (thread['ai_evaluation'] != null)
+                              _buildEnhancedInfoRow(
+                                'AI Analysis',
+                                thread['ai_evaluation'],
+                                Icons.psychology_outlined,
+                                _primaryColor,
+                              ),
+                          ] else if (status == 'Pending') ...[
+                            _buildEnhancedInfoRow(
+                              'Current Status',
+                              'Awaiting admin approval',
+                              Icons.access_time,
+                              _warningColor,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Estimated Time',
+                              'Usually reviewed within 24 hours',
+                              Icons.schedule,
+                              _secondaryTextColor,
+                            ),
+                            if (thread['ai_evaluation'] != null)
+                              _buildEnhancedInfoRow(
+                                'AI Analysis',
+                                thread['ai_evaluation'],
+                                Icons.psychology_outlined,
+                                _primaryColor,
+                              ),
+                          ],
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Spacer(),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 12,
+                          children: [
+                            _buildMetricChipWithIcon(
+                              Icons.favorite_outline,
+                              '${thread['Total_likes'] ?? 0}',
+                              _dangerColor,
+                            ),
+                            _buildMetricChipWithIcon(
+                              Icons.reply_outlined,
+                              '${thread['reply_count'] ?? 0}',
+                              _primaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // New helper method for enhanced info rows
+  Widget _buildEnhancedInfoRow(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(width: 32, child: Icon(icon, size: 18, color: color)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _secondaryTextColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  _buildStatusChip(statusText, statusColor),
-                  Spacer(),
-                  Text(
-                    _formatDate(thread['created_at']),
-                    style: TextStyle(fontSize: 12, color: _secondaryTextColor),
-                  ),
-                ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontSize: 13,
+                color: _secondaryTextColor,
+                fontWeight: FontWeight.w500,
               ),
-              SizedBox(height: 12),
-              Text(
-                thread['message'] ?? 'No message',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _textColor,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildMetricChip(
-                    Icons.favorite,
-                    '${thread['Total_likes'] ?? 0}',
-                  ),
-                  SizedBox(width: 8),
-                  _buildMetricChip(
-                    Icons.reply,
-                    '${thread['reply_count'] ?? 0}',
-                  ),
-                ],
-              ),
-              if (thread['ai_evaluation'] != null) ...[
-                SizedBox(height: 12),
-                _buildAIStatus(thread['ai_evaluation']),
-              ],
-            ],
+            ),
           ),
-        ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 13, color: _textColor),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -603,9 +1008,10 @@ class _MyHistoryPageState extends State<MyHistoryPage>
               SizedBox(height: 12),
               Row(
                 children: [
-                  _buildMetricChip(
+                  _buildMetricChipWithIcon(
                     Icons.favorite,
                     '${reply['total_Likes'] ?? 0}',
+                    _dangerColor,
                   ),
                 ],
               ),
@@ -638,24 +1044,24 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     );
   }
 
-  Widget _buildMetricChip(IconData icon, String text) {
+  Widget _buildMetricChipWithIcon(IconData icon, String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
-        color: _secondaryTextColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: _secondaryTextColor),
-          SizedBox(width: 4),
+          Icon(icon, size: 18, color: color),
+          SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
-              color: _secondaryTextColor,
+              color: color,
               fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: 14,
             ),
           ),
         ],
@@ -671,32 +1077,35 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     };
 
     final icons = {
-      'Safe': Icons.check_circle,
-      'Inappropriate': Icons.warning,
-      'Undetermined': Icons.help_outline,
+      'Safe': Icons.check_circle_outline,
+      'Inappropriate': Icons.warning_amber_outlined,
+      'Undetermined': Icons.help_outline_outlined,
+    };
+
+    final texts = {
+      'Safe': 'Safe',
+      'Inappropriate': 'Inappropriate',
+      'Undetermined': 'Review Needed',
     };
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: colors[status]!.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors[status]!.withOpacity(0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icons[status], size: 16, color: colors[status]),
-          SizedBox(width: 8),
+          Icon(icons[status], size: 18, color: colors[status]),
+          SizedBox(width: 6),
           Text(
-            'AI Analysis: ',
-            style: TextStyle(color: _secondaryTextColor, fontSize: 12),
-          ),
-          Text(
-            status,
+            texts[status]!,
             style: TextStyle(
               color: colors[status],
               fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: 13,
             ),
           ),
         ],

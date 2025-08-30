@@ -25,6 +25,13 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   String? pictureUrl;
   ScrollController _scrollController = ScrollController();
   int pendingRepliesCount = 0;
+  final Color _primaryColor = Color(0xFF4285F4);
+  final Color _successColor = Color(0xFF34A853);
+  final Color _warningColor = Color(0xFFFBBC05);
+  final Color _dangerColor = Color(0xFFEA4335);
+  final Color _cardColor = Colors.white;
+  final Color _textColor = Color(0xFF202124);
+  final Color _secondaryTextColor = Color(0xFF5F6368);
 
   TextEditingController _replyController = TextEditingController();
   bool _isSending = false;
@@ -284,6 +291,185 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     setState(() {
       _isSending = false;
     });
+  }
+
+  Future<void> _showRejectDialog(Map<dynamic, dynamic> reply) async {
+    final reasonController = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _dangerColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 40,
+                          color: _dangerColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Confirm Rejection',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Are you sure you want to reject this thread?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    labelText: 'Reason (optional)',
+                    labelStyle: TextStyle(color: _secondaryTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  maxLines: 2,
+                  style: TextStyle(color: _textColor),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _banThread(reply, reason: reasonController.text);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Reject',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _banThread(
+    Map<dynamic, dynamic> reply, {
+    String reason = '',
+  }) async {
+    try {
+      final int threadId = int.parse(reply['Thread_reply_ID'].toString());
+      final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
+      final response = await http.post(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/threads-replied/reject',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'threadId': threadId,
+          'adminId': userId,
+          'reason': rejectionReason,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Thread banned successfully')));
+        fetchReplies();
+        refreshThreadData(); // รีเฟรชรายการ threads
+      } else {
+        throw Exception('Failed to ban thread');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   Future<void> fetchPendingRepliesCount() async {
@@ -913,8 +1099,23 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      RichText(
-                        text: _buildMessageWithMentions(reply['message'] ?? ''),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          RichText(
+                            text: _buildMessageWithMentions(
+                              reply['message'] ?? '',
+                            ),
+                          ),
+
+                          IconButton(
+                            icon: Icon(
+                              Icons.report,
+                              color: const Color.fromARGB(255, 144, 143, 143),
+                            ),
+                            onPressed: () => _showRejectDialog(reply),
+                          ),
+                        ],
                       ),
                     ],
                   ),

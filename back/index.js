@@ -2625,7 +2625,7 @@ app.post('/threads-replied/approve', async (req, res) => {
 
 // POST /threads/reject
 app.post('/threads-replied/reject', async (req, res) => {
-  const { threadId, adminId } = req.body;
+  const { threadId, adminId, reason } = req.body;
   
   try {
     const connection = await db.promise().getConnection();
@@ -2646,18 +2646,18 @@ app.post('/threads-replied/reject', async (req, res) => {
     if (existingCheck.length > 0) {
       // Update existing record
       await connection.execute(
-        `UPDATE Admin_check_inappropriate_thread_reply 
-         SET Admin_ID = ?, admin_action_taken = 'Banned', admin_checked_at = NOW() 
+      `UPDATE Admin_check_inappropriate_thread_reply 
+         SET Admin_ID = ?, admin_action_taken = 'Banned', reason_for_taken = ?, admin_checked_at = NOW() 
          WHERE Thread_reply_ID = ?`,
-        [adminId, threadId]
+        [adminId, reason, threadId]
       );
     } else {
       // Create new record
       await connection.execute(
-        `INSERT INTO Admin_check_inappropriate_thread_reply 
-         (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at) 
-         VALUES (?, ?, 'Banned', NOW())`,
-        [threadId, adminId]
+          `INSERT INTO Admin_check_inappropriate_thread_reply 
+         (Thread_reply_ID, Admin_ID, admin_action_taken, reason_for_taken, admin_checked_at) 
+         VALUES (?, ?, 'Banned', ?, NOW())`,
+        [threadId, adminId, reason]
       );
     }
     
@@ -2684,7 +2684,7 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
         act.admin_action_taken,
         act.admin_checked_at,
         act.reason_for_taken,
-        u.username as author_username
+        u.username as author_username,
         upp.picture_url
       FROM Admin_check_inappropriate_thread act
       JOIN Thread t ON act.Thread_ID = t.Thread_ID
@@ -2745,7 +2745,7 @@ app.get('/api/my_threads/:userId', async (req, res) => {
         t.ai_evaluation,
         t.admin_decision,
         (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count,
-        u.fullname as author_username,
+        u.username as author_username,
         u.email as author_email,
         upp.picture_url as author_picture,
         act.admin_action_taken,

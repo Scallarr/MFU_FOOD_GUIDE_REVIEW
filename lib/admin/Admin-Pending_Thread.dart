@@ -480,7 +480,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
             offset: Offset(0, 4),
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.05),
             blurRadius: 15,
             spreadRadius: 0.5,
             offset: Offset(0, 2),
@@ -553,9 +553,29 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
                 ],
               ),
               SizedBox(height: 20),
-              Text(
-                thread['message'] ?? '',
-                style: TextStyle(fontSize: 15, height: 1.6, color: _textColor),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  thread['message'] ?? 'No message',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _textColor,
+                    height: 1.5,
+                  ),
+                ),
               ),
               SizedBox(height: 20),
               InkWell(
