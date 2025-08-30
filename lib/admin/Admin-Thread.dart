@@ -7,6 +7,7 @@ import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Pending_Thread.dart';
+import 'package:myapp/admin/Admin-Thread-Reply.dart';
 import 'package:myapp/admin/Admin-pendingThreadsReplied.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
@@ -34,7 +35,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   final Color _textColor = Color(0xFF202124);
   final Color _secondaryTextColor = Color(0xFF5F6368);
   TextEditingController _textController = TextEditingController();
-
+  int _pendingRepliedThreadsCount = 0;
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -48,6 +49,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     _loadUserID();
     loadUserIdAndFetchProfile();
     fetchPendingThreadsCount();
+    fetchPendingRepliedThreadsCount();
   }
 
   Future<void> fetchPendingThreadsCount() async {
@@ -71,6 +73,33 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       print('Error fetching pending threads count: $e');
       setState(() {
         _pendingThreadsCount = 0;
+      });
+    }
+  }
+
+  Future<void> fetchPendingRepliedThreadsCount() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/threads-replied/pending',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> pendingRepliedThreads = json.decode(response.body);
+        setState(() {
+          _pendingRepliedThreadsCount = pendingRepliedThreads.length;
+        });
+      } else {
+        print('Failed to fetch pending replied threads count');
+        setState(() {
+          _pendingRepliedThreadsCount = 0;
+        });
+      }
+    } catch (e) {
+      print('Error fetching pending replied threads count: $e');
+      setState(() {
+        _pendingRepliedThreadsCount = 0;
       });
     }
   }
@@ -779,9 +808,10 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                             fontSize: 13.5,
                                           ),
                                         ),
-                                        if (_pendingThreadsCount > 0)
+                                        if (_pendingRepliedThreadsCount >
+                                            0) // เปลี่ยนเป็น _pendingRepliedThreadsCount
                                           Text(
-                                            '$_pendingThreadsCount pending',
+                                            '$_pendingRepliedThreadsCount pending', // เปลี่ยนเป็น _pendingRepliedThreadsCount
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey.shade600,
@@ -790,7 +820,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                       ],
                                     ),
                                   ),
-                                  if (_pendingThreadsCount > 0)
+                                  if (_pendingRepliedThreadsCount >
+                                      0) // เปลี่ยนเป็น _pendingRepliedThreadsCount
                                     Container(
                                       width: 24,
                                       height: 24,
@@ -800,7 +831,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                       ),
                                       child: Center(
                                         child: Text(
-                                          '$_pendingThreadsCount',
+                                          '$_pendingRepliedThreadsCount', // เปลี่ยนเป็น _pendingRepliedThreadsCount
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 11,
@@ -820,8 +851,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                           if (value == 'verify_threads') {
                             page = PendingThreadsPage();
                           } else if (value == 'verify_threads_replied') {
-                            page =
-                                PendingThreadsRepliedPage(); // หน้าใหม่สำหรับ replied threads
+                            page = PendingThreadsRepliedPage();
                           } else {
                             return;
                           }
@@ -833,6 +863,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
                           if (shouldRefresh == true) {
                             fetchThreads();
+                            fetchPendingThreadsCount(); // รีเฟรชจำนวน pending threads
+                            fetchPendingRepliedThreadsCount(); // รีเฟรชจำนวน pending replied threads
                           }
                         },
                       ),
@@ -853,7 +885,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                   final shouldRefresh = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ThreadRepliesPage(thread: thread),
+                      builder: (context) =>
+                          ThreadRepliesAdminPage(thread: thread),
                     ),
                   );
 

@@ -73,6 +73,7 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
           pendingThreads = jsonDecode(response.body);
           filteredThreads = pendingThreads;
           isLoading = false;
+          print(filteredThreads);
         });
       } else {
         throw Exception('Failed to load threads');
@@ -582,10 +583,8 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
                 ],
               ),
               SizedBox(height: 20),
-              Text(
-                thread['message'] ?? '',
-                style: TextStyle(fontSize: 15, height: 1.6, color: _textColor),
-              ),
+              _buildMessage(thread['message'] ?? ''),
+
               SizedBox(height: 20),
               InkWell(
                 onTap: () => _toggleThreadExpansion(thread['Thread_ID']),
@@ -623,7 +622,8 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(
-                    onPressed: () => _showRejectDialog(thread['Thread_ID']),
+                    onPressed: () =>
+                        _showRejectDialog(thread['Thread_reply_ID']),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       backgroundColor: Colors.red,
@@ -640,7 +640,8 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
                   ),
                   SizedBox(width: 25),
                   ElevatedButton(
-                    onPressed: () => _showApproveDialog(thread['Thread_ID']),
+                    onPressed: () =>
+                        _showApproveDialog(thread['Thread_reply_ID']),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding: EdgeInsets.symmetric(
@@ -791,7 +792,7 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
         );
         setState(() {
           pendingThreads.removeWhere(
-            (thread) => thread['Thread_ID'] == threadId,
+            (thread) => thread['Thread_reply_ID'] == threadId,
           );
           filteredThreads = pendingThreads;
         });
@@ -825,7 +826,7 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
         _showSnackBar('Replied thread rejected successfully');
         setState(() {
           pendingThreads.removeWhere(
-            (thread) => thread['Thread_ID'] == threadId,
+            (thread) => thread['Thread_reply_ID'] == threadId,
           );
           filteredThreads = pendingThreads;
         });
@@ -836,4 +837,62 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
       _showSnackBar('Error: ${e.toString()}');
     }
   }
+}
+
+Widget _buildMessage(String message) {
+  final regex = RegExp(r'(@\w+)');
+  final matches = regex.allMatches(message);
+
+  if (matches.isEmpty) {
+    return Text(
+      message,
+      style: TextStyle(fontSize: 18, color: const Color.fromARGB(255, 0, 0, 0)),
+    );
+  }
+
+  List<TextSpan> spans = [];
+  int start = 0;
+
+  for (final match in matches) {
+    if (match.start > start) {
+      spans.add(
+        TextSpan(
+          text: message.substring(start, match.start),
+          style: TextStyle(
+            fontSize: 20,
+            height: 1.6,
+            color: const Color.fromARGB(255, 0, 0, 0),
+          ),
+        ),
+      );
+    }
+
+    spans.add(
+      TextSpan(
+        text: match.group(0),
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: const Color.fromARGB(255, 255, 0, 0), // สีของ @mention
+        ),
+      ),
+    );
+
+    start = match.end;
+  }
+
+  if (start < message.length) {
+    spans.add(
+      TextSpan(
+        text: message.substring(start),
+        style: TextStyle(
+          fontSize: 20,
+          height: 1.6,
+          color: const Color.fromARGB(255, 0, 0, 0),
+        ),
+      ),
+    );
+  }
+
+  return RichText(text: TextSpan(children: spans));
 }

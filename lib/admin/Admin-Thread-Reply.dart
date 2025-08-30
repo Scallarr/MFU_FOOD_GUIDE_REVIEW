@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/admin/Admin-Thread-Reply-Pending.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThreadRepliesAdminPage extends StatefulWidget {
@@ -333,7 +334,22 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
         ),
         backgroundColor: const Color(0xFFCEBFA3),
         foregroundColor: Colors.black,
-        elevation: 1,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.verified_user, size: 26),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PendingRepliesAdminPage(
+                    threadId: widget.thread['Thread_ID'], // ส่ง threadId ไปด้วย
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Review pending replies for this thread',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

@@ -2433,7 +2433,42 @@ app.post('/threads/reject', async (req, res) => {
 });
 
 
-
+// GET /threads-replied/pending/:threadId
+app.get('/threads-replied/pending/:threadId', async (req, res) => {
+  try {
+    const threadId = req.params.threadId;
+    const connection = await db.promise().getConnection();
+    
+    const [rows] = await connection.execute(`
+      SELECT 
+        tr.Thread_reply_ID,
+        tr.Thread_ID,
+        tr.User_ID,
+        u.username,
+        upp.picture_url,
+        tr.message,
+        tr.created_at,
+        tr.total_Likes,
+        tr.ai_evaluation,
+        tr.admin_decision,
+        t.Thread_ID as original_thread_id,
+        tu.username as replied_to_username
+      FROM Thread_reply tr
+      JOIN User u ON tr.User_ID = u.User_ID
+      JOIN Thread t ON tr.Thread_ID = t.Thread_ID
+      JOIN User tu ON t.User_ID = tu.User_ID
+      LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
+      WHERE tr.admin_decision = 'Pending' AND tr.Thread_ID = ?
+      ORDER BY tr.created_at DESC
+    `, [threadId]);
+    
+    connection.release();
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
