@@ -2685,9 +2685,11 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
         act.admin_checked_at,
         act.reason_for_taken,
         u.username as author_username
+        upp.picture_url
       FROM Admin_check_inappropriate_thread act
       JOIN Thread t ON act.Thread_ID = t.Thread_ID
       JOIN User u ON t.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
       WHERE act.Admin_ID = ?
       ORDER BY act.admin_checked_at DESC
     `, [adminId]);
@@ -2736,18 +2738,63 @@ app.get('/api/my_threads/:userId', async (req, res) => {
   try {
     const [rows] = await db.promise().execute(`
       SELECT 
-        t.*,
-        (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count
+        t.Thread_ID,
+        t.message,
+        t.created_at,
+        t.Total_likes,
+        t.ai_evaluation,
+        t.admin_decision,
+        (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count,
+        u.fullname as author_username,
+        u.email as author_email,
+        upp.picture_url as author_picture,
+        act.admin_action_taken,
+        act.admin_checked_at,
+        act.reason_for_taken,
+        admin_user.fullname as admin_username
       FROM Thread t
+      LEFT JOIN User u ON t.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
+      LEFT JOIN Admin_check_inappropriate_thread act ON t.Thread_ID = act.Thread_ID
+      LEFT JOIN User admin_user ON act.Admin_ID = admin_user.User_ID
       WHERE t.User_ID = ?
       ORDER BY t.created_at DESC
     `, [userId]);
 
-    res.json(rows);
+    // จัดรูปแบบข้อมูลให้ตรงกับ requirement
+    const formattedRows = rows.map(row => {
+      const baseData = {
+        Thread_ID: row.Thread_ID,
+        message: row.message,
+        created_at: row.created_at,
+        Total_likes: row.Total_likes,
+        reply_count: row.reply_count,
+        ai_evaluation: row.ai_evaluation,
+        admin_decision: row.admin_decision,
+        author_username: row.author_username,
+        author_email: row.author_email,
+        author_picture: row.author_picture
+      };
+
+      // ถ้าโพสต์ถูกแบน ให้เพิ่มข้อมูล admin
+      if (row.admin_action_taken === 'Banned') {
+        return {
+          ...baseData,
+          admin_username: row.admin_username,
+          admin_action_taken: row.admin_action_taken,
+          admin_checked_at: row.admin_checked_at,
+          reason_for_taken: row.reason_for_taken
+        };
+      }
+
+      return baseData;
+    });
+
+    res.json(formattedRows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
-  }
+  } 
 });
 
 // API สำหรับดึง replies ของผู้ใช้
