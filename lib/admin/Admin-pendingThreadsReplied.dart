@@ -393,6 +393,7 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
               controller: searchController,
               decoration: InputDecoration(
                 hintText: 'Search by username, message, or replied to...',
+                hintStyle: TextStyle(fontSize: 12),
                 prefixIcon: Icon(Icons.search, color: _secondaryTextColor),
                 filled: true,
                 fillColor: Colors.white,

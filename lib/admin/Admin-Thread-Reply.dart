@@ -848,7 +848,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                               size: 16,
                               color: Colors.blue,
                             ),
-                            const SizedBox(width: 50),
+
                             Text(
                               timeAgo(thread['created_at'] ?? ''),
                               style: const TextStyle(
@@ -1076,38 +1076,49 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
+                            timeAgo(reply['created_at'] ?? ''),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color.fromARGB(255, 131, 130, 130),
+                            ),
+                          ),
+                          const Spacer(),
+
+                          Text(
                             reply['username'] ?? '',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 13.5,
                             ),
                           ),
+                          SizedBox(width: 10),
                           const Icon(
                             Icons.check_circle,
                             color: Colors.blue,
-                            size: 15,
+                            size: 18,
                           ),
-                          const Spacer(),
-                          Text(
-                            timeAgo(reply['created_at'] ?? ''),
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
+
                           const SizedBox(width: 5),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          RichText(
-                            text: _buildMessageWithMentions(
-                              reply['message'] ?? '',
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsetsGeometry.all(3),
+                              // เพิ่ม Expanded นี้
+                              child: RichText(
+                                text: _buildMessageWithMentions(
+                                  reply['message'] ?? '',
+                                ),
+                                maxLines: 10, // กำหนดจำนวนบรรทัดสูงสุด
+                                overflow:
+                                    TextOverflow.ellipsis, // ตัดข้อความด้วย ...
+                              ),
                             ),
                           ),
-
                           IconButton(
                             icon: Icon(
                               Icons.report,
@@ -1249,8 +1260,28 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      RichText(
-                        text: _buildMessageWithMentions(reply['message'] ?? ''),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            // เพิ่ม Expanded นี้
+                            child: RichText(
+                              text: _buildMessageWithMentions(
+                                reply['message'] ?? '',
+                              ),
+                              maxLines: 10, // กำหนดจำนวนบรรทัดสูงสุด
+                              overflow:
+                                  TextOverflow.ellipsis, // ตัดข้อความด้วย ...
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              Icons.report,
+                              color: const Color.fromARGB(255, 144, 143, 143),
+                            ),
+                            onPressed: () => _showRejectDialog(reply),
+                          ),
+                        ],
                       ),
                     ],
                   ),
