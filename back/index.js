@@ -1051,6 +1051,57 @@ ORDER BY T.created_at DESC
   }
 });
 
+// Get single thread by ID
+app.get('/thread/:threadId/:userId', async (req, res) => {
+  const threadId = req.params.threadId;
+  const userId = req.params.userId;
+
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT 
+        T.Thread_ID, 
+        T.message, 
+        T.created_at, 
+        T.User_ID,
+        U.fullname, 
+        U.username,
+        U.email,
+        P.picture_url,
+        T.Total_likes AS total_likes,
+        (
+          SELECT COUNT(*) 
+          FROM Thread_reply TR
+          WHERE TR.Thread_ID = T.Thread_ID
+            AND TR.admin_decision = 'Posted'
+        ) AS total_comments,
+        EXISTS (
+          SELECT 1 
+          FROM Thread_Likes 
+          WHERE Thread_ID = T.Thread_ID 
+            AND User_ID = ?
+        ) AS is_liked
+      FROM Thread T
+      JOIN User U ON T.User_ID = U.User_ID
+      LEFT JOIN user_Profile_Picture P ON P.User_ID = U.User_ID AND P.is_active = 1
+      WHERE T.Thread_ID = ?
+        AND T.admin_decision = 'Posted'
+    `, [userId, threadId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Thread not found' });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+
+
 app.post('/like_thread', async (req, res) => {
   const { User_ID, Thread_ID, liked } = req.body;
 

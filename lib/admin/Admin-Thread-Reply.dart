@@ -284,19 +284,22 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   }
 
   Future<void> refreshThreadData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    userId = prefs.getInt('user_id');
     try {
-      final threadId = widget.thread['Thread_ID'];
       final response = await http.get(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/thread/$threadId',
+          'https://mfu-food-guide-review.onrender.com/all_threads/$userId',
         ),
       );
 
       if (response.statusCode == 200) {
         final updatedThread = json.decode(response.body);
         setState(() {
+          // อัพเดตข้อมูล thread ทั้งหมด
           widget.thread.clear();
-          widget.thread.addAll(updatedThread); // อัปเดตข้อมูล thread
+          widget.thread.addAll(updatedThread);
         });
       }
     } catch (e) {
@@ -337,8 +340,8 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.verified_user, size: 26),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final shouldRefresh = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => PendingRepliesAdminPage(
@@ -346,6 +349,9 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                   ),
                 ),
               );
+              if (shouldRefresh == true) {
+                await fetchReplies(); // ฟังก์ชันโหลด thread ใหม่
+              }
             },
             tooltip: 'Review pending replies for this thread',
           ),
