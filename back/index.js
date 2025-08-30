@@ -1099,7 +1099,24 @@ app.get('/thread/:threadId/:userId', async (req, res) => {
 });
 
 
+// Get count of pending replies for a specific thread
+app.get('/api/pending_replies_count/:threadId', async (req, res) => {
+  const threadId = req.params.threadId;
 
+  try {
+    const [rows] = await db.promise().execute(`
+      SELECT COUNT(*) as count 
+      FROM Thread_reply 
+      WHERE Thread_ID = ? 
+        AND admin_decision = 'Pending'
+    `, [threadId]);
+
+    res.json({ count: rows[0].count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
 app.post('/like_thread', async (req, res) => {

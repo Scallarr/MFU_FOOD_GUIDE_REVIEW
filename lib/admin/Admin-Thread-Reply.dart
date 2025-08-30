@@ -284,10 +284,8 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   }
 
   Future<void> refreshThreadData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    userId = prefs.getInt('user_id');
     try {
+      final threadId = widget.thread['Thread_ID'];
       final response = await http.get(
         Uri.parse(
           'https://mfu-food-guide-review.onrender.com/all_threads/$userId',
@@ -295,12 +293,24 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
       );
 
       if (response.statusCode == 200) {
-        final updatedThread = json.decode(response.body);
-        setState(() {
-          // อัพเดตข้อมูล thread ทั้งหมด
-          widget.thread.clear();
-          widget.thread.addAll(updatedThread);
-        });
+        final List<dynamic> allThreads = json.decode(response.body);
+
+        // หา thread ที่ต้องการโดยใช้ Thread_ID
+        final updatedThread = allThreads.firstWhere(
+          (thread) => thread['Thread_ID'] == threadId,
+          orElse: () => null,
+        );
+
+        if (updatedThread != null) {
+          setState(() {
+            widget.thread.clear();
+            widget.thread.addAll(updatedThread);
+          });
+        } else {
+          print('Thread not found in response');
+        }
+      } else {
+        print('Failed to refresh threads: ${response.statusCode}');
       }
     } catch (e) {
       print('Error refreshing thread: $e');
@@ -350,7 +360,8 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                 ),
               );
               if (shouldRefresh == true) {
-                await fetchReplies(); // ฟังก์ชันโหลด thread ใหม่
+                await fetchReplies();
+                await refreshThreadData(); // ฟังก์ชันโหลด thread ใหม่
               }
             },
             tooltip: 'Review pending replies for this thread',
