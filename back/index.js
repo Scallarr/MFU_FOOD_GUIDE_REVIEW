@@ -3,6 +3,8 @@
   const mysql = require('mysql2');
   const jwt = require('jsonwebtoken');
   const axios = require('axios');
+  const moment = require('moment-timezone');
+  
 
   const app = express();
   app.use(cors());
@@ -18,6 +20,10 @@
     password: 'lunYpL9EDowPHBA02vkE',
     database: 'byjsmg8vfii8dqlflpwy',
   });
+
+  const now = moment().tz("Asia/Bangkok").format("YYYY-MM-DD HH:mm:ss");
+
+
 
 app.post('/user/login', (req, res) => {
   const { fullname, username, email, google_id, picture_url } = req.body;
@@ -1177,6 +1183,7 @@ app.post('/unlike_thread', async (req, res) => {
 });
 
 app.post('/create_thread', async (req, res) => {
+ 
   try {
     const { User_ID, message } = req.body;
     if (!User_ID || !message) {
@@ -1199,8 +1206,8 @@ app.post('/create_thread', async (req, res) => {
     const [result] = await db.promise().execute(
       `INSERT INTO Thread 
        (User_ID, message, ai_evaluation, admin_decision, created_at, Total_likes)
-       VALUES (?, ?, ?, ?, NOW(), 0)`,
-      [User_ID, message, ai_evaluation, admin_decision]
+       VALUES (?, ?, ?, ?, ?, 0)`,
+      [User_ID, message, ai_evaluation, admin_decision,now]
     );
 
     const newThreadId = result.insertId;
@@ -1281,8 +1288,8 @@ app.post('/api/send_reply', async (req, res) => {
       const [result] = await conn.execute(
         `INSERT INTO Thread_reply
           (Thread_ID, User_ID, message, created_at, total_Likes, ai_evaluation, admin_decision)
-          VALUES (?, ?, ?, NOW(), 0, ?, ?)`,
-        [Thread_ID, User_ID, message, aiEvaluation, adminDecision]
+          VALUES (?, ?, ?, ?, 0, ?, ?)`,
+        [Thread_ID, User_ID, message, now,aiEvaluation, adminDecision]
       );
 
       const insertedId = result.insertId;
