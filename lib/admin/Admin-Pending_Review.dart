@@ -488,10 +488,28 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
     );
   }
 
+  String formatDate(String? dateString) {
+    if (dateString == null) return 'Unknown date';
+
+    try {
+      // แปลง string เป็น DateTime
+      DateTime date = DateTime.parse(
+        dateString,
+      ); // JSON จาก MySQL เป็นเวลาตรงไทย
+
+      // ใช้ local time ของ device (ถ้าต้องการ)
+      date = date.toLocal();
+
+      // แปลงเป็น format readable
+      return DateFormat('MMM d, y · h:mm a').format(date);
+    } catch (e) {
+      return 'Invalid date';
+    }
+  }
+
   Widget _buildReviewCard(Map<String, dynamic> review) {
-    final date = DateFormat(
-      'MMM d, y · h:mm a',
-    ).format(DateTime.parse(review['created_at']));
+    Text(formatDate(review['created_at']), style: TextStyle(fontSize: 14));
+
     final overallRating =
         double.tryParse(review['rating_overall'].toString()) ?? 0.0;
     final isExpanded = _expandedReviewId == review['Review_ID'];
@@ -600,11 +618,8 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          date,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: _secondaryTextColor,
-                          ),
+                          formatDate(review['created_at']),
+                          style: TextStyle(fontSize: 14),
                         ),
                       ],
                     ),

@@ -1115,8 +1115,17 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Unknown date';
+
     try {
-      final date = DateTime.parse(dateString);
+      // แปลง string เป็น DateTime
+      DateTime date = DateTime.parse(
+        dateString,
+      ); // JSON จาก MySQL เป็นเวลาตรงไทย
+
+      // ใช้ local time ของ device (ถ้าต้องการ)
+      date = date.toLocal();
+
+      // แปลงเป็น format readable
       return DateFormat('MMM d, y · h:mm a').format(date);
     } catch (e) {
       return 'Invalid date';

@@ -1725,7 +1725,7 @@ app.post('/api/reviews/approve', async (req, res) => {
 
   try {
     await connection.beginTransaction();
-
+const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
     // 1. Get review details including restaurant ID
     const [reviewResult] = await connection.execute(
       `SELECT User_ID, Restaurant_ID, rating_overall, rating_hygiene, rating_flavor, rating_service 
@@ -1743,9 +1743,9 @@ app.post('/api/reviews/approve', async (req, res) => {
     // 2. Update review status to 'Posted'
     const [updateResult] = await connection.execute(
       `UPDATE Review 
-       SET message_status = 'Posted', created_at = NOW() 
+       SET message_status = 'Posted', created_at = ?
        WHERE Review_ID = ?`, 
-      [reviewId]
+      [reviewId, now]
     );
 
     if (updateResult.affectedRows === 0) {
@@ -1805,11 +1805,11 @@ app.post('/api/reviews/approve', async (req, res) => {
     const [updateAdminResult] = await connection.execute(
       `UPDATE Admin_check_inappropriate_review 
        SET admin_action_taken = 'Safe',
-           admin_checked_at = NOW(),
+           admin_checked_at = ?,
            reason_for_taken = 'Appropriate message',
            Admin_ID = ?
        WHERE Review_ID = ?`,
-      [adminId || 1, reviewId]
+      [now,adminId || 1, reviewId]
     );
 
     // If no existing record was found, insert a new one
@@ -1817,8 +1817,8 @@ app.post('/api/reviews/approve', async (req, res) => {
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_review 
          (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
-         VALUES (?, ?, 'Safe', NOW(), 'Appropriate message')`,
-        [reviewId, adminId || 1]
+         VALUES (?, ?, 'Safe', ?, 'Appropriate message')`,
+        [reviewId, adminId || 1,now]
       );
     }
 
@@ -1861,6 +1861,7 @@ app.post('/api/reviews/reject', async (req, res) => {
 
   try {
     await connection.beginTransaction();
+    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
 
     // 1. Get review details including user and restaurant IDs
     const [reviewDetails] = await connection.execute(
@@ -1895,11 +1896,11 @@ app.post('/api/reviews/reject', async (req, res) => {
     const [updateAdminResult] = await connection.execute(
       `UPDATE Admin_check_inappropriate_review 
        SET admin_action_taken = 'Banned',
-           admin_checked_at = NOW(),
+           admin_checked_at = ?,
            reason_for_taken = ?,
            Admin_ID = ?
        WHERE Review_ID = ?`,
-      [reason || 'Inappropriate message', adminId || 1, reviewId]
+      [now,reason || 'Inappropriate message', adminId || 1, reviewId]
     );
 
     // If no existing record was updated, insert a new one
@@ -1907,8 +1908,8 @@ app.post('/api/reviews/reject', async (req, res) => {
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_review 
          (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken)
-         VALUES (?, ?, 'Banned', NOW(), ?)`,
-        [reviewId, adminId || 1, reason || 'Inappropriate message']
+         VALUES (?, ?, 'Banned', ?, ?)`,
+        [reviewId, adminId || 1,now, reason || 'Inappropriate message']
       );
     }
 
@@ -2247,7 +2248,7 @@ app.post('/Add/profiles', async (req, res) => {
   
   try {
     await connection.beginTransaction();
-    
+    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
     const { profileName, description, imageUrl, requiredCoins } = req.body;
 
     // ตรวจสอบข้อมูลที่จำเป็น
@@ -2263,8 +2264,8 @@ app.post('/Add/profiles', async (req, res) => {
     const [result] = await connection.execute(
       `INSERT INTO exchange_coin_Shop 
        (Profile_Name, Description, Image_URL, Required_Coins, Created_At)
-       VALUES (?, ?, ?, ?, NOW())`,
-      [profileName, description, imageUrl, requiredCoins]
+       VALUES (?, ?, ?, ?, ?)`,
+      [profileName, description, imageUrl, requiredCoins,now]
     );
 
     // ดึงข้อมูลโปรไฟล์ที่เพิ่งสร้างเพื่อส่งกลับ
@@ -2419,12 +2420,14 @@ app.post('/threads/approve', async (req, res) => {
   
   try {
     const connection = await db.promise().getConnection();
+    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
     await connection.beginTransaction();
+
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread SET  created_at= NOW() , admin_decision = "Posted" WHERE Thread_ID = ?',
-      [threadId]
+      'UPDATE Thread SET  created_at= ? , admin_decision = "Posted" WHERE Thread_ID = ?',
+      [now,threadId]
     );
     
     // Update or create record in Admin_check_inappropriate_thread table
@@ -2437,17 +2440,17 @@ app.post('/threads/approve', async (req, res) => {
       // Update existing record
       await connection.execute(
         `UPDATE Admin_check_inappropriate_thread 
-         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = NOW() 
+         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = ?
          WHERE Thread_ID = ?`,
-        [adminId, threadId]
+        [adminId, now,threadId]
       );
     } else {
       // Create new record
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_thread 
          (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at) 
-         VALUES (?, ?, 'Safe', NOW())`,
-        [threadId, adminId]
+         VALUES (?, ?, 'Safe', ?)`,
+        [threadId, adminId,now]
       );
     }
     
@@ -2468,12 +2471,13 @@ app.post('/threads/reject', async (req, res) => {
   
   try {
    const connection = await db.promise().getConnection();
+   const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
     await connection.beginTransaction();
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread SET  created_at= NOW(),  admin_decision = "Banned" WHERE Thread_ID = ?',
-      [threadId]
+      'UPDATE Thread SET  created_at= ?,  admin_decision = "Banned" WHERE Thread_ID = ?',
+      [now,threadId]
     );
     
     // Update or create record in Admin_check_inappropriate_thread table
@@ -2487,17 +2491,17 @@ app.post('/threads/reject', async (req, res) => {
       await connection.execute(
         `UPDATE Admin_check_inappropriate_thread 
          SET Admin_ID = ?, admin_action_taken = 'Banned', 
-         admin_checked_at = NOW(), reason_for_taken = ? 
+         admin_checked_at = ?, reason_for_taken = ? 
          WHERE Thread_ID = ?`,
-        [adminId, reason, threadId]
+        [adminId, now,reason, threadId]
       );
     } else {
       // Create new record
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_thread 
          (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
-         VALUES (?, ?, 'Banned', NOW(), ?)`,
-        [threadId, adminId, reason]
+         VALUES (?, ?, 'Banned', ?, ?)`,
+        [threadId, adminId, now,reason]
       );
     }
     
@@ -2591,13 +2595,14 @@ app.post('/threads-replied/approve', async (req, res) => {
   const { threadId, adminId } = req.body;
   
   try {
+    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
     const connection = await db.promise().getConnection();
     await connection.beginTransaction();
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread_reply SET  created_at= NOW() , admin_decision = "Posted" WHERE Thread_reply_ID = ?',
-      [threadId]
+      'UPDATE Thread_reply SET  created_at= ? , admin_decision = "Posted" WHERE Thread_reply_ID = ?',
+      [now,threadId]
     );
     
     // Update or create record in Admin_check_inappropriate_thread table
@@ -2610,17 +2615,17 @@ app.post('/threads-replied/approve', async (req, res) => {
       // Update existing record
       await connection.execute(
         `UPDATE Admin_check_inappropriate_thread_reply 
-         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = NOW() 
+         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = ? 
          WHERE Thread_reply_ID = ?`,
-        [adminId, threadId]
+        [adminId, now,threadId]
       );
     } else {
       // Create new record
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_thread_reply 
          (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at) 
-         VALUES (?, ?, 'Safe', NOW())`,
-        [threadId, adminId]
+         VALUES (?, ?, 'Safe', ?)`,
+        [threadId, adminId,now]
       );
     }
     
@@ -2641,12 +2646,13 @@ app.post('/threads-replied/reject', async (req, res) => {
   
   try {
     const connection = await db.promise().getConnection();
+    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
     await connection.beginTransaction();
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread_reply SET  created_at= NOW() , admin_decision = "Banned" WHERE Thread_reply_ID = ?',
-      [threadId]
+      'UPDATE Thread_reply SET  created_at= ? , admin_decision = "Banned" WHERE Thread_reply_ID = ?',
+      [now,threadId]
     );
     
     // Update or create record in Admin_check_inappropriate_thread table
@@ -2659,17 +2665,17 @@ app.post('/threads-replied/reject', async (req, res) => {
       // Update existing record
       await connection.execute(
       `UPDATE Admin_check_inappropriate_thread_reply 
-         SET Admin_ID = ?, admin_action_taken = 'Banned', reason_for_taken = ?, admin_checked_at = NOW() 
+         SET Admin_ID = ?, admin_action_taken = 'Banned', reason_for_taken = ?, admin_checked_at = ?
          WHERE Thread_reply_ID = ?`,
-        [adminId, reason, threadId]
+        [adminId, reason, now,threadId]
       );
     } else {
       // Create new record
       await connection.execute(
           `INSERT INTO Admin_check_inappropriate_thread_reply 
          (Thread_reply_ID, Admin_ID, admin_action_taken, reason_for_taken, admin_checked_at) 
-         VALUES (?, ?, 'Banned', ?, NOW())`,
-        [threadId, adminId, reason]
+         VALUES (?, ?, 'Banned', ?, ?)`,
+        [threadId, adminId, reason,now]
       );
     }
     

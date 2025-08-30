@@ -461,10 +461,28 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
     );
   }
 
+  String formatDate(String? dateString) {
+    if (dateString == null) return 'Unknown date';
+
+    try {
+      // แปลง string เป็น DateTime
+      DateTime date = DateTime.parse(
+        dateString,
+      ); // JSON จาก MySQL เป็นเวลาตรงไทย
+
+      // ใช้ local time ของ device (ถ้าต้องการ)
+      date = date.toLocal();
+
+      // แปลงเป็น format readable
+      return DateFormat('MMM d, y · h:mm a').format(date);
+    } catch (e) {
+      return 'Invalid date';
+    }
+  }
+
   Widget _buildThreadCard(Map<String, dynamic> thread) {
-    final date = DateFormat(
-      'MMM d, y · h:mm a',
-    ).format(DateTime.parse(thread['created_at']));
+    Text(formatDate(thread['created_at']), style: TextStyle(fontSize: 14));
+
     final isExpanded = _expandedThreadId == thread['Thread_ID'];
     final totalLikes = thread['Total_likes'] ?? 0;
 
@@ -540,9 +558,9 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          date,
+                          formatDate(thread['created_at']),
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             color: _secondaryTextColor,
                           ),
                         ),

@@ -848,7 +848,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                               size: 16,
                               color: Colors.blue,
                             ),
-
+                            Spacer(),
                             Text(
                               timeAgo(thread['created_at'] ?? ''),
                               style: const TextStyle(
