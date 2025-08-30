@@ -2503,7 +2503,7 @@ app.post('/threads-replied/approve', async (req, res) => {
       // Create new record
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_thread_reply 
-         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at) 
+         (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at) 
          VALUES (?, ?, 'Safe', NOW())`,
         [threadId, adminId]
       );
@@ -2552,7 +2552,7 @@ app.post('/threads-replied/reject', async (req, res) => {
       // Create new record
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_thread_reply 
-         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at) 
+         (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at) 
          VALUES (?, ?, 'Banned', NOW())`,
         [threadId, adminId]
       );
