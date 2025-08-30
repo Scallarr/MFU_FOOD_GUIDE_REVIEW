@@ -2487,7 +2487,7 @@ app.post('/threads-replied/approve', async (req, res) => {
     
     // Update or create record in Admin_check_inappropriate_thread table
     const [existingCheck] = await connection.execute(
-      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_reply_ID = ?',
+      'SELECT * FROM Admin_check_inappropriate_thread_reply WHERE Thread_reply_ID = ?',
       [threadId]
     );
     
@@ -2536,7 +2536,7 @@ app.post('/threads-replied/reject', async (req, res) => {
     
     // Update or create record in Admin_check_inappropriate_thread table
     const [existingCheck] = await connection.execute(
-      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_reply_ID = ?',
+      'SELECT * FROM Admin_check_inappropriate_thread_reply WHERE Thread_reply_ID = ?',
       [threadId]
     );
     
