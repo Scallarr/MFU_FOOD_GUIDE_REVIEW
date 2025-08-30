@@ -2481,28 +2481,28 @@ app.post('/threads-replied/approve', async (req, res) => {
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread SET  created_at= NOW() , admin_decision = "Posted" WHERE Thread_ID = ?',
+      'UPDATE Thread_reply SET  created_at= NOW() , admin_decision = "Posted" WHERE Thread_ID = ?',
       [threadId]
     );
     
     // Update or create record in Admin_check_inappropriate_thread table
     const [existingCheck] = await connection.execute(
-      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_ID = ?',
+      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_reply_ID = ?',
       [threadId]
     );
     
     if (existingCheck.length > 0) {
       // Update existing record
       await connection.execute(
-        `UPDATE Admin_check_inappropriate_thread 
+        `UPDATE Admin_check_inappropriate_thread_reply 
          SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = NOW() 
-         WHERE Thread_ID = ?`,
+         WHERE Thread_reply_ID = ?`,
         [adminId, threadId]
       );
     } else {
       // Create new record
       await connection.execute(
-        `INSERT INTO Admin_check_inappropriate_thread 
+        `INSERT INTO Admin_check_inappropriate_thread_reply 
          (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at) 
          VALUES (?, ?, 'Safe', NOW())`,
         [threadId, adminId]
@@ -2522,54 +2522,52 @@ app.post('/threads-replied/approve', async (req, res) => {
 
 // POST /threads/reject
 app.post('/threads-replied/reject', async (req, res) => {
-  const { threadId, adminId, reason } = req.body;
+  const { threadId, adminId } = req.body;
   
   try {
-   const connection = await db.promise().getConnection();
+    const connection = await db.promise().getConnection();
     await connection.beginTransaction();
     
     // Update thread status in Thread table
     await connection.execute(
-      'UPDATE Thread SET  created_at= NOW(),  admin_decision = "Banned" WHERE Thread_ID = ?',
+      'UPDATE Thread_reply SET  created_at= NOW() , admin_decision = "Banned" WHERE Thread_ID = ?',
       [threadId]
     );
     
     // Update or create record in Admin_check_inappropriate_thread table
     const [existingCheck] = await connection.execute(
-      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_ID = ?',
+      'SELECT * FROM Admin_check_inappropriate_thread WHERE Thread_reply_ID = ?',
       [threadId]
     );
     
     if (existingCheck.length > 0) {
       // Update existing record
       await connection.execute(
-        `UPDATE Admin_check_inappropriate_thread 
-         SET Admin_ID = ?, admin_action_taken = 'Banned', 
-         admin_checked_at = NOW(), reason_for_taken = ? 
-         WHERE Thread_ID = ?`,
-        [adminId, reason, threadId]
+        `UPDATE Admin_check_inappropriate_thread_reply 
+         SET Admin_ID = ?, admin_action_taken = 'Banned', admin_checked_at = NOW() 
+         WHERE Thread_reply_ID = ?`,
+        [adminId, threadId]
       );
     } else {
       // Create new record
       await connection.execute(
-        `INSERT INTO Admin_check_inappropriate_thread 
-         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
-         VALUES (?, ?, 'Banned', NOW(), ?)`,
-        [threadId, adminId, reason]
+        `INSERT INTO Admin_check_inappropriate_thread_reply 
+         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at) 
+         VALUES (?, ?, 'Banned', NOW())`,
+        [threadId, adminId]
       );
     }
     
     await connection.commit();
     connection.release();
     
-    res.json({ success: true, message: 'Thread rejected successfully' });
+    res.json({ success: true, message: 'Thread approved successfully' });
   } catch (error) {
     console.error(error);
     if (connection) await connection.rollback();
-    res.status(500).json({ error: 'Failed to reject thread' });
+    res.status(500).json({ error: 'Failed to approve thread' });
   }
 });
-
 
 
 
