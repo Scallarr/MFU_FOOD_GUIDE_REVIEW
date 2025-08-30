@@ -7,6 +7,7 @@ import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Pending_Thread.dart';
+import 'package:myapp/admin/Admin-pendingThreadsReplied.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
@@ -630,129 +631,211 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Search TextField
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
-                            blurRadius: 1,
-                            offset: const Offset(1, 1),
-                          ),
-                        ],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search threads...',
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
+                  Row(
+                    children: [
+                      // Search TextField
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.5),
+                                blurRadius: 1,
+                                offset: const Offset(1, 1),
+                              ),
+                            ],
                             borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide.none,
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Search threads...',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value.toLowerCase();
+                              });
+                            },
                           ),
                         ),
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value.toLowerCase();
-                          });
-                        },
                       ),
-                    ),
-                  ),
+                      // Three-dot menu button
+                      SizedBox(width: 10),
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: const Color.fromARGB(255, 0, 0, 0),
+                        ),
+                        itemBuilder: (BuildContext context) => [
+                          PopupMenuItem(
+                            value: 'verify_threads',
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.verified_outlined,
+                                      size: 18,
+                                      color: Colors.blue.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Verify Threads',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        if (_pendingThreadsCount > 0)
+                                          Text(
+                                            '$_pendingThreadsCount pending',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_pendingThreadsCount > 0)
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFFF4757),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '$_pendingThreadsCount',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'verify_threads_replied',
+                            child: Container(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.reply_all_rounded,
+                                      size: 18,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Verify Threads Replied',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 13.5,
+                                          ),
+                                        ),
+                                        if (_pendingThreadsCount > 0)
+                                          Text(
+                                            '$_pendingThreadsCount pending',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (_pendingThreadsCount > 0)
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFFF4757),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '$_pendingThreadsCount',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        onSelected: (String value) async {
+                          Widget page;
 
-                  SizedBox(
-                    width: 16,
-                  ), // เพิ่มระยะห่างระหว่าง search และ verify button
-                  // Verify Button with Stack for badge
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      InkWell(
-                        onTap: () async {
+                          if (value == 'verify_threads') {
+                            page = PendingThreadsPage();
+                          } else if (value == 'verify_threads_replied') {
+                            page =
+                                PendingThreadsRepliedPage(); // หน้าใหม่สำหรับ replied threads
+                          } else {
+                            return;
+                          }
+
                           final shouldRefresh = await Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => PendingThreadsPage(),
-                            ),
+                            MaterialPageRoute(builder: (context) => page),
                           );
-                          if (shouldRefresh) {
+
+                          if (shouldRefresh == true) {
                             fetchThreads();
                           }
                         },
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Color.fromARGB(255, 76, 74, 74),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.brown.withOpacity(0.3),
-                                blurRadius: 6,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.verified,
-                                size: 20,
-                                color: Colors.white,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Verify',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       ),
-
-                      // Notification Badge
-                      // if (restaurant != null && restaurant!.pendingReviewsCount > 0)
-                      // เปลี่ยนจาก '5' เป็น '_pendingThreadsCount'
-                      // Notification Badge
-                      if (_pendingThreadsCount > 0)
-                        Positioned(
-                          right: -5,
-                          top: -17,
-                          child: Container(
-                            padding: EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 219, 31, 31),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: Text(
-                              '$_pendingThreadsCount', // ใช้ค่าจริงจาก API
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ],

@@ -277,44 +277,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-                ] else ...[
-                  if (_user!.photoUrl != null)
-                    CircleAvatar(
-                      radius: isMobile ? 40 : 50,
-                      backgroundImage: NetworkImage(_user!.photoUrl!),
-                    ),
-                  SizedBox(height: 16),
-                  Text(
-                    "Hello, ${_user!.displayName}",
-                    style: TextStyle(
-                      fontSize: isMobile ? 20 : 24,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    "Email: ${_user!.email}",
-                    style: TextStyle(
-                      fontSize: isMobile ? 14 : 16,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: signOut,
-                    child: Text("Sign Out", style: TextStyle(fontSize: 18)),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 40,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: Colors.deepOrange,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
                 ],
 
                 Spacer(), // ดันให้ footer อยู่ด้านล่าง

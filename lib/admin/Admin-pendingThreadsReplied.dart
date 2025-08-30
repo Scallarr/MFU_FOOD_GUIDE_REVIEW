@@ -4,14 +4,15 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class PendingThreadsPage extends StatefulWidget {
-  const PendingThreadsPage({Key? key}) : super(key: key);
+class PendingThreadsRepliedPage extends StatefulWidget {
+  const PendingThreadsRepliedPage({Key? key}) : super(key: key);
 
   @override
-  _PendingThreadsPageState createState() => _PendingThreadsPageState();
+  _PendingThreadsRepliedPageState createState() =>
+      _PendingThreadsRepliedPageState();
 }
 
-class _PendingThreadsPageState extends State<PendingThreadsPage> {
+class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
   List<dynamic> pendingThreads = [];
   List<dynamic> filteredThreads = [];
   bool isLoading = true;
@@ -47,7 +48,11 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
       filteredThreads = pendingThreads.where((thread) {
         final username = thread['username']?.toString().toLowerCase() ?? '';
         final message = thread['message']?.toString().toLowerCase() ?? '';
-        return username.contains(query) || message.contains(query);
+        final repliedTo =
+            thread['replied_to_username']?.toString().toLowerCase() ?? '';
+        return username.contains(query) ||
+            message.contains(query) ||
+            repliedTo.contains(query);
       }).toList();
     });
   }
@@ -58,7 +63,9 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/pending'),
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/threads-replied/pending',
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -148,7 +155,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  'Are you sure you want to approve this thread?',
+                  'Are you sure you want to approve this replied thread?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -271,7 +278,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
                 ),
                 SizedBox(height: 12),
                 Text(
-                  'Are you sure you want to reject this thread?',
+                  'Are you sure you want to reject this replied thread?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -364,7 +371,10 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF),
       appBar: AppBar(
-        title: Text('Pending Threads', style: TextStyle(color: Colors.white)),
+        title: Text(
+          'Pending Replied Threads',
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
         backgroundColor: const Color(0xFFCEBFA3),
         elevation: 0,
@@ -381,8 +391,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
             child: TextField(
               controller: searchController,
               decoration: InputDecoration(
-                hintText: 'Search by username or message...',
-                hintStyle: TextStyle(fontSize: 13.5),
+                hintText: 'Search by username, message, or replied to...',
                 prefixIcon: Icon(Icons.search, color: _secondaryTextColor),
                 filled: true,
                 fillColor: Colors.white,
@@ -424,7 +433,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
           CircularProgressIndicator(color: _primaryColor, strokeWidth: 3),
           SizedBox(height: 20),
           Text(
-            'Loading threads...',
+            'Loading replied threads...',
             style: TextStyle(color: _secondaryTextColor, fontSize: 16),
           ),
         ],
@@ -438,13 +447,13 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.forum_outlined,
+            Icons.reply_outlined,
             size: 64,
             color: _secondaryTextColor.withOpacity(0.3),
           ),
           SizedBox(height: 20),
           Text(
-            'No pending threads',
+            'No pending replied threads',
             style: TextStyle(
               fontSize: 18,
               color: _textColor,
@@ -453,7 +462,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
           ),
           SizedBox(height: 8),
           Text(
-            'New threads will appear here',
+            'New replied threads will appear here',
             style: TextStyle(color: _secondaryTextColor, fontSize: 14),
           ),
         ],
@@ -467,6 +476,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
     ).format(DateTime.parse(thread['created_at']));
     final isExpanded = _expandedThreadId == thread['Thread_ID'];
     final totalLikes = thread['Total_likes'] ?? 0;
+    final repliedToUsername = thread['replied_to_username'] ?? 'Unknown';
 
     return Container(
       margin: EdgeInsets.only(bottom: 16, top: 5),
@@ -545,6 +555,25 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
                             fontSize: 13,
                             color: _secondaryTextColor,
                           ),
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.reply,
+                              size: 14,
+                              color: _secondaryTextColor,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Replying to $repliedToUsername',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _primaryColor,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -742,7 +771,9 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
   Future<void> _approveThread(int threadId) async {
     try {
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/approve'),
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/threads-replied/approve',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,
@@ -756,7 +787,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
 
       if (response.statusCode == 200) {
         _showSnackBar(
-          responseData['message'] ?? 'Thread approved successfully',
+          responseData['message'] ?? 'Replied thread approved successfully',
         );
         setState(() {
           pendingThreads.removeWhere(
@@ -765,7 +796,9 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
           filteredThreads = pendingThreads;
         });
       } else {
-        throw Exception(responseData['message'] ?? 'Failed to approve thread');
+        throw Exception(
+          responseData['message'] ?? 'Failed to approve replied thread',
+        );
       }
     } catch (e) {
       _showSnackBar('Error: ${e.toString()}');
@@ -776,7 +809,9 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
     try {
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/reject'),
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/threads-replied/reject',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,
@@ -787,7 +822,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
       );
 
       if (response.statusCode == 200) {
-        _showSnackBar('Thread rejected successfully');
+        _showSnackBar('Replied thread rejected successfully');
         setState(() {
           pendingThreads.removeWhere(
             (thread) => thread['Thread_ID'] == threadId,
@@ -795,7 +830,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
           filteredThreads = pendingThreads;
         });
       } else {
-        throw Exception('Failed to reject thread');
+        throw Exception('Failed to reject replied thread');
       }
     } catch (e) {
       _showSnackBar('Error: ${e.toString()}');
