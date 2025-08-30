@@ -19,6 +19,7 @@
     user: 'u6lkh5gfkkvbxdij',
     password: 'lunYpL9EDowPHBA02vkE',
     database: 'byjsmg8vfii8dqlflpwy',
+    timezone: '+07:00',
   });
 
 

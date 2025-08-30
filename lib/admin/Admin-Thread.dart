@@ -533,17 +533,34 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   }
 
   String timeAgo(String datetimeString) {
-    DateTime dateTime = DateTime.parse(datetimeString).toLocal();
-    Duration diff = DateTime.now().difference(dateTime);
+    if (datetimeString.isEmpty) return 'Unknown time';
 
-    if (diff.inSeconds < 60) {
-      return 'Just now';
-    } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} minutes ago';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} hours ago';
-    } else {
-      return '${diff.inDays} days ago';
+    try {
+      // Post time from server (UTC)
+      DateTime postTime = DateTime.parse(datetimeString);
+
+      // Current time (UTC)
+      DateTime now = DateTime.now().toUtc();
+
+      Duration diff = now.difference(postTime);
+
+      if (diff.inSeconds < 60) {
+        return 'Just now';
+      } else if (diff.inMinutes < 60) {
+        return '${diff.inMinutes} minutes ago';
+      } else if (diff.inHours < 24) {
+        return '${diff.inHours} hours ago';
+      } else if (diff.inDays < 30) {
+        return '${diff.inDays} days ago';
+      } else if (diff.inDays < 365) {
+        int months = (diff.inDays / 30).floor();
+        return '$months months ago';
+      } else {
+        int years = (diff.inDays / 365).floor();
+        return '$years years ago';
+      }
+    } catch (e) {
+      return 'Soon';
     }
   }
 
