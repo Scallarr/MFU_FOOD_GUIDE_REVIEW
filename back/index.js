@@ -1745,7 +1745,7 @@ const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS
       `UPDATE Review 
        SET message_status = 'Posted', created_at = ?
        WHERE Review_ID = ?`, 
-      [reviewId, now]
+      [now,reviewId ]
     );
 
     if (updateResult.affectedRows === 0) {
