@@ -1203,7 +1203,8 @@ app.post('/create_thread', async (req, res) => {
       ai_evaluation = 'Inappropriate';
       admin_decision = 'Pending';
     }
-  const now = moment().tz("Asia/Bangkok").format("YYYY-MM-DD HH:mm:ss");
+const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+
 
     const [result] = await db.promise().execute(
       `INSERT INTO Thread 
@@ -1287,7 +1288,8 @@ app.post('/api/send_reply', async (req, res) => {
     try {
       await conn.beginTransaction();
 
-const now = moment().tz("Asia/Bangkok").format("YYYY-MM-DD HH:mm:ss");
+const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+
       const [result] = await conn.execute(
         `INSERT INTO Thread_reply
           (Thread_ID, User_ID, message, created_at, total_Likes, ai_evaluation, admin_decision)
