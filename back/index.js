@@ -2688,16 +2688,36 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
     const [rows] = await db.promise().execute(`
       SELECT 
         t.Thread_ID,
-        t.message,
+        t.message as thread_message,
+
+        -- การตรวจสอบของ admin
         act.admin_action_taken,
         act.admin_checked_at,
         act.reason_for_taken,
-        u.username as author_username,
-        upp.picture_url
+
+        -- เจ้าของ thread
+        u.User_ID as thread_author_id,
+        u.username as thread_author_username,
+        u.fullname as thread_author_fullname,
+        upp.picture_url as thread_author_picture,
+
+        -- แอดมินผู้แบน
+        admin_user.User_ID as admin_id,
+        admin_user.username as admin_username,
+        admin_user.fullname as admin_fullname,
+        admin_pp.picture_url as admin_picture
+
       FROM Admin_check_inappropriate_thread act
-      JOIN Thread t ON act.Thread_ID = t.Thread_ID
-      JOIN User u ON t.User_ID = u.User_ID
-      LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
+      JOIN Thread t 
+           ON act.Thread_ID = t.Thread_ID
+      JOIN User u 
+           ON t.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp 
+           ON u.User_ID = upp.User_ID AND upp.is_active = 1
+      JOIN User admin_user 
+           ON act.Admin_ID = admin_user.User_ID
+      LEFT JOIN user_Profile_Picture admin_pp
+           ON admin_user.User_ID = admin_pp.User_ID AND admin_pp.is_active = 1
       WHERE act.Admin_ID = ?
       ORDER BY act.admin_checked_at DESC
     `, [adminId]);
@@ -2709,6 +2729,7 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
   }
 });
 
+
 // API สำหรับดึงประวัติการตรวจสอบ replies ของ admin
 app.get('/api/admin_reply_history/:adminId', async (req, res) => {
   const adminId = req.params.adminId;
@@ -2717,17 +2738,40 @@ app.get('/api/admin_reply_history/:adminId', async (req, res) => {
     const [rows] = await db.promise().execute(`
       SELECT 
         tr.Thread_reply_ID,
-        tr.message,
+        tr.message as reply_message,
         acr.admin_action_taken,
         acr.admin_checked_at,
         acr.reason_for_taken,
-        u.username as author_username,
+
+        -- user ที่ถูกแบน
+        u.User_ID as banned_user_id,
+        u.username as banned_username,
+        u.fullname as banned_fullname,
+        upp.picture_url as banned_user_picture,
+
+        -- thread ต้นทาง
         t.Thread_ID,
-        t.message as thread_message
+        t.message as thread_message,
+
+        -- admin ที่ทำการแบน
+        admin_user.User_ID as admin_id,
+        admin_user.username as admin_username,
+        admin_user.fullname as admin_fullname,
+        admin_pp.picture_url as admin_picture
+
       FROM Admin_check_inappropriate_thread_reply acr
-      JOIN Thread_reply tr ON acr.Thread_reply_ID = tr.Thread_reply_ID
-      JOIN User u ON tr.User_ID = u.User_ID
-      JOIN Thread t ON tr.Thread_ID = t.Thread_ID
+      JOIN Thread_reply tr 
+           ON acr.Thread_reply_ID = tr.Thread_reply_ID
+      JOIN User u 
+           ON tr.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp 
+           ON u.User_ID = upp.User_ID AND upp.is_active = 1
+      JOIN Thread t 
+           ON tr.Thread_ID = t.Thread_ID
+      JOIN User admin_user 
+           ON acr.Admin_ID = admin_user.User_ID
+      LEFT JOIN user_Profile_Picture admin_pp
+           ON admin_user.User_ID = admin_pp.User_ID AND admin_pp.is_active = 1
       WHERE acr.Admin_ID = ?
       ORDER BY acr.admin_checked_at DESC
     `, [adminId]);
@@ -2740,6 +2784,7 @@ app.get('/api/admin_reply_history/:adminId', async (req, res) => {
 });
 
 
+// Theads post history
 app.get('/api/my_threads/:userId', async (req, res) => {
   const userId = req.params.userId;
 
@@ -2806,26 +2851,98 @@ app.get('/api/my_threads/:userId', async (req, res) => {
 });
 
 // API สำหรับดึง replies ของผู้ใช้
-app.get('/api/my_replies/:userId', async (req, res) => {
+app.get('/api/my_thread_replies/:userId', async (req, res) => {
   const userId = req.params.userId;
 
   try {
     const [rows] = await db.promise().execute(`
       SELECT 
-        tr.*,
-        t.message as thread_message
+        tr.Thread_reply_ID,
+        tr.Thread_ID,
+        tr.message as reply_message,
+        tr.created_at as reply_created_at,
+        tr.total_Likes as reply_total_Likes,
+        tr.ai_evaluation as reply_ai_evaluation,
+        tr.admin_decision as reply_admin_decision,
+
+        -- author of reply
+        u.username as reply_author_username,
+        u.email as reply_author_email,
+        upp.picture_url as reply_author_picture,
+
+        -- info of parent thread
+        t.message as thread_message,
+        thread_owner.username as thread_author_username,
+        thread_owner.fullname as thread_author_fullname,
+
+        -- admin moderation info
+        act.admin_action_taken,
+        act.admin_checked_at,
+        act.reason_for_taken,
+        admin_user.fullname as admin_username
+
       FROM Thread_reply tr
-      JOIN Thread t ON tr.Thread_ID = t.Thread_ID
+      LEFT JOIN User u 
+             ON tr.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp 
+             ON u.User_ID = upp.User_ID AND upp.is_active = 1
+
+      -- join parent Thread
+      LEFT JOIN Thread t 
+             ON tr.Thread_ID = t.Thread_ID
+      LEFT JOIN User thread_owner 
+             ON t.User_ID = thread_owner.User_ID
+
+      -- join admin moderation for reply
+      LEFT JOIN Admin_check_inappropriate_thread_reply act 
+             ON tr.Thread_reply_ID = act.Thread_reply_ID
+      LEFT JOIN User admin_user 
+             ON act.Admin_ID = admin_user.User_ID
+
       WHERE tr.User_ID = ?
       ORDER BY tr.created_at DESC
     `, [userId]);
 
-    res.json(rows);
+    // format output
+    const formattedRows = rows.map(row => {
+      const baseData = {
+        Thread_reply_ID: row.Thread_reply_ID,
+        Thread_ID: row.Thread_ID,
+        reply_message: row.reply_message,
+        reply_created_at: row.reply_created_at,
+        reply_total_Likes: row.reply_total_Likes,
+        reply_ai_evaluation: row.reply_ai_evaluation,
+        reply_admin_decision: row.reply_admin_decision,
+
+        reply_author_username: row.reply_author_username,
+        reply_author_email: row.reply_author_email,
+        reply_author_picture: row.reply_author_picture,
+
+        thread_message: row.thread_message,
+        thread_author_username: row.thread_author_username,
+        thread_author_fullname: row.thread_author_fullname
+      };
+
+      if (row.admin_action_taken === 'Banned') {
+        return {
+          ...baseData,
+          admin_username: row.admin_username,
+          admin_action_taken: row.admin_action_taken,
+          admin_checked_at: row.admin_checked_at,
+          reason_for_taken: row.reason_for_taken
+        };
+      }
+
+      return baseData;
+    });
+
+    res.json(formattedRows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 
 
