@@ -2872,10 +2872,13 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
 
         -- info of parent thread
         t.message as thread_message,
+        t.created_at as thread_created_at,
+        t.admin_decision as thread_admin_decision,
         thread_owner.username as thread_author_username,
         thread_owner.fullname as thread_author_fullname,
+        thread_pp.picture_url as thread_author_picture,
 
-        -- admin moderation info
+        -- admin moderation info for reply
         act.admin_action_taken,
         act.admin_checked_at,
         act.reason_for_taken,
@@ -2892,6 +2895,8 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
              ON tr.Thread_ID = t.Thread_ID
       LEFT JOIN User thread_owner 
              ON t.User_ID = thread_owner.User_ID
+      LEFT JOIN user_Profile_Picture thread_pp
+             ON thread_owner.User_ID = thread_pp.User_ID AND thread_pp.is_active = 1
 
       -- join admin moderation for reply
       LEFT JOIN Admin_check_inappropriate_thread_reply act 
@@ -2919,8 +2924,11 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         reply_author_picture: row.reply_author_picture,
 
         thread_message: row.thread_message,
+        thread_created_at: row.thread_created_at,
+        thread_admin_decision: row.thread_admin_decision,
         thread_author_username: row.thread_author_username,
-        thread_author_fullname: row.thread_author_fullname
+        thread_author_fullname: row.thread_author_fullname,
+        thread_author_picture: row.thread_author_picture
       };
 
       if (row.admin_action_taken === 'Banned') {
@@ -2942,7 +2950,6 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 
 
 
