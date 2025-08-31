@@ -81,6 +81,8 @@ class _RestaurantReviewHistoryPageState
 
         setState(() {
           _reviewApprovalHistory = data.map((review) {
+            // Helper function to safely convert any value to double
+
             // กำหนดสถานะของ review
             String status;
             if (review['admin_action_taken'] == 'Banned') {
@@ -365,114 +367,15 @@ class _RestaurantReviewHistoryPageState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Restaurant Header
-                  Row(
-                    children: [
-                      // Restaurant Image
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _primaryColor.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: item['restaurant_photo'] != null
-                              ? Image.network(
-                                  item['restaurant_photo'],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: _primaryColor.withOpacity(0.1),
-                                      child: Icon(
-                                        Icons.restaurant,
-                                        color: _primaryColor,
-                                        size: 30,
-                                      ),
-                                    );
-                                  },
-                                )
-                              : Container(
-                                  color: _primaryColor.withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.restaurant,
-                                    color: _primaryColor,
-                                    size: 30,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['restaurant_name'] ?? 'Unknown Restaurant',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: _textColor,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              '${item['restaurant_location']} • ${item['restaurant_category']?.replaceAll('_', ' ') ?? ''}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _secondaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Status chip
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: statusColor.withOpacity(0.4),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(statusIcon, size: 16, color: statusColor),
-                            SizedBox(width: 6),
-                            Text(
-                              statusText,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 16),
+                  SizedBox(height: 4),
 
                   // User info and ratings
                   Row(
                     children: [
                       // User Avatar
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 50,
+                        height: 50,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
@@ -508,74 +411,194 @@ class _RestaurantReviewHistoryPageState
                       ),
                       SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'By ${item['user_username'] ?? 'Unknown User'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: _textColor,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'By ${item['user_username'] ?? 'Unknown User'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _textColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              _formatDate(
+                                item['created_at'],
+                              ), // This should already return a string
+                              style: TextStyle(fontSize: 10),
+                            ),
+                          ],
                         ),
                       ),
-                      // Overall rating
                       Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 6,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: _primaryColor.withOpacity(0.1),
+                          color: statusColor.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: _primaryColor.withOpacity(0.3),
-                            width: 1,
+                            color: statusColor.withOpacity(0.4),
+                            width: 1.5,
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.star, size: 16, color: Colors.amber),
-                            SizedBox(width: 4),
+                            Icon(statusIcon, size: 16, color: statusColor),
+                            SizedBox(width: 6),
                             Text(
-                              item['rating_overall']?.toStringAsFixed(1) ??
-                                  '0.0',
+                              statusText,
                               style: TextStyle(
-                                color: _textColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                       ),
+
+                      // Overall rating
                     ],
                   ),
 
                   SizedBox(height: 16),
-
                   // Review comment
                   Container(
                     width: double.infinity,
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Color(0xFFE8EAED), width: 1.2),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
                         ),
                       ],
                     ),
-                    child: Text(
-                      item['comment'] ?? 'No comment',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: _textColor,
-                        height: 1.5,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Restaurant header
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                width: 63,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _primaryColor.withOpacity(0.2),
+                                    width: 1.5,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: item['restaurant_photo'] != null
+                                    ? Image.network(
+                                        item['restaurant_photo'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: _primaryColor
+                                                    .withOpacity(0.1),
+                                                child: Icon(
+                                                  Icons.restaurant,
+                                                  color: _primaryColor,
+                                                  size: 28,
+                                                ),
+                                              );
+                                            },
+                                      )
+                                    : Container(
+                                        color: _primaryColor.withOpacity(0.1),
+                                        child: Icon(
+                                          Icons.restaurant,
+                                          color: _primaryColor,
+                                          size: 28,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['restaurant_name'] ??
+                                        'Unknown Restaurant',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _textColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(height: 4),
+                                  Column(children: []),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: 14,
+                                        color: _secondaryTextColor,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${item['restaurant_location']} MFU  • ${item['restaurant_category']?.replaceAll('_', ' ') ?? ''}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: _secondaryTextColor,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 14),
+
+                        // Divider line (เพื่อแยกหัวกับ comment)
+                        Divider(color: Colors.grey[200], thickness: 1),
+
+                        SizedBox(height: 10),
+
+                        // Comment section
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            item['comment'] ?? 'No comment',
+                            textAlign: TextAlign.start,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: _textColor,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -591,19 +614,67 @@ class _RestaurantReviewHistoryPageState
                     ),
                     child: Column(
                       children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Overall Rating',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            // SizedBox(height: 20),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color: _primaryColor.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color: Colors.amber,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        item['rating_overall'] ?? '0.0',
+                                        style: TextStyle(
+                                          color: _textColor,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
                         _buildRatingBar(
                           'Hygiene',
-                          item['rating_hygiene']?.toDouble() ?? 0.0,
+                          item['rating_hygiene'].toDouble() ?? 0.0,
                         ),
                         SizedBox(height: 8),
                         _buildRatingBar(
                           'Flavor',
-                          item['rating_flavor']?.toDouble() ?? 0.0,
+                          item['rating_flavor'].toDouble() ?? 0.0,
                         ),
                         SizedBox(height: 8),
                         _buildRatingBar(
                           'Service',
-                          item['rating_service']?.toDouble() ?? 0.0,
+                          item['rating_service'].toDouble() ?? 0.0,
                         ),
                       ],
                     ),
@@ -673,7 +744,7 @@ class _RestaurantReviewHistoryPageState
                         ),
 
                         if (isExpanded) ...[
-                          SizedBox(height: 12),
+                          if (action == 'Posted') SizedBox(height: 12),
                           Divider(
                             color: statusColor.withOpacity(0.2),
                             height: 1,
@@ -684,7 +755,9 @@ class _RestaurantReviewHistoryPageState
                             'Review ID',
                             'ID ${item['Review_ID']}',
                             Icons.reviews,
-                            Colors.blue,
+                            action == 'Safe'
+                                ? Colors.green
+                                : const Color.fromARGB(255, 255, 10, 10),
                           ),
 
                           if (item['ai_evaluation'] != null)
@@ -692,7 +765,9 @@ class _RestaurantReviewHistoryPageState
                               'AI Analysis',
                               item['ai_evaluation'],
                               Icons.psychology_outlined,
-                              _primaryColor,
+                              action == 'Safe'
+                                  ? Colors.green
+                                  : const Color.fromARGB(255, 255, 10, 10),
                             ),
 
                           if (item['admin_username'] != null)
@@ -700,7 +775,9 @@ class _RestaurantReviewHistoryPageState
                               action == 'Banned' ? 'Banned by' : 'Approved by',
                               item['admin_username'],
                               Icons.admin_panel_settings,
-                              _textColor,
+                              action == 'Safe'
+                                  ? Colors.green
+                                  : const Color.fromARGB(255, 255, 10, 10),
                             ),
 
                           if (item['reason_for_taken'] != null)
@@ -708,7 +785,9 @@ class _RestaurantReviewHistoryPageState
                               action == 'Banned' ? 'Reason' : 'Notes',
                               item['reason_for_taken'],
                               Icons.info_outline,
-                              _secondaryTextColor,
+                              action == 'Safe'
+                                  ? Colors.green
+                                  : const Color.fromARGB(255, 255, 10, 10),
                             ),
 
                           if (item['admin_checked_at'] != null)
@@ -716,7 +795,9 @@ class _RestaurantReviewHistoryPageState
                               'Reviewed at',
                               _formatDate(item['admin_checked_at']),
                               Icons.calendar_today,
-                              _secondaryTextColor,
+                              action == 'Safe'
+                                  ? Colors.green
+                                  : const Color.fromARGB(255, 255, 10, 10),
                             ),
                         ],
                       ],
@@ -729,15 +810,10 @@ class _RestaurantReviewHistoryPageState
                     children: [
                       _buildMetricChipWithIcon(
                         Icons.favorite_outline,
-                        '${item['total_likes'] ?? 0}',
-                        _dangerColor,
+                        '${item['total_likes'] ?? 0}', // Ensure this is a string
+                        _getBackgroundColor(item['admin_action_taken']),
                       ),
                       SizedBox(width: 12),
-                      _buildMetricChipWithIcon(
-                        Icons.calendar_today,
-                        _formatDate(item['created_at']),
-                        _primaryColor,
-                      ),
                     ],
                   ),
                 ],
@@ -747,6 +823,21 @@ class _RestaurantReviewHistoryPageState
         );
       },
     );
+  }
+
+  Color _getBackgroundColor(String? decision) {
+    switch (decision) {
+      case 'Posted':
+        return _successColor.withOpacity(0.5); // เขียว
+      case 'Safe':
+        return _successColor.withOpacity(0.5); // เขียว
+      case 'Banned':
+        return _dangerColor.withOpacity(0.5); // แดง
+      case 'Pending':
+        return _warningColor.withOpacity(0.5); // เหลืองทอง
+      default:
+        return const Color.fromARGB(255, 0, 0, 0); // fallback
+    }
   }
 
   Widget _buildReviewItem(Map<String, dynamic> review) {
@@ -930,7 +1021,7 @@ class _RestaurantReviewHistoryPageState
                             Icon(Icons.star, size: 20, color: Colors.amber),
                             SizedBox(width: 8),
                             Text(
-                              '${review['rating_overall']?.toStringAsFixed(1) ?? '0.0'} Overall',
+                              '${review['rating_overall'] ?? '0.0'} Overall',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -966,8 +1057,9 @@ class _RestaurantReviewHistoryPageState
                     child: Column(
                       children: [
                         _buildRatingBar(
-                          'Hygiene',
-                          review['rating_hygiene']?.toDouble() ?? 0.0,
+                          'Flavor',
+                          review['rating_flavor']?.toDouble() ??
+                              0.0, // This might be the issue
                         ),
                         SizedBox(height: 8),
                         _buildRatingBar(
@@ -1171,9 +1263,13 @@ class _RestaurantReviewHistoryPageState
   }
 
   Color _getRatingColor(double rating) {
-    if (rating >= 4.0) return _successColor;
-    if (rating >= 3.0) return _warningColor;
-    return _dangerColor;
+    if (rating >= 4.5) return Colors.green[800]!; // Excellent
+    if (rating >= 4.0) return Colors.lightGreen[600]!; // Very Good
+    if (rating >= 3.5) return Colors.lime[600]!; // Good
+    if (rating >= 3.0) return Colors.amber[600]!; // Average
+    if (rating >= 2.5) return Colors.orange[600]!; // Below Average
+    if (rating >= 2.0) return Colors.deepOrange[600]!; // Poor
+    return Colors.red[700]!; // Very Poor
   }
 
   Widget _buildEnhancedInfoRow(

@@ -592,15 +592,20 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ],
                   ),
 
-                  SizedBox(height: 16),
+                  SizedBox(height: 10),
+                  Divider(
+                    color: const Color.fromARGB(255, 226, 225, 225),
+                    thickness: 1,
+                  ),
 
+                  SizedBox(height: 10),
                   // Thread message with improved background and border
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
                       boxShadow: [
                         BoxShadow(
@@ -814,7 +819,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     String statusText;
     Color containerColor;
     IconData statusIcon;
-    bool isExpanded = true;
+    bool isExpanded = false;
 
     switch (action) {
       case 'Posted':
@@ -968,6 +973,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                           ],
                         ),
                       ),
+
                       // Enhanced status chip with icon
                       Container(
                         padding: EdgeInsets.symmetric(
@@ -1001,8 +1007,13 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                       ),
                     ],
                   ),
+                  SizedBox(height: 13),
+                  Divider(
+                    color: const Color.fromARGB(255, 226, 225, 225),
+                    thickness: 1,
+                  ),
 
-                  SizedBox(height: 33),
+                  SizedBox(height: 25),
 
                   // Original thread info with enhanced UI
                   Container(
@@ -1142,8 +1153,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 ),
                               ],
                             ),
-                            SizedBox(height: 10),
+                            SizedBox(height: 05),
 
+                            Divider(
+                              color: const Color.fromARGB(255, 226, 225, 225),
+                              thickness: 1,
+                            ),
+
+                            SizedBox(height: 10),
                             // Thread message
                             Container(
                               width: double.infinity,
@@ -1169,18 +1186,18 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               ),
                             ),
                             SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                _buildMetricChipWithIcon(
-                                  Icons.favorite_outline,
-                                  '${item['thread_total_like'] ?? 0}',
-                                  _getBackgroundColor(
-                                    item['thread_admin_decision'],
-                                  ),
-                                ),
-                              ],
-                            ),
+                            // Row(
+                            //   mainAxisAlignment: MainAxisAlignment.end,
+                            //   children: [
+                            //     _buildMetricChipWithIcon(
+                            //       Icons.favorite_outline,
+                            //       '${item['thread_total_like'] ?? 0}',
+                            //       _getBackgroundColor(
+                            //         item['thread_admin_decision'],
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
                           ],
                         ),
 
@@ -1374,20 +1391,20 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               'Thread ID',
                               'ID ${item['Thread_ID']}',
                               Icons.forum,
-                              Colors.blue,
+                              _dangerColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Reply ID',
                               'ID ${item['Thread_reply_ID']}',
                               Icons.reply,
-                              Colors.green,
+                              _dangerColor,
                             ),
                             if (item['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
                                 item['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                _dangerColor,
                               ),
                             if (item['admin_username'] != null)
                               _buildEnhancedInfoRow(
@@ -1401,14 +1418,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Reason For Banned',
                                 item['reason_for_taken'],
                                 Icons.info_outline,
-                                _secondaryTextColor,
+                                _dangerColor,
                               ),
                             if (item['admin_checked_at'] != null)
                               _buildEnhancedInfoRow(
                                 'Action Taken',
                                 _formatDate(item['admin_checked_at']),
                                 Icons.calendar_today,
-                                _secondaryTextColor,
+                                _dangerColor,
                               ),
                             _buildEnhancedInfoRow(
                               'Status Threads Reply',
@@ -1416,14 +1433,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                   ? 'Posted'
                                   : item['admin_action_taken'],
                               getThreadStatusIcon(item['admin_action_taken']),
-                              Colors.black,
+                              _dangerColor,
                             ),
                           ] else if (statusText == 'Posted') ...[
                             _buildEnhancedInfoRow(
                               'Thread ID',
                               'ID ${item['Thread_ID']}',
                               Icons.forum,
-                              Colors.blue,
+                              Colors.green,
                             ),
                             _buildEnhancedInfoRow(
                               'Reply ID',
@@ -1436,28 +1453,28 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'AI Analysis',
                                 item['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                Colors.green,
                               ),
                             if (item['admin_username'] != null)
                               _buildEnhancedInfoRow(
                                 'Admin Action',
                                 'Approved by ${item['admin_username']}',
                                 Icons.gavel,
-                                _dangerColor,
+                                Colors.green,
                               ),
                             if (item['reason_for_taken'] != null)
                               _buildEnhancedInfoRow(
                                 'Reason For Approved',
                                 item['reason_for_taken'],
                                 Icons.info_outline,
-                                _secondaryTextColor,
+                                Colors.green,
                               ),
                             if (item['admin_checked_at'] != null)
                               _buildEnhancedInfoRow(
                                 'Action Taken',
                                 _formatDate(item['admin_checked_at']),
                                 Icons.calendar_today,
-                                _secondaryTextColor,
+                                Colors.green,
                               ),
                             _buildEnhancedInfoRow(
                               'Status Threads Reply',
@@ -1465,34 +1482,34 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                   ? 'Posted'
                                   : item['admin_action_taken'],
                               getThreadStatusIcon(item['admin_action_taken']),
-                              Colors.black,
+                              Colors.green,
                             ),
                           ] else if (statusText == 'Pending') ...[
                             _buildEnhancedInfoRow(
                               'Thread Id',
                               item['thread_id'].toString() ?? 'Unknown Admin',
                               Icons.admin_panel_settings,
-                              _primaryColor,
+                              Colors.green,
                             ),
                             _buildEnhancedInfoRow(
                               'Thread Reply Id',
                               item['Thread_reply_ID'].toString() ??
                                   'Unknown Admin',
                               Icons.admin_panel_settings,
-                              _primaryColor,
+                              Colors.green,
                             ),
                             _buildEnhancedInfoRow(
                               'Estimated Time',
                               'Usually reviewed within 24 hours',
                               Icons.schedule,
-                              _secondaryTextColor,
+                              Colors.green,
                             ),
                             if (item['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
                                 item['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                Colors.green,
                               ),
                           ],
                         ],
@@ -1683,8 +1700,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ],
                   ),
 
-                  SizedBox(height: 16),
+                  SizedBox(height: 10),
 
+                  Divider(
+                    color: const Color.fromARGB(255, 226, 225, 225),
+                    thickness: 1,
+                  ),
+
+                  SizedBox(height: 10),
                   // Thread message with improved background and border
                   Container(
                     width: double.infinity,
@@ -1924,13 +1947,13 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Color _getBackgroundColor(String? decision) {
     switch (decision) {
       case 'Posted':
-        return _successColor; // เขียว
+        return _successColor.withOpacity(0.5); // เขียว
       case 'Safe':
-        return _successColor; // เขียว
+        return _successColor.withOpacity(0.5); // เขียว
       case 'Banned':
-        return _dangerColor; // แดง
+        return _dangerColor.withOpacity(0.5); // แดง
       case 'Pending':
-        return _warningColor; // เหลืองทอง
+        return _warningColor.withOpacity(0.5); // เหลืองทอง
       default:
         return const Color.fromARGB(255, 0, 0, 0); // fallback
     }
@@ -1985,7 +2008,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     String statusText;
     Color containerColor;
     IconData statusIcon;
-    bool isExpanded = true;
+    bool isExpanded = false;
 
     switch (status) {
       case 'Posted':
@@ -2171,8 +2194,13 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ],
                   ),
 
-                  SizedBox(height: 29),
+                  SizedBox(height: 10),
+                  Divider(
+                    color: const Color.fromARGB(255, 226, 225, 225),
+                    thickness: 1,
+                  ),
 
+                  SizedBox(height: 20),
                   // Original thread info with enhanced UI
                   Container(
                     padding: EdgeInsets.all(16),
@@ -2312,8 +2340,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 ),
                               ],
                             ),
-                            SizedBox(height: 10),
 
+                            SizedBox(height: 0),
+                            Divider(
+                              color: const Color.fromARGB(255, 226, 225, 225),
+                              thickness: 1,
+                            ),
+
+                            SizedBox(height: 5),
                             // Thread message
                             Container(
                               width: double.infinity,
@@ -2339,18 +2373,18 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               ),
                             ),
                             SizedBox(height: 17),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                _buildMetricChipWithIcon(
-                                  Icons.favorite_outline,
-                                  '${reply['Total_likes'] ?? 10010}',
-                                  _getBackgroundColor(
-                                    reply['Thread_admin_decision'],
-                                  ),
-                                ),
-                              ],
-                            ),
+                            // Row(
+                            //   mainAxisAlignment: MainAxisAlignment.end,
+                            //   children: [
+                            //     _buildMetricChipWithIcon(
+                            //       Icons.favorite_outline,
+                            //       '${reply['Total_likes'] ?? 10010}',
+                            //       _getBackgroundColor(
+                            //         reply['Thread_admin_decision'],
+                            //       ),
+                            //     ),
+                            //   ],
+                            // ),
                           ],
                         ),
 

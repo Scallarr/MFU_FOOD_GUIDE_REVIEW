@@ -1044,6 +1044,11 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                 ),
                               ],
                             ),
+                            SizedBox(height: 10),
+                            // Divider(
+                            //   color: const Color.fromARGB(255, 226, 225, 225),
+                            //   thickness: 1,
+                            // ),
                             const SizedBox(height: 12),
                             Align(
                               alignment: Alignment.centerLeft,
