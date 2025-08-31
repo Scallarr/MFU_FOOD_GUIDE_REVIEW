@@ -2585,17 +2585,17 @@ app.post('/threads-replied/approve', async (req, res) => {
   const { threadId, adminId } = req.body;
   
   try {
-    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    const now = moment().tz("Asia/Bangkok").toDate(); // JS Date object
     const connection = await db.promise().getConnection();
     await connection.beginTransaction();
     
-    // Update thread status in Thread table
+    // Update thread status in Thread_reply table
     await connection.execute(
-      'UPDATE Thread_reply SET  created_at= ? , admin_decision = "Posted" WHERE Thread_reply_ID = ?',
-      [now,threadId]
+      'UPDATE Thread_reply SET created_at = ?, admin_decision = "Posted" WHERE Thread_reply_ID = ?',
+      [now, threadId]
     );
     
-    // Update or create record in Admin_check_inappropriate_thread table
+    // Check if record already exists
     const [existingCheck] = await connection.execute(
       'SELECT * FROM Admin_check_inappropriate_thread_reply WHERE Thread_reply_ID = ?',
       [threadId]
@@ -2605,17 +2605,17 @@ app.post('/threads-replied/approve', async (req, res) => {
       // Update existing record
       await connection.execute(
         `UPDATE Admin_check_inappropriate_thread_reply 
-         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = ? 
+         SET Admin_ID = ?, admin_action_taken = 'Safe', admin_checked_at = ?, reason_for_taken = ? 
          WHERE Thread_reply_ID = ?`,
-        [adminId, now,threadId]
+        [adminId, now, "No inappropriate words found", threadId]
       );
     } else {
-      // Create new record
+      // Insert new record
       await connection.execute(
         `INSERT INTO Admin_check_inappropriate_thread_reply 
-         (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at) 
-         VALUES (?, ?, 'Safe', ?)`,
-        [threadId, adminId,now]
+         (Thread_reply_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
+         VALUES (?, ?, 'Safe', ?, ?)`,
+        [threadId, adminId, now, "No inappropriate words found"]
       );
     }
     
