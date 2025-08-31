@@ -2690,6 +2690,7 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
         t.Thread_ID,
         t.message as thread_message,
         t.ai_evaluation,
+        t.Total_likes ,
 
         -- การตรวจสอบของ admin
         act.admin_action_taken,
@@ -2759,6 +2760,7 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         t.message as thread_message,
         t.created_at as thread_created_at,
         t.admin_decision as thread_admin_decision,
+        t.Total_likes as thread_total_like,
         thread_owner.User_ID as thread_author_id,
         thread_owner.username as thread_author_username,
         thread_owner.fullname as thread_author_fullname,
@@ -2823,7 +2825,8 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         thread_author_id: row.thread_author_id,
         thread_author_username: row.thread_author_username,
         thread_author_fullname: row.thread_author_fullname,
-        thread_author_picture: row.thread_author_picture
+        thread_author_picture: row.thread_author_picture,
+        thread_totallikes: row.thread_total_like
       };
 
       // เพิ่มข้อมูล admin ถ้า action มีค่า
@@ -2942,6 +2945,7 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         t.message as thread_message,
         t.created_at as thread_created_at,
         t.admin_decision as thread_admin_decision,
+        t.Total_likes  as thread_Total_likes,
         thread_owner.username as thread_author_username,
         thread_owner.fullname as thread_author_fullname,
         thread_pp.picture_url as thread_author_picture,
@@ -2994,6 +2998,7 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         thread_message: row.thread_message,
         thread_created_at: row.thread_created_at,
         thread_admin_decision: row.thread_admin_decision,
+        thread_total_like: row.thread_Total_likess,
         thread_author_username: row.thread_author_username,
         thread_author_fullname: row.thread_author_fullname,
         thread_author_picture: row.thread_author_picture
