@@ -2689,6 +2689,7 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
       SELECT 
         t.Thread_ID,
         t.message as thread_message,
+        t.ai_evaluation,
 
         -- การตรวจสอบของ admin
         act.admin_action_taken,
@@ -2699,6 +2700,7 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
         u.User_ID as thread_author_id,
         u.username as thread_author_username,
         u.fullname as thread_author_fullname,
+        u.email as thread_author_email,
         upp.picture_url as thread_author_picture,
 
         -- แอดมินผู้แบน
@@ -2730,58 +2732,124 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
 });
 
 
-// API สำหรับดึงประวัติการตรวจสอบ replies ของ admin
-app.get('/api/admin_reply_history/:adminId', async (req, res) => {
+// API สำหรับดึง replies ที่ admin จัดการ พร้อมข้อมูลครบ
+app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
   const adminId = req.params.adminId;
 
   try {
     const [rows] = await db.promise().execute(`
       SELECT 
         tr.Thread_reply_ID,
+        tr.Thread_ID,
         tr.message as reply_message,
-        acr.admin_action_taken,
-        acr.admin_checked_at,
-        acr.reason_for_taken,
+        tr.created_at as reply_created_at,
+        tr.total_Likes as reply_total_Likes,
+        tr.ai_evaluation as reply_ai_evaluation,
+        tr.admin_decision as reply_admin_decision,
 
-        -- user ที่ถูกแบน
-        u.User_ID as banned_user_id,
-        u.username as banned_username,
-        u.fullname as banned_fullname,
-        upp.picture_url as banned_user_picture,
+        -- author of reply
+        u.User_ID as reply_author_id,
+        u.username as reply_author_username,
+        u.email as reply_author_email,
+        u.fullname as reply_author_fullname,
+        upp.picture_url as reply_author_picture,
 
-        -- thread ต้นทาง
-        t.Thread_ID,
+        -- info of parent thread
+        t.Thread_ID as thread_id,
         t.message as thread_message,
+        t.created_at as thread_created_at,
+        t.admin_decision as thread_admin_decision,
+        thread_owner.User_ID as thread_author_id,
+        thread_owner.username as thread_author_username,
+        thread_owner.fullname as thread_author_fullname,
+        thread_pp.picture_url as thread_author_picture,
 
-        -- admin ที่ทำการแบน
+        -- admin moderation info
+        act.admin_action_taken,
+        act.admin_checked_at,
+        act.reason_for_taken,
         admin_user.User_ID as admin_id,
         admin_user.username as admin_username,
         admin_user.fullname as admin_fullname,
         admin_pp.picture_url as admin_picture
 
-      FROM Admin_check_inappropriate_thread_reply acr
+      FROM Admin_check_inappropriate_thread_reply act
       JOIN Thread_reply tr 
-           ON acr.Thread_reply_ID = tr.Thread_reply_ID
+           ON act.Thread_reply_ID = tr.Thread_reply_ID
       JOIN User u 
            ON tr.User_ID = u.User_ID
       LEFT JOIN user_Profile_Picture upp 
            ON u.User_ID = upp.User_ID AND upp.is_active = 1
+
+      -- join parent thread
       JOIN Thread t 
            ON tr.Thread_ID = t.Thread_ID
+      JOIN User thread_owner 
+           ON t.User_ID = thread_owner.User_ID
+      LEFT JOIN user_Profile_Picture thread_pp
+           ON thread_owner.User_ID = thread_pp.User_ID AND thread_pp.is_active = 1
+
+      -- admin info
       JOIN User admin_user 
-           ON acr.Admin_ID = admin_user.User_ID
+           ON act.Admin_ID = admin_user.User_ID
       LEFT JOIN user_Profile_Picture admin_pp
            ON admin_user.User_ID = admin_pp.User_ID AND admin_pp.is_active = 1
-      WHERE acr.Admin_ID = ?
-      ORDER BY acr.admin_checked_at DESC
+
+      WHERE act.Admin_ID = ?
+      ORDER BY act.admin_checked_at DESC
     `, [adminId]);
 
-    res.json(rows);
+    // format output
+    const formattedRows = rows.map(row => {
+      const baseData = {
+        Thread_reply_ID: row.Thread_reply_ID,
+        Thread_ID: row.Thread_ID,
+        reply_message: row.reply_message,
+        reply_created_at: row.reply_created_at,
+        reply_total_Likes: row.reply_total_Likes,
+        reply_ai_evaluation: row.reply_ai_evaluation,
+        reply_admin_decision: row.reply_admin_decision,
+
+        reply_author_id: row.reply_author_id,
+        reply_author_username: row.reply_author_username,
+        reply_author_email: row.reply_author_email,
+        reply_author_fullname: row.reply_author_fullname,
+        reply_author_picture: row.reply_author_picture,
+
+        thread_id: row.thread_id,
+        thread_message: row.thread_message,
+        thread_created_at: row.thread_created_at,
+        thread_admin_decision: row.thread_admin_decision,
+        thread_author_id: row.thread_author_id,
+        thread_author_username: row.thread_author_username,
+        thread_author_fullname: row.thread_author_fullname,
+        thread_author_picture: row.thread_author_picture
+      };
+
+      // เพิ่มข้อมูล admin ถ้า action มีค่า
+      if (row.admin_action_taken) {
+        return {
+          ...baseData,
+          admin_id: row.admin_id,
+          admin_username: row.admin_username,
+          admin_fullname: row.admin_fullname,
+          admin_picture: row.admin_picture,
+          admin_action_taken: (row.admin_action_taken === 'Safe') ? 'Posted' : row.admin_action_taken,
+          admin_checked_at: row.admin_checked_at,
+          reason_for_taken: row.reason_for_taken
+        };
+      }
+
+      return baseData;
+    });
+
+    res.json(formattedRows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 
 // Theads post history

@@ -602,9 +602,11 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       final message = thread['message'].toString().toLowerCase();
       final fullname = thread['username'].toString().toLowerCase();
       final status = thread['status']?.toString().toLowerCase() ?? '';
+      final id = thread['Thread_ID'].toString().toLowerCase();
       return message.contains(_searchQuery) ||
           fullname.contains(_searchQuery) ||
-          status.contains(_searchQuery);
+          status.contains(_searchQuery) ||
+          id.contains(_searchQuery);
     }).toList();
 
     return Scaffold(
@@ -699,7 +701,11 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                           child: TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
-                              hintText: 'Search threads...',
+                              hintText: 'Search threads ID or urthor Name ... ',
+                              hintStyle: TextStyle(
+                                fontSize: 11.5,
+                                color: Colors.black,
+                              ),
                               prefixIcon: const Icon(Icons.search),
                               filled: true,
                               fillColor: Colors.white,

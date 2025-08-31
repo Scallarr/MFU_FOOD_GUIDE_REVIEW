@@ -50,9 +50,11 @@ class _PendingThreadsRepliedPageState extends State<PendingThreadsRepliedPage> {
         final message = thread['message']?.toString().toLowerCase() ?? '';
         final repliedTo =
             thread['replied_to_username']?.toString().toLowerCase() ?? '';
+        final ID = thread['Thread_reply_ID'].toString().toLowerCase();
         return username.contains(query) ||
             message.contains(query) ||
-            repliedTo.contains(query);
+            repliedTo.contains(query) ||
+            ID.contains(query);
       }).toList();
     });
   }

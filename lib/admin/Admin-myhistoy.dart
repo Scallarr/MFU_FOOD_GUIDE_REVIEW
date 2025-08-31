@@ -369,79 +369,358 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     final action = item['admin_action_taken'];
     Color statusColor;
     String statusText;
+    Color containerColor;
+    IconData statusIcon;
+    bool isExpanded = true;
 
     switch (action) {
       case 'Safe':
         statusColor = _successColor;
         statusText = 'Approved';
+        containerColor = _successColor.withOpacity(0.05);
+        statusIcon = Icons.check_circle_outline;
         break;
       case 'Banned':
         statusColor = _dangerColor;
-        statusText = 'Rejected';
+        statusText = 'Banned';
+        containerColor = _dangerColor.withOpacity(0.05);
+        statusIcon = Icons.block;
         break;
       default:
         statusColor = _warningColor;
         statusText = 'Pending';
+        containerColor = _warningColor.withOpacity(0.05);
+        statusIcon = Icons.access_time;
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          margin: EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                offset: Offset(0, 5),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+            ),
+            color: _cardColor,
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatusChip(statusText, statusColor),
-                  Spacer(),
-                  Text(
-                    _formatDate(item['admin_checked_at']),
-                    style: TextStyle(fontSize: 12, color: _secondaryTextColor),
+                  Row(
+                    children: [
+                      // Author Avatar
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _primaryColor.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: item['thread_author_picture'] != null
+                              ? Image.network(
+                                  item['thread_author_picture'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: _primaryColor.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.person,
+                                        color: _primaryColor,
+                                        size: 20,
+                                      ),
+                                    );
+                                  },
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                            strokeWidth: 2,
+                                            color: _primaryColor,
+                                          ),
+                                        );
+                                      },
+                                )
+                              : Container(
+                                  color: _primaryColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.person,
+                                    color: _primaryColor,
+                                    size: 20,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Author: ${item['thread_author_username'] ?? 'Unknown User'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _textColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              _formatDate(item['admin_checked_at']),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _secondaryTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ), // Header with status and date
+                      Row(
+                        children: [
+                          // Enhanced status chip with icon
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: statusColor.withOpacity(0.4),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(statusIcon, size: 16, color: statusColor),
+                                SizedBox(width: 6),
+                                Text(
+                                  statusText,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Thread message with improved background and border
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      item['thread_message'] ?? 'No message',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: _textColor,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+
+                  // Author information
+                  SizedBox(height: 16),
+
+                  // Enhanced status details container
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: containerColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    statusIcon,
+                                    size: 18,
+                                    color: statusColor,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Approval Details',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                isExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                                color: statusColor,
+                                size: 22,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  isExpanded = !isExpanded;
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
+                        ),
+
+                        if (isExpanded) ...[
+                          SizedBox(height: 12),
+                          Divider(
+                            color: statusColor.withOpacity(0.2),
+                            height: 1,
+                          ),
+                          SizedBox(height: 12),
+
+                          // Admin information
+                          _buildEnhancedInfoRow(
+                            'Thread ID',
+                            'ID ${item['Thread_ID']}',
+                            Icons.forum,
+                            Colors.blue,
+                          ),
+                          _buildEnhancedInfoRow(
+                            'Author by',
+                            item['thread_author_username'] ?? 'Unknown Admin',
+                            Icons.admin_panel_settings,
+                            Colors.green,
+                          ),
+                          if (item['admin_username'] != null)
+                            _buildEnhancedInfoRow(
+                              'Admin Action',
+                              item['admin_username'],
+                              Icons.person,
+                              _secondaryTextColor,
+                            ),
+
+                          // Action details
+                          if (action == 'Banned') ...[
+                            if (item['reason_for_taken'] != null)
+                              _buildEnhancedInfoRow(
+                                'Reason for Banned',
+                                item['reason_for_taken'],
+                                Icons.info_outline,
+                                _dangerColor,
+                              ),
+                          ] else if (action == 'Safe') ...[
+                            _buildEnhancedInfoRow(
+                              'Reason for Approved',
+                              item['reason_for_taken'] ??
+                                  'Not Found Inappropriate Language',
+                              Icons.info_outline,
+                              _dangerColor,
+                            ),
+                          ],
+
+                          // Timestamp
+                          if (item['admin_checked_at'] != null)
+                            _buildEnhancedInfoRow(
+                              'Reviewed at',
+                              _formatDate(item['admin_checked_at']),
+                              Icons.calendar_today,
+                              _secondaryTextColor,
+                            ),
+                          // ใช้ใน widget
+                          _buildEnhancedInfoRow(
+                            'Status Threads',
+                            (item['admin_action_taken'] == 'Safe')
+                                ? 'Posted'
+                                : item['admin_action_taken'],
+                            getThreadStatusIcon(item['admin_action_taken']),
+                            Colors.black,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 12),
-              Text(
-                item['message'] ?? 'No message',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _textColor,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Author: ${item['author_username']}',
-                style: TextStyle(fontSize: 14, color: _secondaryTextColor),
-              ),
-              if (item['reason_for_taken'] != null) ...[
-                SizedBox(height: 8),
-                Text(
-                  'Reason: ${item['reason_for_taken']}',
-                  style: TextStyle(fontSize: 14, color: _secondaryTextColor),
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  IconData getThreadStatusIcon(String status) {
+    switch (status) {
+      case 'Safe':
+      case 'Posted':
+        return Icons.check_circle;
+      case 'Banned':
+        return Icons.block;
+      case 'Pending':
+        return Icons.hourglass_empty;
+      default:
+        return Icons.forum;
+    }
   }
 
   Widget _buildReplyApprovalItem(Map<String, dynamic> item) {
@@ -456,7 +735,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
         break;
       case 'Banned':
         statusColor = _dangerColor;
-        statusText = 'Rejected';
+        statusText = 'Banned';
         break;
       default:
         statusColor = _warningColor;
@@ -809,6 +1088,12 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                           // Status-specific information with better formatting
                           if (status == 'Banned') ...[
                             _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ' + thread['Thread_ID'].toString(),
+                              Icons.forum,
+                              const Color.fromARGB(255, 7, 7, 7),
+                            ),
+                            _buildEnhancedInfoRow(
                               'Admin Action',
                               'Banned by ${thread['admin_username'] ?? 'Unknown Admin'}',
                               Icons.gavel,
@@ -830,11 +1115,18 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               ),
                           ] else if (status == 'Posted') ...[
                             _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ' + thread['Thread_ID'].toString(),
+                              Icons.forum,
+                              const Color.fromARGB(255, 7, 7, 7),
+                            ),
+                            _buildEnhancedInfoRow(
                               'Visibility',
                               'Publicly visible to all users',
                               Icons.visibility,
                               _successColor,
                             ),
+
                             if (thread['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
@@ -843,6 +1135,12 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 _primaryColor,
                               ),
                           ] else if (status == 'Pending') ...[
+                            _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ' + thread['Thread_ID'].toString(),
+                              Icons.forum,
+                              const Color.fromARGB(255, 7, 7, 7),
+                            ),
                             _buildEnhancedInfoRow(
                               'Current Status',
                               'Awaiting admin approval',
@@ -1448,6 +1746,26 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
                           // Status-specific information with better formatting
                           if (status == 'Banned') ...[
+                            _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ${reply['Thread_ID']}',
+                              Icons.forum,
+                              Colors.blue,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Reply ID',
+                              'ID ${reply['Thread_reply_ID']}',
+                              Icons.reply,
+                              Colors.green,
+                            ),
+
+                            if (reply['ai_evaluation'] != null)
+                              _buildEnhancedInfoRow(
+                                'AI Analysis',
+                                reply['ai_evaluation'],
+                                Icons.psychology_outlined,
+                                _primaryColor,
+                              ),
                             if (reply['admin_username'] != null)
                               _buildEnhancedInfoRow(
                                 'Admin Action',
@@ -1457,7 +1775,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               ),
                             if (reply['reason_for_taken'] != null)
                               _buildEnhancedInfoRow(
-                                'Reason',
+                                'Reason For Banned',
                                 reply['reason_for_taken'],
                                 Icons.info_outline,
                                 _secondaryTextColor,
@@ -1470,6 +1788,18 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 _secondaryTextColor,
                               ),
                           ] else if (status == 'Posted') ...[
+                            _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ${reply['Thread_ID']}',
+                              Icons.forum,
+                              Colors.blue,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Reply ID',
+                              'ID ${reply['Thread_reply_ID']}',
+                              Icons.reply,
+                              Colors.green,
+                            ),
                             _buildEnhancedInfoRow(
                               'Visibility',
                               'Publicly visible to all users',
@@ -1516,14 +1846,19 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 Icons.calendar_today,
                                 _secondaryTextColor,
                               ),
-                            if (reply['admin_checked_at'] != null)
-                              _buildEnhancedInfoRow(
-                                'Approved At',
-                                _formatDate(reply['admin_checked_at']),
-                                Icons.calendar_today,
-                                _secondaryTextColor,
-                              ),
                           ] else if (status == 'Pending') ...[
+                            _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ${reply['Thread_ID']}',
+                              Icons.forum,
+                              Colors.blue,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Reply ID',
+                              'ID ${reply['Thread_reply_ID']}',
+                              Icons.reply,
+                              Colors.green,
+                            ),
                             _buildEnhancedInfoRow(
                               'Current Status',
                               'Awaiting admin approval',
@@ -1549,25 +1884,22 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ),
                   ),
 
-                  SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Spacer(),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 12,
-                          children: [
-                            _buildMetricChipWithIcon(
-                              Icons.favorite_outline,
-                              '${reply['Total_likes'] ?? 0}',
-                              _dangerColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  // SizedBox(height: 20),
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.end,
+                  //   children: [
+                  //     Wrap(
+                  //       spacing: 12,
+                  //       children: [
+                  //         _buildMetricChipWithIcon(
+                  //           Icons.favorite_outline,
+                  //           '${reply['Total_likes'] ?? 0}    ',
+                  //           Colors.black,
+                  //         ),
+                  //       ],
+                  //     ),
+                  //   ],
+                  // ),
                 ],
               ),
             ),
@@ -1597,20 +1929,20 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
   Widget _buildMetricChipWithIcon(IconData icon, String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        color: color,
+        borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color),
+          Icon(icon, size: 18, color: Colors.white),
           SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
-              color: color,
+              color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
