@@ -2901,7 +2901,7 @@ app.get('/api/my_threads/:userId', async (req, res) => {
       };
 
       // ถ้าโพสต์ถูกแบน ให้เพิ่มข้อมูล admin
-      if (row.admin_action_taken === 'Banned') {
+      if (row.admin_action_taken === 'Banned'|| row.admin_action_taken === 'Safe' )  {
         return {
           ...baseData,
           admin_username: row.admin_username,

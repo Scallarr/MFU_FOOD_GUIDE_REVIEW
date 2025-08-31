@@ -138,6 +138,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
               'thread_message': reply['thread_message'],
               'thread_created_at': reply['thread_created_at'],
               'thread_admin_decision': reply['thread_admin_decision'],
+              'thread_total_like': reply['thread_totallikes'],
               'thread_author_username': reply['thread_author_username'],
               'thread_author_fullname': reply['thread_author_fullname'],
               'thread_author_picture': reply['thread_author_picture'],
@@ -751,6 +752,17 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                       ],
                     ),
                   ),
+                  SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _buildMetricChipWithIcon(
+                        Icons.favorite_outline,
+                        '${item['Total_likes'] ?? 20}',
+                        _dangerColor,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1134,6 +1146,17 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                _buildMetricChipWithIcon(
+                                  Icons.favorite_outline,
+                                  '${item['thread_total_like'] ?? 0}',
+                                  _dangerColor,
+                                ),
+                              ],
+                            ),
                           ],
                         ),
 
@@ -1409,16 +1432,6 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                   ),
 
                   SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _buildMetricChipWithIcon(
-                        Icons.favorite_outline,
-                        '${item['thread_total_Likes'] ?? 0}',
-                        _dangerColor,
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -1731,15 +1744,9 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                           ] else if (status == 'Posted') ...[
                             _buildEnhancedInfoRow(
                               'Thread ID',
-                              'ID ' + thread['Thread_ID'].toString(),
+                              'ID ${thread['Thread_ID']}',
                               Icons.forum,
-                              const Color.fromARGB(255, 7, 7, 7),
-                            ),
-                            _buildEnhancedInfoRow(
-                              'Visibility',
-                              'Publicly visible to all users',
-                              Icons.visibility,
-                              _successColor,
+                              Colors.blue,
                             ),
 
                             if (thread['ai_evaluation'] != null)
@@ -1748,6 +1755,39 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 thread['ai_evaluation'],
                                 Icons.psychology_outlined,
                                 _primaryColor,
+                              ),
+                            if (thread['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true ||
+                                thread['admin_username'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approved by',
+                                thread['admin_username'] ?? 'Unknown Admin',
+                                Icons.admin_panel_settings,
+                                _primaryColor,
+                              ),
+                            if (thread['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true &&
+                                thread['reason_for_taken'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approval Reason',
+                                thread['reason_for_taken'],
+                                Icons.info_outline,
+                                _secondaryTextColor,
+                              ),
+                            if (thread['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true &&
+                                thread['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approved At',
+                                _formatDate(thread['admin_checked_at']),
+                                Icons.calendar_today,
+                                _secondaryTextColor,
                               ),
                           ] else if (status == 'Pending') ...[
                             _buildEnhancedInfoRow(
@@ -1783,25 +1823,22 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
                   SizedBox(height: 20),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Spacer(),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 12,
-                          children: [
-                            _buildMetricChipWithIcon(
-                              Icons.favorite_outline,
-                              '${thread['Total_likes'] ?? 0}',
-                              _dangerColor,
-                            ),
-                            _buildMetricChipWithIcon(
-                              Icons.reply_outlined,
-                              '${thread['reply_count'] ?? 0}',
-                              _primaryColor,
-                            ),
-                          ],
-                        ),
+                      Wrap(
+                        spacing: 12,
+                        children: [
+                          _buildMetricChipWithIcon(
+                            Icons.favorite_outline,
+                            '${thread['Total_likes'] ?? 0}',
+                            _dangerColor,
+                          ),
+                          // _buildMetricChipWithIcon(
+                          //   Icons.reply_outlined,
+                          //   '${thread['reply_count'] ?? 0}',
+                          //   _primaryColor,
+                          // ),
+                        ],
                       ),
                     ],
                   ),
