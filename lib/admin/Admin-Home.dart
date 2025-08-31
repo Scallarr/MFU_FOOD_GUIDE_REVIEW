@@ -6,6 +6,7 @@ import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Pending_Review.dart';
 import 'package:myapp/admin/Admin-Restaurant-Detail.dart';
+import 'package:myapp/admin/Admin-Restaurant-History.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
@@ -457,50 +458,120 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
           ),
 
           // Search Bar
+          // ในส่วนของ SliverPadding ที่มี Search Bar ให้เพิ่ม PopupMenuButton ด้านขวา
           SliverPadding(
             padding: const EdgeInsets.only(left: 10, right: 10, top: 14),
             sliver: SliverToBoxAdapter(
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search restaurants...',
-                  hintStyle: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0).withOpacity(0.6),
-                  ),
-                  prefixIcon: Icon(Icons.search, color: Color(0xFF5D4037)),
-                  filled: true,
-                  fillColor: Color(0xFFF5F0E6),
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Color.fromARGB(255, 108, 76, 44),
-                      width: 2,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search restaurants...',
+                        hintStyle: TextStyle(
+                          color: Color.fromARGB(255, 0, 0, 0).withOpacity(0.6),
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Color(0xFF5D4037),
+                        ),
+                        filled: true,
+                        fillColor: Color(0xFFF5F0E6),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Color.fromARGB(255, 108, 76, 44),
+                            width: 2,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Color.fromARGB(255, 122, 80, 38),
+                            width: 2,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Color.fromARGB(255, 141, 71, 50),
+                            width: 2.5,
+                          ),
+                        ),
+                      ),
+                      style: TextStyle(color: Color.fromARGB(255, 34, 31, 30)),
+                      onChanged: (value) {
+                        setState(() {
+                          searchQuery = value;
+                        });
+                      },
                     ),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Color.fromARGB(255, 122, 80, 38),
-                      width: 2,
+                  SizedBox(width: 4),
+                  // เพิ่ม PopupMenuButton ตรงนี้
+                  Container(
+                    width: 30,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFF5F0E6),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border(),
+                    ),
+                    child: PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: Color(0xFF5D4037),
+                        size: 30,
+                      ),
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem(
+                          value: 'approve',
+                          child: Row(
+                            children: [
+                              Icon(Icons.reviews, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text('Approve Reviews'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'history',
+                          child: Row(
+                            children: [
+                              Icon(Icons.history, color: Colors.green),
+                              SizedBox(width: 8),
+                              Text('My History'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onSelected: (String value) {
+                        if (value == 'approve') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RestaurantReviewHistoryPage(),
+                            ),
+                          );
+                        } else if (value == 'history') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  RestaurantReviewHistoryPage(),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Color.fromARGB(255, 141, 71, 50),
-                      width: 2.5,
-                    ),
-                  ),
-                ),
-                style: TextStyle(color: Color.fromARGB(255, 34, 31, 30)),
-                onChanged: (value) {
-                  setState(() {
-                    searchQuery = value;
-                  });
-                },
+                  SizedBox(width: 4),
+                ],
               ),
             ),
           ),

@@ -693,29 +693,28 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                           ),
                           SizedBox(height: 12),
 
-                          // Admin information
-                          _buildEnhancedInfoRow(
-                            'Thread ID',
-                            'ID ${item['Thread_ID']}',
-                            Icons.forum,
-                            Colors.blue,
-                          ),
-                          _buildEnhancedInfoRow(
-                            'Author by',
-                            item['thread_author_username'] ?? 'Unknown Admin',
-                            Icons.admin_panel_settings,
-                            Colors.green,
-                          ),
-                          if (item['admin_username'] != null)
-                            _buildEnhancedInfoRow(
-                              'Admin Action',
-                              item['admin_username'],
-                              Icons.person,
-                              _secondaryTextColor,
-                            ),
-
                           // Action details
                           if (action == 'Banned') ...[
+                            // Admin information
+                            _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ${item['Thread_ID']}',
+                              Icons.forum,
+                              _dangerColor,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Author by',
+                              item['thread_author_username'] ?? 'Unknown Admin',
+                              Icons.admin_panel_settings,
+                              _dangerColor,
+                            ),
+                            if (item['admin_username'] != null)
+                              _buildEnhancedInfoRow(
+                                'Admin Action',
+                                item['admin_username'],
+                                Icons.person,
+                                _dangerColor,
+                              ),
                             if (item['reason_for_taken'] != null)
                               _buildEnhancedInfoRow(
                                 'Reason for Banned',
@@ -724,12 +723,32 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 _dangerColor,
                               ),
                           ] else if (action == 'Safe') ...[
+                            // Admin information
+                            _buildEnhancedInfoRow(
+                              'Thread ID',
+                              'ID ${item['Thread_ID']}',
+                              Icons.forum,
+                              _successColor,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Author by',
+                              item['thread_author_username'] ?? 'Unknown Admin',
+                              Icons.admin_panel_settings,
+                              _successColor,
+                            ),
+                            if (item['admin_username'] != null)
+                              _buildEnhancedInfoRow(
+                                'Admin Action',
+                                item['admin_username'],
+                                Icons.person,
+                                _successColor,
+                              ),
                             _buildEnhancedInfoRow(
                               'Reason for Approved',
                               item['reason_for_taken'] ??
                                   'Not Found Inappropriate Language',
                               Icons.info_outline,
-                              _dangerColor,
+                              _successColor,
                             ),
                           ],
 
@@ -739,7 +758,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               'Reviewed at',
                               _formatDate(item['admin_checked_at']),
                               Icons.calendar_today,
-                              _secondaryTextColor,
+                              _successColor,
                             ),
                           // ใช้ใน widget
                           _buildEnhancedInfoRow(
@@ -748,7 +767,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 ? 'Posted'
                                 : item['admin_action_taken'],
                             getThreadStatusIcon(item['admin_action_taken']),
-                            Colors.black,
+                            _successColor,
                           ),
                         ],
                       ],
@@ -761,7 +780,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                       _buildMetricChipWithIcon(
                         Icons.favorite_outline,
                         '${item['Total_likes'] ?? 20}',
-                        _dangerColor,
+                        _getBackgroundColor(item['admin_action_taken']),
                       ),
                     ],
                   ),
@@ -923,6 +942,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                         ),
                       ),
                       SizedBox(width: 12),
+
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -982,7 +1002,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ],
                   ),
 
-                  SizedBox(height: 29),
+                  SizedBox(height: 33),
 
                   // Original thread info with enhanced UI
                   Container(
@@ -1155,7 +1175,9 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 _buildMetricChipWithIcon(
                                   Icons.favorite_outline,
                                   '${item['thread_total_like'] ?? 0}',
-                                  _dangerColor,
+                                  _getBackgroundColor(
+                                    item['thread_admin_decision'],
+                                  ),
                                 ),
                               ],
                             ),
@@ -1201,33 +1223,78 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                       ],
                     ),
                   ),
+                  SizedBox(height: 15),
 
-                  SizedBox(height: 16),
-
+                  SizedBox(height: 30),
                   // Reply message with improved background and border
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Color(0xFFE8EAED),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      item['reply_message'] ?? 'No message',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: _textColor,
-                        height: 1.5,
+                        child: Text(
+                          item['reply_message'] ?? 'No message',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: _textColor,
+                            height: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
+
+                      // 🟢 ตรงนี้ต้องอยู่ใน Stack ด้วย
+                      Positioned(
+                        top: -20, // ปรับตำแหน่งให้อยู่บนขอบ
+                        left: 17,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color.fromARGB(255, 207, 207, 207),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 14,
+                                color: _primaryColor,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Replying Message',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: _primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   SizedBox(height: 22),
@@ -1858,12 +1925,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     switch (decision) {
       case 'Posted':
         return _successColor; // เขียว
+      case 'Safe':
+        return _successColor; // เขียว
       case 'Banned':
         return _dangerColor; // แดง
       case 'Pending':
         return _warningColor; // เหลืองทอง
       default:
-        return Colors.grey.shade200; // fallback
+        return const Color.fromARGB(255, 0, 0, 0); // fallback
     }
   }
 
@@ -2126,7 +2195,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: 10), // Space for the title
+                            SizedBox(height: 17), // Space for the title
                             // Thread author info
                             Row(
                               children: [
@@ -2276,7 +2345,9 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 _buildMetricChipWithIcon(
                                   Icons.favorite_outline,
                                   '${reply['Total_likes'] ?? 10010}',
-                                  _getBackgroundColor(reply['admin_decision']),
+                                  _getBackgroundColor(
+                                    reply['Thread_admin_decision'],
+                                  ),
                                 ),
                               ],
                             ),
@@ -2324,32 +2395,75 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ),
                   ),
 
-                  SizedBox(height: 16),
-
-                  // Reply message with improved background and border
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
+                  SizedBox(height: 45),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Reply message with improved background and border
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Color(0xFFE8EAED),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      reply['message'] ?? 'No message',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: _textColor,
-                        height: 1.5,
+                        child: Text(
+                          reply['message'] ?? 'No message',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: _textColor,
+                            height: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        top: -20,
+                        left: 15,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color.fromARGB(255, 207, 207, 207),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                size: 14,
+                                color: _primaryColor,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Replying Message',
+                                style: TextStyle(
+                                  fontSize: 13,
+
+                                  color: _primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
                   SizedBox(height: 22),

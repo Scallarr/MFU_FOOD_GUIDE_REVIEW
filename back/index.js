@@ -563,6 +563,100 @@ app.put('/user-profile/update/:id', (req, res) => {
 //   });
 // });
 
+// GET /api/admin_review_history/:userId
+// Returns review approval history for an admin user
+// GET /api/admin_review_history/:userId
+// Returns review approval history for an admin user
+app.get('/api/admin_review_history/:userId', async (req, res) => {
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+    
+    const userId = req.params.userId;
+    
+    const query = `
+      SELECT 
+        r.Review_ID, r.Restaurant_ID, r.rating_overall, r.rating_hygiene, 
+        r.rating_flavor, r.rating_service, r.comment, r.total_likes, 
+        r.created_at, r.ai_evaluation, r.message_status,
+        res.restaurant_name, res.location, res.photos, res.category, 
+        res.operating_hours, res.phone_number,
+        u.User_ID as user_id, u.username as user_username, u.email as user_email, 
+        u.fullname as user_fullname,
+        up.picture_url as user_picture,
+        a.User_ID as admin_id, a.username as admin_username, 
+        a.fullname as admin_fullname,
+        ap.picture_url as admin_picture,
+        ac.admin_action_taken, ac.admin_checked_at, ac.reason_for_taken
+      FROM Admin_check_inappropriate_review ac
+      INNER JOIN Review r ON ac.Review_ID = r.Review_ID
+      INNER JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
+      INNER JOIN User u ON r.User_ID = u.User_ID
+      LEFT JOIN User a ON ac.Admin_ID = a.User_ID
+      LEFT JOIN user_Profile_Picture up ON u.User_ID = up.User_ID AND up.is_active = 1
+      LEFT JOIN user_Profile_Picture ap ON a.User_ID = ap.User_ID AND ap.is_active = 1
+      WHERE ac.Admin_ID = ?
+      ORDER BY ac.admin_checked_at DESC
+    `;
+    
+    const [results] = await connection.execute(query, [userId]);
+    
+    await connection.commit();
+    res.json(results);
+    
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('Error fetching admin review history:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+// GET /api/my_reviews/:userId
+// Returns all reviews by a specific user
+// GET /api/my_reviews/:userId
+// Returns all reviews by a specific user
+app.get('/api/my_reviews/:userId', async (req, res) => {
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+    
+    const userId = req.params.userId;
+    
+    const query = `
+      SELECT 
+        r.Review_ID, r.Restaurant_ID, r.rating_overall, r.rating_hygiene, 
+        r.rating_flavor, r.rating_service, r.comment, r.total_likes, 
+        r.created_at, r.ai_evaluation, r.message_status,
+        res.restaurant_name, res.location, res.photos, res.category, 
+        res.operating_hours, res.phone_number,
+        ac.admin_action_taken, ac.admin_checked_at, ac.reason_for_taken,
+        a.username as admin_username
+      FROM Review r
+      INNER JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
+      LEFT JOIN Admin_check_inappropriate_review ac ON r.Review_ID = ac.Review_ID
+      LEFT JOIN User a ON ac.Admin_ID = a.User_ID
+      WHERE r.User_ID = ?
+      ORDER BY r.created_at DESC
+    `;
+    
+    const [results] = await connection.execute(query, [userId]);
+    
+    await connection.commit();
+    res.json(results);
+    
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error('Error fetching user reviews:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+
 
 app.get('/leaderboard', async (req, res) => {
   try {
