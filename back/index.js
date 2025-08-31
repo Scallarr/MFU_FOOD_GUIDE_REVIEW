@@ -2931,15 +2931,16 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         thread_author_picture: row.thread_author_picture
       };
 
-      if (row.admin_action_taken === 'Banned') {
-        return {
-          ...baseData,
-          admin_username: row.admin_username,
-          admin_action_taken: row.admin_action_taken,
-          admin_checked_at: row.admin_checked_at,
-          reason_for_taken: row.reason_for_taken
-        };
-      }
+  if (row.admin_action_taken === 'Banned' || row.admin_action_taken === 'Safe') {
+  return {
+    ...baseData,
+    admin_username: row.admin_username,
+    admin_action_taken: row.admin_action_taken,
+    admin_checked_at: row.admin_checked_at,
+    reason_for_taken: row.reason_for_taken
+  };
+}
+
 
       return baseData;
     });

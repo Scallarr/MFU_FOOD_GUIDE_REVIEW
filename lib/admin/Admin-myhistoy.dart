@@ -188,6 +188,9 @@ class _MyHistoryPageState extends State<MyHistoryPage>
               'Thread_ID': thread['Thread_ID'],
               'Thread_message': thread['thread_message'],
               'Thread_username': thread['thread_author_username'],
+              'Thread_picture': thread['thread_author_picture'],
+              'Thread_create_at': thread['thread_created_at'],
+              'Thread_admin_decision': thread['thread_admin_decision'],
               'Thread_reply_ID': thread['Thread_reply_ID'],
               'message': thread['reply_message'],
               'created_at': thread['reply_created_at'],
@@ -969,6 +972,25 @@ class _MyHistoryPageState extends State<MyHistoryPage>
         statusIcon = Icons.access_time;
     }
 
+    // กำหนดสถานะของ Thread ต้นฉบับ
+    final threadStatus = reply['Thread_admin_decision'];
+    Color threadStatusColor;
+    String threadStatusText;
+
+    switch (threadStatus) {
+      case 'Posted':
+        threadStatusColor = _successColor;
+        threadStatusText = 'Posted';
+        break;
+      case 'Banned':
+        threadStatusColor = _dangerColor;
+        threadStatusText = 'Banned';
+        break;
+      default:
+        threadStatusColor = _warningColor;
+        threadStatusText = 'Pending';
+    }
+
     return StatefulBuilder(
       builder: (context, setState) {
         return Container(
@@ -1076,6 +1098,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 fontSize: 11,
                                 color: _secondaryTextColor,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -1113,56 +1136,212 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                     ],
                   ),
 
-                  SizedBox(height: 16),
+                  SizedBox(height: 29),
 
-                  // Original thread info
+                  // Original thread info with enhanced UI
                   Container(
-                    padding: EdgeInsets.all(12),
+                    padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        Row(
+                        // Main content
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 16,
-                              color: _secondaryTextColor,
+                            SizedBox(height: 10), // Space for the title
+                            // Thread author info
+                            Row(
+                              children: [
+                                // Thread Author Avatar
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: _primaryColor.withOpacity(0.2),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: ClipOval(
+                                    child: reply['Thread_picture'] != null
+                                        ? Image.network(
+                                            reply['Thread_picture'],
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return Container(
+                                                    color: _primaryColor
+                                                        .withOpacity(0.1),
+                                                    child: Icon(
+                                                      Icons.person,
+                                                      color: _primaryColor,
+                                                      size: 20,
+                                                    ),
+                                                  );
+                                                },
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return Center(
+                                                child: CircularProgressIndicator(
+                                                  value:
+                                                      loadingProgress
+                                                              .expectedTotalBytes !=
+                                                          null
+                                                      ? loadingProgress
+                                                                .cumulativeBytesLoaded /
+                                                            loadingProgress
+                                                                .expectedTotalBytes!
+                                                      : null,
+                                                  strokeWidth: 2,
+                                                  color: _primaryColor,
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Container(
+                                            color: _primaryColor.withOpacity(
+                                              0.1,
+                                            ),
+                                            child: Icon(
+                                              Icons.person,
+                                              color: _primaryColor,
+                                              size: 20,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        reply['Thread_username'] ??
+                                            'Unknown User',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: _textColor,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        _formatDate(reply['Thread_create_at']),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: _secondaryTextColor,
+                                        ),
+                                      ),
+                                      SizedBox(height: 0),
+                                    ],
+                                  ),
+                                ),
+                                // Thread status chip
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: threadStatusColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: threadStatusColor.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    threadStatusText,
+                                    style: TextStyle(
+                                      color: threadStatusColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Replying to:',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: _secondaryTextColor,
+                            SizedBox(height: 10),
+
+                            // Thread message
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Color(0xFFE8EAED),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                reply['Thread_message'] ?? 'No thread message',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: _textColor,
+                                  height: 1.4,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
-                        SizedBox(height: 6),
-                        Text(
-                          reply['Thread_username'] ?? 'Unknown User',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: _textColor,
+
+                        // Title positioned on top border
+                        Positioned(
+                          top: -30,
+                          left: 0,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color.fromARGB(255, 207, 207, 207),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_outline,
+                                  size: 14,
+                                  color: _primaryColor,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Replying to this thread',
+                                  style: TextStyle(
+                                    fontSize: 13,
+
+                                    color: _primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          reply['Thread_message'] ?? 'No thread message',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: _textColor,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -1303,6 +1482,39 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 reply['ai_evaluation'],
                                 Icons.psychology_outlined,
                                 _primaryColor,
+                              ),
+                            if (reply['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true ||
+                                reply['admin_username'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approved by',
+                                reply['admin_username'] ?? 'Unknown Admin',
+                                Icons.admin_panel_settings,
+                                _primaryColor,
+                              ),
+                            if (reply['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true &&
+                                reply['reason_for_taken'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approval Reason',
+                                reply['reason_for_taken'],
+                                Icons.info_outline,
+                                _secondaryTextColor,
+                              ),
+                            if (reply['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true &&
+                                reply['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approved At',
+                                _formatDate(reply['admin_checked_at']),
+                                Icons.calendar_today,
+                                _secondaryTextColor,
                               ),
                             if (reply['admin_checked_at'] != null)
                               _buildEnhancedInfoRow(
