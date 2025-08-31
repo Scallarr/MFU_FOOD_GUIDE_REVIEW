@@ -200,7 +200,9 @@ class _MyHistoryPageState extends State<MyHistoryPage>
               'admin_username': thread['admin_username'],
               'admin_action_taken': thread['admin_action_taken'],
               'admin_checked_at': thread['admin_checked_at'],
-              'reason_for_taken': thread['reason_for_taken'],
+              'reason_for_taken':
+                  thread['reason_for_taken'] ??
+                  'Not Found Inappropriate Message',
             };
           }).toList();
         });
@@ -246,7 +248,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
               'Thread_reply_ID': thread['Thread_reply_ID'],
               'message': thread['reply_message'],
               'created_at': thread['reply_created_at'],
-              'Total_likes': thread['reply_total_likes'],
+              'Total_likes': thread['thread_total_like'],
               // 'reply_count': thread['reply_count'],
               'ai_evaluation': thread['reply_ai_evaluation'],
               'admin_decision': thread['reply_admin_decision'],
@@ -1719,7 +1721,13 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               'Thread ID',
                               'ID ' + thread['Thread_ID'].toString(),
                               Icons.forum,
-                              const Color.fromARGB(255, 7, 7, 7),
+                              _dangerColor,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Ai Analysis',
+                              thread['ai_evaluation'],
+                              Icons.psychology_outlined,
+                              _dangerColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Admin Action',
@@ -1732,21 +1740,21 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Reason',
                                 thread['reason_for_taken'],
                                 Icons.info_outline,
-                                _secondaryTextColor,
+                                _dangerColor,
                               ),
                             if (thread['admin_checked_at'] != null)
                               _buildEnhancedInfoRow(
                                 'Action Taken',
                                 _formatDate(thread['admin_checked_at']),
                                 Icons.calendar_today,
-                                _secondaryTextColor,
+                                _dangerColor,
                               ),
                           ] else if (status == 'Posted') ...[
                             _buildEnhancedInfoRow(
                               'Thread ID',
                               'ID ${thread['Thread_ID']}',
                               Icons.forum,
-                              Colors.blue,
+                              _successColor,
                             ),
 
                             if (thread['ai_evaluation'] != null)
@@ -1754,7 +1762,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'AI Analysis',
                                 thread['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                _successColor,
                               ),
                             if (thread['ai_evaluation']?.contains(
                                       'Inappropriate',
@@ -1765,7 +1773,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Approved by',
                                 thread['admin_username'] ?? 'Unknown Admin',
                                 Icons.admin_panel_settings,
-                                _primaryColor,
+                                _successColor,
                               ),
                             if (thread['ai_evaluation']?.contains(
                                       'Inappropriate',
@@ -1776,7 +1784,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Approval Reason',
                                 thread['reason_for_taken'],
                                 Icons.info_outline,
-                                _secondaryTextColor,
+                                _successColor,
                               ),
                             if (thread['ai_evaluation']?.contains(
                                       'Inappropriate',
@@ -1787,14 +1795,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Approved At',
                                 _formatDate(thread['admin_checked_at']),
                                 Icons.calendar_today,
-                                _secondaryTextColor,
+                                _successColor,
                               ),
                           ] else if (status == 'Pending') ...[
                             _buildEnhancedInfoRow(
                               'Thread ID',
                               'ID ' + thread['Thread_ID'].toString(),
                               Icons.forum,
-                              const Color.fromARGB(255, 7, 7, 7),
+                              _warningColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Current Status',
@@ -1806,14 +1814,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               'Estimated Time',
                               'Usually reviewed within 24 hours',
                               Icons.schedule,
-                              _secondaryTextColor,
+                              _warningColor,
                             ),
                             if (thread['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
                                 thread['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                _warningColor,
                               ),
                           ],
                         ],
@@ -1825,21 +1833,16 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Wrap(
-                        spacing: 12,
-                        children: [
-                          _buildMetricChipWithIcon(
-                            Icons.favorite_outline,
-                            '${thread['Total_likes'] ?? 0}',
-                            _dangerColor,
-                          ),
-                          // _buildMetricChipWithIcon(
-                          //   Icons.reply_outlined,
-                          //   '${thread['reply_count'] ?? 0}',
-                          //   _primaryColor,
-                          // ),
-                        ],
+                      _buildMetricChipWithIcon(
+                        Icons.favorite_outline,
+                        '${thread['Total_likes'] ?? 0}',
+                        _getBackgroundColor(thread['admin_decision']),
                       ),
+                      // _buildMetricChipWithIcon(
+                      //   Icons.reply_outlined,
+                      //   '${thread['reply_count'] ?? 0}',
+                      //   _primaryColor,
+                      // ),
                     ],
                   ),
                 ],
@@ -1849,6 +1852,19 @@ class _MyHistoryPageState extends State<MyHistoryPage>
         );
       },
     );
+  }
+
+  Color _getBackgroundColor(String? decision) {
+    switch (decision) {
+      case 'Posted':
+        return _successColor; // เขียว
+      case 'Banned':
+        return _dangerColor; // แดง
+      case 'Pending':
+        return _warningColor; // เหลืองทอง
+      default:
+        return Colors.grey.shade200; // fallback
+    }
   }
 
   // New helper method for enhanced info rows
@@ -2253,6 +2269,17 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            SizedBox(height: 17),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                _buildMetricChipWithIcon(
+                                  Icons.favorite_outline,
+                                  '${reply['Total_likes'] ?? 10010}',
+                                  _getBackgroundColor(reply['admin_decision']),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
 
@@ -2402,13 +2429,13 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               'Thread ID',
                               'ID ${reply['Thread_ID']}',
                               Icons.forum,
-                              Colors.blue,
+                              _dangerColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Reply ID',
                               'ID ${reply['Thread_reply_ID']}',
                               Icons.reply,
-                              Colors.green,
+                              _dangerColor,
                             ),
 
                             if (reply['ai_evaluation'] != null)
@@ -2416,7 +2443,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'AI Analysis',
                                 reply['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                _dangerColor,
                               ),
                             if (reply['admin_username'] != null)
                               _buildEnhancedInfoRow(
@@ -2430,21 +2457,21 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Reason For Banned',
                                 reply['reason_for_taken'],
                                 Icons.info_outline,
-                                _secondaryTextColor,
+                                _dangerColor,
                               ),
                             if (reply['admin_checked_at'] != null)
                               _buildEnhancedInfoRow(
                                 'Action Taken',
                                 _formatDate(reply['admin_checked_at']),
                                 Icons.calendar_today,
-                                _secondaryTextColor,
+                                _dangerColor,
                               ),
                           ] else if (status == 'Posted') ...[
                             _buildEnhancedInfoRow(
                               'Thread ID',
                               'ID ${reply['Thread_ID']}',
                               Icons.forum,
-                              Colors.blue,
+                              _successColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Reply ID',
@@ -2463,7 +2490,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'AI Analysis',
                                 reply['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                _successColor,
                               ),
                             if (reply['ai_evaluation']?.contains(
                                       'Inappropriate',
@@ -2474,7 +2501,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Approved by',
                                 reply['admin_username'] ?? 'Unknown Admin',
                                 Icons.admin_panel_settings,
-                                _primaryColor,
+                                _successColor,
                               ),
                             if (reply['ai_evaluation']?.contains(
                                       'Inappropriate',
@@ -2485,7 +2512,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Approval Reason',
                                 reply['reason_for_taken'],
                                 Icons.info_outline,
-                                _secondaryTextColor,
+                                _successColor,
                               ),
                             if (reply['ai_evaluation']?.contains(
                                       'Inappropriate',
@@ -2496,20 +2523,20 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 'Approved At',
                                 _formatDate(reply['admin_checked_at']),
                                 Icons.calendar_today,
-                                _secondaryTextColor,
+                                _successColor,
                               ),
                           ] else if (status == 'Pending') ...[
                             _buildEnhancedInfoRow(
                               'Thread ID',
                               'ID ${reply['Thread_ID']}',
                               Icons.forum,
-                              Colors.blue,
+                              _warningColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Reply ID',
                               'ID ${reply['Thread_reply_ID']}',
                               Icons.reply,
-                              Colors.green,
+                              _warningColor,
                             ),
                             _buildEnhancedInfoRow(
                               'Current Status',
@@ -2521,14 +2548,14 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               'Estimated Time',
                               'Usually reviewed within 24 hours',
                               Icons.schedule,
-                              _secondaryTextColor,
+                              _warningColor,
                             ),
                             if (reply['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
                                 reply['ai_evaluation'],
                                 Icons.psychology_outlined,
-                                _primaryColor,
+                                _warningColor,
                               ),
                           ],
                         ],

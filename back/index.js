@@ -2998,7 +2998,7 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         thread_message: row.thread_message,
         thread_created_at: row.thread_created_at,
         thread_admin_decision: row.thread_admin_decision,
-        thread_total_like: row.thread_Total_likess,
+        thread_total_like: row.thread_Total_likes,
         thread_author_username: row.thread_author_username,
         thread_author_fullname: row.thread_author_fullname,
         thread_author_picture: row.thread_author_picture
