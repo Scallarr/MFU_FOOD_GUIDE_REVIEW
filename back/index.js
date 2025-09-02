@@ -3135,7 +3135,7 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         act.admin_action_taken,
         act.admin_checked_at,
         act.reason_for_taken,
-        admin_user.fullname as admin_username
+        admin_user.username as admin_username
 
       FROM Thread_reply tr
       LEFT JOIN User u 

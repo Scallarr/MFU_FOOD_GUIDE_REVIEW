@@ -446,7 +446,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/threads-replied/reject',
+          'https://mfu-food-guide-review.onrender.com/threads-replied/AdminManual-check/reject',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
