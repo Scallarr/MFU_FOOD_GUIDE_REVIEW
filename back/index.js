@@ -2811,6 +2811,47 @@ app.post('/threads-replied/reject', async (req, res) => {
     res.status(500).json({ error: 'Failed to approve thread' });
   }
 });
+// POST /threads/reject
+app.post('/threads-replied/AdminManual-check/reject', async (req, res) => {
+  const { threadId, adminId, reason } = req.body;
+  
+  try {
+    const connection = await db.promise().getConnection();
+    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    await connection.beginTransaction();
+    
+    // Update thread status in Thread table
+    await connection.execute(
+      'UPDATE Thread_reply SET  created_at= ? , admin_decision = "Banned" WHERE Thread_reply_ID = ?',
+      [now,threadId]
+    );
+    
+    // Update or create record in Admin_check_inappropriate_thread table
+    const [existingCheck] = await connection.execute(
+      'SELECT * FROM Admin_check_inappropriate_thread_reply WHERE Thread_reply_ID = ?',
+      [threadId]
+    );
+    
+ 
+      // Create new record
+      await connection.execute(
+          `INSERT INTO Admin_check_inappropriate_thread_reply 
+         (Thread_reply_ID, Admin_ID, admin_action_taken, reason_for_taken, admin_checked_at) 
+         VALUES (?, ?, 'Banned', ?, ?)`,
+        [threadId, adminId, reason,now]
+      );
+    
+    
+    await connection.commit();
+    connection.release();
+    
+    res.json({ success: true, message: 'Thread approved successfully' });
+  } catch (error) {
+    console.error(error);
+    if (connection) await connection.rollback();
+    res.status(500).json({ error: 'Failed to approve thread' });
+  }
+});
 
 // API สำหรับดึงประวัติการตรวจสอบ threads ของ admin
 app.get('/api/admin_thread_history/:adminId', async (req, res) => {
@@ -3111,8 +3152,13 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
              ON thread_owner.User_ID = thread_pp.User_ID AND thread_pp.is_active = 1
 
       -- join admin moderation for reply
-      LEFT JOIN Admin_check_inappropriate_thread_reply act 
-             ON tr.Thread_reply_ID = act.Thread_reply_ID
+     LEFT JOIN (
+    SELECT * FROM (
+        SELECT *, ROW_NUMBER() OVER(PARTITION BY Thread_reply_ID ORDER BY admin_checked_at DESC) as rn
+        FROM Admin_check_inappropriate_thread_reply
+    ) tmp
+    WHERE rn = 1
+) act ON tr.Thread_reply_ID = act.Thread_reply_ID
       LEFT JOIN User admin_user 
              ON act.Admin_ID = admin_user.User_ID
 

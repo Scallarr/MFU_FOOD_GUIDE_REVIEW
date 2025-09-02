@@ -775,7 +775,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
                           // ใช้ใน widget
                           _buildEnhancedInfoRow(
-                            'Status Threads',
+                            'Current Threads Status',
                             (item['admin_decision'] == 'Safe')
                                 ? 'Posted'
                                 : item['admin_decision'],
@@ -1856,6 +1856,12 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               Icons.forum,
                               _successColor,
                             ),
+                            _buildEnhancedInfoRow(
+                              'Visibility',
+                              'Publicly visible to all users',
+                              Icons.visibility,
+                              _successColor,
+                            ),
 
                             if (thread['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
@@ -1904,18 +1910,12 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               Icons.forum,
                               _warningColor,
                             ),
-                            _buildEnhancedInfoRow(
-                              'Current Status',
-                              'Awaiting admin approval',
-                              Icons.access_time,
-                              _warningColor,
-                            ),
-                            _buildEnhancedInfoRow(
-                              'Estimated Time',
-                              'Usually reviewed within 24 hours',
-                              Icons.schedule,
-                              _warningColor,
-                            ),
+                            // _buildEnhancedInfoRow(
+                            //   'Current Status',
+                            //   'Awaiting admin approval',
+                            //   Icons.access_time,
+                            //   _warningColor,
+                            // ),
                             if (thread['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
@@ -1923,7 +1923,25 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 Icons.psychology_outlined,
                                 _warningColor,
                               ),
+                            _buildEnhancedInfoRow(
+                              'Estimated Time',
+                              'Usually reviewed within 24 hours',
+                              Icons.schedule,
+                              _warningColor,
+                            ),
                           ],
+                          _buildEnhancedInfoRow(
+                            'Current Threads status ',
+                            (thread['admin_decision'] == 'Posted')
+                                ? 'Posted'
+                                : thread['admin_decision'],
+                            getThreadStatusIcon(thread['admin_decision']),
+                            thread['admin_decision'] == 'Pending'
+                                ? _warningColor
+                                : thread['admin_decision'] == 'Posted'
+                                ? _successColor
+                                : _dangerColor,
+                          ),
                         ],
                       ],
                     ),
@@ -2696,18 +2714,6 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               Icons.reply,
                               _warningColor,
                             ),
-                            _buildEnhancedInfoRow(
-                              'Current Status',
-                              'Awaiting admin approval',
-                              Icons.access_time,
-                              _warningColor,
-                            ),
-                            _buildEnhancedInfoRow(
-                              'Estimated Time',
-                              'Usually reviewed within 24 hours',
-                              Icons.schedule,
-                              _warningColor,
-                            ),
                             if (reply['ai_evaluation'] != null)
                               _buildEnhancedInfoRow(
                                 'AI Analysis',
@@ -2715,7 +2721,26 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 Icons.psychology_outlined,
                                 _warningColor,
                               ),
+
+                            _buildEnhancedInfoRow(
+                              'Estimated Time',
+                              'Usually reviewed within 24 hours',
+                              Icons.schedule,
+                              _warningColor,
+                            ),
                           ],
+                          _buildEnhancedInfoRow(
+                            'Current Threads Reply status ',
+                            (reply['admin_decision'] == 'Posted')
+                                ? 'Posted'
+                                : reply['admin_decision'],
+                            getThreadStatusIcon(reply['admin_decision']),
+                            reply['admin_decision'] == 'Pending'
+                                ? _warningColor
+                                : reply['admin_decision'] == 'Posted'
+                                ? _successColor
+                                : _dangerColor,
+                          ),
                         ],
                       ],
                     ),
