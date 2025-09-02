@@ -2599,6 +2599,44 @@ app.post('/threads/reject', async (req, res) => {
     res.status(500).json({ error: 'Failed to reject thread' });
   }
 });
+app.post('/threads/AdminManual-check/reject', async (req, res) => {
+  const { threadId, adminId, reason } = req.body;
+  
+  try {
+   const connection = await db.promise().getConnection();
+   const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    await connection.beginTransaction();
+    
+    // Update thread status in Thread table
+    await connection.execute(
+      'UPDATE Thread SET  created_at= ?,  admin_decision = "Banned" WHERE Thread_ID = ?',
+      [now,threadId]
+    );
+    
+    // Update or create record in Admin_check_inappropriate_thread table
+
+    
+ 
+  
+      // Create new record
+      await connection.execute(
+        `INSERT INTO Admin_check_inappropriate_thread 
+         (Thread_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
+         VALUES (?, ?, 'Banned', ?, ?)`,
+        [threadId, adminId, now,reason]
+      );
+   
+    
+    await connection.commit();
+    connection.release();
+    
+    res.json({ success: true, message: 'Thread rejected successfully' });
+  } catch (error) {
+    console.error(error);
+    if (connection) await connection.rollback();
+    res.status(500).json({ error: 'Failed to reject thread' });
+  }
+});
 
 
 // GET /threads-replied/pending/:threadId

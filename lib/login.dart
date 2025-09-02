@@ -40,8 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (googleUser == null) return;
 
       final isAdmin = googleUser.email == 'kasiditkosit@gmail.com';
+      final isAdmin2 = googleUser.email == '49369@cru.ac.th';
 
-      if (!googleUser.email.endsWith('@lamduan.mfu.ac.th') && !isAdmin) {
+      if (!googleUser.email.endsWith('@lamduan.mfu.ac.th') &&
+          !isAdmin &&
+          !isAdmin2) {
         await _googleSignIn.signOut();
         setState(() => _user = null);
         ScaffoldMessenger.of(context).showSnackBar(

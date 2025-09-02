@@ -387,15 +387,6 @@
 // //   }
 // // }
 
-
-
-
-
-
-
-
-
-
 //   Future<void> _uploadImage() async {
 //     if (_imageFile == null) return;
 
@@ -446,3 +437,38 @@
 //       setState(() {
 //         _isUploading = false;
 //       }
+
+//  ขนาดภาพ
+// N = 32;
+
+// % สร้างแกน x
+// x = 0:N-1;
+
+// % 2 periods ของ cosine ภายใน 32 pixels
+// % => cos(2 * pi * (2/N) * x)
+// cosine_row = cos(2 * pi * (2/N) * x);
+
+// % ทำซ้ำทุก row ให้ได้ภาพ 32x32
+// img = repmat(cosine_row, N, 1);
+
+// % คำนวณ Fourier Transform
+// F = fft2(img);
+// F_shifted = fftshift(F);
+// spectrum = log(1 + abs(F_shifted));
+
+// % หมุนภาพ 90 องศา
+// img_rot = rot90(img);
+
+// % Fourier spectrum หลังหมุน
+// F_rot = fft2(img_rot);
+// F_rot_shifted = fftshift(F_rot);
+// spectrum_rot = log(1 + abs(F_rot_shifted));
+
+// % แสดงผล
+// figure;
+
+// subplot(2,2,1), imshow(img, []), title('Original Image (2 periods cos)');
+// subplot(2,2,2), imshow(spectrum, []), title('Fourier Spectrum');
+
+// subplot(2,2,3), imshow(img_rot, []), title('Image Rotated 90°');
+// subplot(2,2,4), imshow(spectrum_rot, []), title('Fourier Spectrum (Rotated)');
