@@ -2994,28 +2994,35 @@ app.get('/api/my_threads/:userId', async (req, res) => {
 
   try {
     const [rows] = await db.promise().execute(`
-      SELECT 
-        t.Thread_ID,
-        t.message,
-        t.created_at,
-        t.Total_likes,
-        t.ai_evaluation,
-        t.admin_decision,
-        (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count,
-        u.username as author_username,
-        u.email as author_email,
-        upp.picture_url as author_picture,
-        act.admin_action_taken,
-        act.admin_checked_at,
-        act.reason_for_taken,
-        admin_user.fullname as admin_username
-      FROM Thread t
-      LEFT JOIN User u ON t.User_ID = u.User_ID
-      LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
-      LEFT JOIN Admin_check_inappropriate_thread act ON t.Thread_ID = act.Thread_ID
-      LEFT JOIN User admin_user ON act.Admin_ID = admin_user.User_ID
-      WHERE t.User_ID = ?
-      ORDER BY t.created_at DESC
+  SELECT 
+    t.Thread_ID,
+    t.message,
+    t.created_at,
+    t.Total_likes,
+    t.ai_evaluation,
+    t.admin_decision,
+    (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count,
+    u.username as author_username,
+    u.email as author_email,
+    upp.picture_url as author_picture,
+    act.admin_action_taken,
+    act.admin_checked_at,
+    act.reason_for_taken,
+    admin_user.fullname as admin_username
+FROM Thread t
+LEFT JOIN User u ON t.User_ID = u.User_ID
+LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
+LEFT JOIN (
+    SELECT * FROM (
+        SELECT *, ROW_NUMBER() OVER(PARTITION BY Thread_ID ORDER BY admin_checked_at DESC) as rn
+        FROM Admin_check_inappropriate_thread
+    ) tmp
+    WHERE rn = 1
+) act ON t.Thread_ID = act.Thread_ID
+LEFT JOIN User admin_user ON act.Admin_ID = admin_user.User_ID
+WHERE t.User_ID = ?
+ORDER BY t.created_at DESC
+
     `, [userId]);
 
     // จัดรูปแบบข้อมูลให้ตรงกับ requirement

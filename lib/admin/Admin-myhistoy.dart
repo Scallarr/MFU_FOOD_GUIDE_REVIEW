@@ -181,6 +181,8 @@ class _MyHistoryPageState extends State<MyHistoryPage>
               status = 'Banned';
             } else if (thread['admin_decision'] == 'Posted') {
               status = 'Posted';
+            } else if (thread['admin_decision'] == 'Banned') {
+              status = 'Banned';
             } else {
               status = 'Pending';
             }
@@ -726,6 +728,13 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                 item['reason_for_taken'],
                                 Icons.info_outline,
                                 _dangerColor,
+                              ), // Timestamp
+                            if (item['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Reviewed at',
+                                _formatDate(item['admin_checked_at']),
+                                Icons.calendar_today,
+                                _dangerColor,
                               ),
                           ] else if (action == 'Safe') ...[
                             // Admin information
@@ -754,25 +763,26 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                                   'Not Found Inappropriate Language',
                               Icons.info_outline,
                               _successColor,
-                            ),
+                            ), // Timestamp
+                            if (item['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Reviewed at',
+                                _formatDate(item['admin_checked_at']),
+                                Icons.calendar_today,
+                                _successColor,
+                              ),
                           ],
 
-                          // Timestamp
-                          if (item['admin_checked_at'] != null)
-                            _buildEnhancedInfoRow(
-                              'Reviewed at',
-                              _formatDate(item['admin_checked_at']),
-                              Icons.calendar_today,
-                              _successColor,
-                            ),
                           // ใช้ใน widget
                           _buildEnhancedInfoRow(
                             'Status Threads',
-                            (item['admin_action_taken'] == 'Safe')
+                            (item['admin_decision'] == 'Safe')
                                 ? 'Posted'
-                                : item['admin_action_taken'],
-                            getThreadStatusIcon(item['admin_action_taken']),
-                            _successColor,
+                                : item['admin_decision'],
+                            getThreadStatusIcon(item['admin_decision']),
+                            item['admin_decision'] == 'Posted'
+                                ? _successColor
+                                : _dangerColor,
                           ),
                         ],
                       ],
