@@ -3008,7 +3008,7 @@ app.get('/api/my_threads/:userId', async (req, res) => {
     act.admin_action_taken,
     act.admin_checked_at,
     act.reason_for_taken,
-    admin_user.fullname as admin_username
+    admin_user.username as admin_username
 FROM Thread t
 LEFT JOIN User u ON t.User_ID = u.User_ID
 LEFT JOIN user_Profile_Picture upp ON u.User_ID = upp.User_ID AND upp.is_active = 1
