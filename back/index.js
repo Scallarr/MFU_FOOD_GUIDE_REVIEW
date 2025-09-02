@@ -2823,6 +2823,7 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
         t.message as thread_message,
         t.ai_evaluation,
         t.Total_likes ,
+        t.admin_decision,
 
         -- การตรวจสอบของ admin
         act.admin_action_taken,
