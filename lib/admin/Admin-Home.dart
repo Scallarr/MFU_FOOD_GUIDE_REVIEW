@@ -389,70 +389,71 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            toolbarHeight: 70,
+            toolbarHeight: 80,
             backgroundColor: const Color(0xFFCEBFA3),
-            foregroundColor: Colors.black,
-            elevation: 1,
+            pinned: false,
             floating: true,
             snap: true,
-            flexibleSpace: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 0, top: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(left: 20),
-                      child: Text(
-                        'MFU Food Guide ',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 25,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 1),
-                              blurRadius: 3,
-                              color: Colors.black38,
-                            ),
-                          ],
+            elevation: 6,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
+            title: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'MFU FOOD GUIDE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 25,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          offset: const Offset(0, 2),
+                          blurRadius: 4,
+                          color: Colors.black.withOpacity(0.3),
                         ),
-                      ),
+                      ],
                     ),
-                    Padding(
-                      padding: EdgeInsetsGeometry.only(right: 17),
-                      child: GestureDetector(
-                        onTap: () async {
-                          final shouldRefresh = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProfilePageAdmin(),
-                            ),
-                          );
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      final shouldRefresh = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProfilePageAdmin(),
+                        ),
+                      );
 
-                          if (shouldRefresh == true) {
-                            fetchProfilePicture(userId!);
-                          }
-                        },
-                        child: profileImageUrl == null
-                            ? CircleAvatar(
-                                backgroundColor: Colors.grey[300],
-                                child: Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
-                                radius: 27,
-                              )
-                            : CircleAvatar(
-                                backgroundImage: NetworkImage(profileImageUrl!),
-                                radius: 27,
-                                backgroundColor: Colors.grey[300],
-                              ),
+                      if (shouldRefresh == true) {
+                        fetchProfilePicture(userId!);
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
                       ),
+                      child: profileImageUrl == null
+                          ? CircleAvatar(
+                              backgroundColor: Colors.grey[300],
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                              radius: 27,
+                            )
+                          : CircleAvatar(
+                              backgroundImage: NetworkImage(profileImageUrl!),
+                              radius: 27,
+                              backgroundColor: Colors.grey[300],
+                            ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -806,26 +807,43 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
           _buildRestaurantListContent(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color.fromARGB(255, 175, 128, 52),
-        backgroundColor: Colors.white,
-        unselectedItemColor: Colors.grey,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Leaderboard',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color(0xFFCEBFA3),
+            unselectedItemColor: Colors.grey,
+            backgroundColor: Colors.white,
+            elevation: 8,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.emoji_events),
+                label: 'Leaderboard',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.memory),
+                label: 'AI Assistant',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.forum),
+                label: 'Threads',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.memory),
-            label: 'AI Assistant',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color.fromARGB(255, 235, 188, 117),

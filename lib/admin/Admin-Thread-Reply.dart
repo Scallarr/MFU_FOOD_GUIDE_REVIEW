@@ -6,8 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ThreadRepliesAdminPage extends StatefulWidget {
   final Map thread;
+  final bool likedByUser;
 
-  const ThreadRepliesAdminPage({super.key, required this.thread});
+  const ThreadRepliesAdminPage({
+    super.key,
+    required this.thread,
+    required this.likedByUser,
+  });
 
   @override
   State<ThreadRepliesAdminPage> createState() => _ThreadRepliesAdminPageState();
@@ -293,6 +298,24 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     });
   }
 
+  // Future<void> toggleLike(int threadId, bool liked) async {
+  //   final response = await http.post(
+  //     Uri.parse('https://mfu-food-guide-review.onrender.com/like_thread'),
+  //     headers: {'Content-Type': 'application/json'},
+  //     body: json.encode({
+  //       'User_ID': userId,
+  //       'Thread_ID': threadId,
+  //       'liked': !liked, // toggle
+  //     }),
+  //   );
+
+  //   if (response.statusCode == 200) {
+  //   await refreshThreadData();
+  //   } else {
+  //     throw Exception('Failed to toggle like');
+  //   }
+  // }
+
   Future<void> _showRejectDialog(Map<dynamic, dynamic> reply) async {
     final reasonController = TextEditingController();
     return showDialog(
@@ -475,6 +498,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   Future<void> fetchPendingRepliesCount() async {
     try {
       final threadId = widget.thread['Thread_ID'];
+      final likedByUser = widget.likedByUser;
       final response = await http.get(
         Uri.parse(
           'https://mfu-food-guide-review.onrender.com/api/pending_replies_count/$threadId',
@@ -529,6 +553,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   @override
   Widget build(BuildContext context) {
     final thread = widget.thread;
+    final likedByUser = widget.likedByUser;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF),
@@ -591,7 +616,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 18),
-                    _buildThreadItem(thread),
+                    _buildThreadItem(thread, likedByUser),
                     const SizedBox(height: 16),
                     const SizedBox(height: 20),
                     Expanded(
@@ -797,7 +822,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   }
 
   // ... _buildThreadItem() และ _buildReplyItem() ตามเดิม
-  Widget _buildThreadItem(Map thread) {
+  Widget _buildThreadItem(Map thread, bool likedByUser) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -820,59 +845,90 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(thread['picture_url'] ?? ''),
-                    radius: 30,
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFCEBFA3),
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        thread['picture_url'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Container(color: Colors.grey[200]),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 10),
+
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      // mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Flexible(
-                              child: Text(
-                                thread['username'] ?? '',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                            Text(
+                              thread['username'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.verified,
-                              size: 16,
-                              color: Colors.blue,
-                            ),
+
+                            Icon(Icons.verified, size: 16, color: Colors.blue),
                             Spacer(),
+
                             Text(
-                              timeAgo(thread['created_at'] ?? ''),
-                              style: const TextStyle(
+                              timeAgo(thread['created_at']),
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey,
+                                color: Colors.grey[600],
                               ),
                             ),
                           ],
                         ),
+                        SizedBox(height: 4),
                         Text(
                           obfuscateEmail(thread['email'] ?? ''),
-                          style: TextStyle(fontSize: 12.3),
+                          style: TextStyle(
+                            fontSize: 12.3,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 15),
-              Text(
-                thread['message'] ?? '',
-                style: const TextStyle(fontSize: 15),
+              SizedBox(height: 9),
+
+              SizedBox(height: 5),
+
+              // ข้อความของ thread
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  thread['message'],
+                  style: const TextStyle(fontSize: 15, height: 1.4),
+                ),
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
+
+              Divider(color: Colors.grey.shade300, thickness: 0.7),
+              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -957,60 +1013,92 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                       ],
                     ),
                   ),
-
+                  Spacer(),
                   // Like และ Comment อยู่ชิดขวา
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 15,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.red),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.favorite,
-                              size: 18,
-                              color: Colors.red,
+                      // Report
+
+                      // Like button
+                      InkWell(
+                        // onTap: () {
+                        //   toggleLike(thread['Thread_ID'], likedByUser);
+                        // },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: likedByUser
+                                ? Colors.red.shade50
+                                : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: likedByUser
+                                  ? Colors.red.shade200
+                                  : Colors.grey.shade300,
                             ),
-                            const SizedBox(width: 7),
-                            Text('${thread['total_likes'] ?? 0}'),
-                          ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.favorite,
+                                size: 18,
+                                color: likedByUser
+                                    ? Colors.red
+                                    : Colors.grey[600],
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${thread['total_likes']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: likedByUser
+                                      ? Colors.red.shade700
+                                      : Colors.grey[700],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 15),
+
+                      // Comment button
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 15,
+                          horizontal: 12,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 73, 108, 223),
-                          ),
+                          border: Border.all(color: Colors.blue.shade100),
                         ),
                         child: Row(
                           children: [
                             const Icon(
                               Icons.comment,
-                              size: 20,
-                              color: Color.fromARGB(255, 11, 127, 223),
+                              size: 18,
+                              color: Colors.blue,
                             ),
-                            const SizedBox(width: 7),
+                            const SizedBox(width: 6),
                             Text(
-                              '${thread['total_comments'] ?? 0} ',
-                              style: TextStyle(fontSize: 15),
+                              '${thread['total_comments']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 10),
                     ],
                   ),
                 ],
@@ -1036,263 +1124,230 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
   Widget _buildReplyItem(Map reply) {
     final isMe = reply['User_ID'] == userId;
-    print(userId);
-    print(reply['User_ID']);
-    return Row(
-      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: isMe
-          ? [
-              // Bubble + Name + Time (ขวา)
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 20, left: 7),
-                  padding: const EdgeInsets.only(
-                    left: 14,
-                    right: 14,
-                    top: 13,
-                    bottom: 20,
+    final isPending = reply['status'] == 'pending';
+    final isRejected = reply['status'] == 'rejected';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        children: [
+          // Avatar ซ้าย
+          if (!isMe) ...[_buildAvatar(reply), const SizedBox(width: 10)],
+
+          // Bubble + Report Button (Stack)
+          Flexible(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Bubble
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.72,
                   ),
+                  padding: const EdgeInsets.only(
+                    top: 12,
+                    bottom: 30,
+                    left: 15,
+                    right: 15,
+                  ),
+                  margin: EdgeInsets.only(top: 3),
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    borderRadius: BorderRadius.circular(14),
+                    color: isMe
+                        ? const Color.fromARGB(255, 192, 212, 245)
+                        : const Color.fromARGB(255, 255, 255, 255),
+                    borderRadius: BorderRadius.only(
+                      topLeft: isMe
+                          ? const Radius.circular(18)
+                          : const Radius.circular(4),
+                      topRight: isMe
+                          ? const Radius.circular(4)
+                          : const Radius.circular(18),
+                      bottomLeft: const Radius.circular(18),
+                      bottomRight: const Radius.circular(18),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(
-                          0.2,
-                        ), // สีเงาและความโปร่งใส
-                        spreadRadius: 4, // ขนาดเงา
-                        blurRadius: 5, // ความฟุ้งของเงา
-                        offset: const Offset(0, 4), // ตำแหน่งเงา (x, y)
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Name and Time
+                      // Username + Email + Time
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: isMe
+                            ? MainAxisAlignment.end
+                            : MainAxisAlignment.start,
                         children: [
-                          Text(
-                            timeAgo(reply['created_at'] ?? ''),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color.fromARGB(255, 131, 130, 130),
-                            ),
+                          Row(
+                            children: [
+                              // Name
+                              Text(
+                                reply['username'] ?? 'Unknown',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14.5,
+                                  color: Color.fromARGB(255, 33, 33, 33),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.check_circle,
+                                size: 14,
+                                color: Colors.blue,
+                              ),
+
+                              // Email
+                            ],
                           ),
                           const Spacer(),
-
-                          Text(
-                            reply['username'] ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13.5,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.blue,
-                            size: 18,
-                          ),
-
-                          const SizedBox(width: 5),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsetsGeometry.all(3),
-                              // เพิ่ม Expanded นี้
-                              child: RichText(
-                                text: _buildMessageWithMentions(
-                                  reply['message'] ?? '',
+                          // Time + Checkmark
+                          Row(
+                            children: [
+                              Text(
+                                timeAgo(reply['created_at'] ?? ''),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
                                 ),
-                                maxLines: 10, // กำหนดจำนวนบรรทัดสูงสุด
-                                overflow:
-                                    TextOverflow.ellipsis, // ตัดข้อความด้วย ...
                               ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.report,
-                              color: const Color.fromARGB(255, 144, 143, 143),
-                            ),
-                            onPressed: () => _showRejectDialog(reply),
+                              if (isMe) ...[],
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
+                      const SizedBox(height: 3),
 
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                      right: 10,
-                      top: 2,
-                    ), // เว้นขอบรอบรูป
-                    child: CircleAvatar(
-                      backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
-                      radius: 30,
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    left: 42,
-                    child: Container(
-                      padding: const EdgeInsets.all(4), // เว้นขอบรอบไอคอน
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 212, 69, 69),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: const Icon(
-                        Icons.verified,
-                        size: 19,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ]
-          : [
-              // Profile Picture (ซ้าย)
-              // Profile Picture (ซ้าย) + verified icon
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(left: 5, top: 2), // เว้นขอบรอบรูป
-                    child: CircleAvatar(
-                      backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
-                      radius: 30,
-                    ),
-                  ),
+                      // Status Indicator
+                      if (isPending || isRejected)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: isPending
+                                ? const Color(0xFFFBBC05).withOpacity(0.2)
+                                : const Color(0xFFEA4335).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPending ? Icons.access_time : Icons.warning,
+                                size: 12,
+                                color: isPending
+                                    ? const Color(0xFFFBBC05)
+                                    : const Color(0xFFEA4335),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isPending ? 'Pending Review' : 'Rejected',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: isPending
+                                      ? const Color(0xFFFBBC05)
+                                      : const Color(0xFFEA4335),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
-                  Positioned(
-                    top: -4,
-                    left: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 212, 58, 58),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: const Icon(
-                        Icons.verified,
-                        size: 19,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 10),
-
-              const SizedBox(width: 10),
-              // Bubble + Name + Time
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 20, right: 7),
-                  padding: const EdgeInsets.only(
-                    right: 14,
-                    left: 14,
-                    top: 10,
-                    bottom: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          0.2,
-                        ), // สีเงาและความโปร่งใส
-                        spreadRadius: 4, // ขนาดเงา
-                        blurRadius: 5, // ความฟุ้งของเงา
-                        offset: const Offset(0, 4), // ตำแหน่งเงา (x, y)
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Name and Time
                       Row(
+                        mainAxisAlignment: isMe
+                            ? MainAxisAlignment.end
+                            : MainAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Row(
-                              children: [
-                                Text(
-                                  reply['username'] ?? '',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                            child:
+                                // Message Text
+                                RichText(
+                                  text: TextSpan(
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: isMe
+                                          ? const Color.fromARGB(255, 0, 0, 0)
+                                          : const Color(0xFF202124),
+                                      height: 1.4,
+                                    ),
+                                    children: _buildMessageWithMentions(
+                                      reply['message'] ?? '',
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 5),
-                                const Icon(
-                                  Icons.check_circle,
-                                  color: Colors.blue,
-                                  size: 15,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            timeAgo(reply['created_at'] ?? ''),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            // เพิ่ม Expanded นี้
-                            child: RichText(
-                              text: _buildMessageWithMentions(
-                                reply['message'] ?? '',
-                              ),
-                              maxLines: 10, // กำหนดจำนวนบรรทัดสูงสุด
-                              overflow:
-                                  TextOverflow.ellipsis, // ตัดข้อความด้วย ...
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.report,
-                              color: const Color.fromARGB(255, 144, 143, 143),
-                            ),
-                            onPressed: () => _showRejectDialog(reply),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // Report Button (ทุกคน) อยู่ด้านนอกขวาล่าง
+                Positioned(
+                  bottom: -8,
+                  right: -1,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.report_gmailerrorred,
+                      size: 20,
+                      color: Colors.grey[600],
+                    ),
+                    onPressed: () => _showRejectDialog(reply),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Report this message',
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Avatar ขวา
+          if (isMe) ...[const SizedBox(width: 10), _buildAvatar(reply)],
+        ],
+      ),
     );
   }
 
-  // ฟังก์ชันช่วยแปลงข้อความธรรมดาเป็น TextSpan ที่ไฮไลต์ @mentions
-  TextSpan _buildMessageWithMentions(String message) {
+  // Avatar + Verified
+  Widget _buildAvatar(Map reply) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
+          radius: 24,
+          backgroundColor: Colors.grey[200],
+        ),
+        Positioned(
+          bottom: -2,
+          right: -2,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4285F4),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: const Icon(Icons.verified, size: 14, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<TextSpan> _buildMessageWithMentions(String message) {
     final RegExp regex = RegExp(r'@[\w]+'); // หา pattern @username
     final List<TextSpan> spans = [];
 
@@ -1301,12 +1356,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
     for (final match in matches) {
       if (match.start > start) {
-        spans.add(
-          TextSpan(
-            text: message.substring(start, match.start),
-            style: const TextStyle(color: Colors.black, fontSize: 17),
-          ),
-        );
+        spans.add(TextSpan(text: message.substring(start, match.start)));
       }
 
       final mentionText = message.substring(match.start, match.end);
@@ -1314,9 +1364,9 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
       spans.add(
         TextSpan(
           text: mentionText,
-          style: const TextStyle(
-            fontSize: 17,
-            color: Colors.red,
+          style: TextStyle(
+            fontSize: 15,
+            color: const Color.fromARGB(255, 233, 0, 0),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1326,15 +1376,10 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     }
 
     if (start < message.length) {
-      spans.add(
-        TextSpan(
-          text: message.substring(start),
-          style: const TextStyle(color: Colors.black, fontSize: 17),
-        ),
-      );
+      spans.add(TextSpan(text: message.substring(start)));
     }
 
-    return TextSpan(children: spans);
+    return spans;
   }
 
   TextSpan _buildHighlightText(String text) {

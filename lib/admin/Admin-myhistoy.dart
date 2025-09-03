@@ -1488,10 +1488,10 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                               ),
                             _buildEnhancedInfoRow(
                               'Status Threads Reply',
-                              (item['admin_action_taken'] == 'Safe')
+                              (item['reply_admin_decision'] == 'Safe')
                                   ? 'Posted'
-                                  : item['admin_action_taken'],
-                              getThreadStatusIcon(item['admin_action_taken']),
+                                  : item['reply_admin_decision'],
+                              getThreadStatusIcon(item['reply_admin_decision']),
                               Colors.green,
                             ),
                           ] else if (statusText == 'Pending') ...[

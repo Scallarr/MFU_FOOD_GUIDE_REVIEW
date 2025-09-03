@@ -794,17 +794,17 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
         controller: _scrollController,
         slivers: [
           SliverAppBar(
-            toolbarHeight: 70,
+            toolbarHeight: 80,
             backgroundColor: const Color(0xFFCEBFA3),
             pinned: false,
             floating: true,
             snap: true,
-            elevation: 4,
+            elevation: 6,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
             title: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 8,
-              ), // ปรับตามต้องการ
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -816,9 +816,9 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                       color: Colors.white,
                       shadows: [
                         Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 3,
-                          color: Colors.black38,
+                          offset: const Offset(0, 2),
+                          blurRadius: 4,
+                          color: Colors.black.withOpacity(0.3),
                         ),
                       ],
                     ),
@@ -836,32 +836,40 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                         fetchProfilePicture(userId!);
                       }
                     },
-                    child: profileImageUrl == null
-                        ? CircleAvatar(
-                            backgroundColor: Colors.grey[300],
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 40,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: profileImageUrl == null
+                          ? CircleAvatar(
+                              backgroundColor: Colors.grey[300],
+                              child: Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 40,
+                              ),
+                              radius: 27,
+                            )
+                          : CircleAvatar(
+                              backgroundImage: NetworkImage(profileImageUrl!),
+                              radius: 27,
+                              backgroundColor: Colors.grey[300],
                             ),
-                            radius: 27, // ขนาดใหญ่
-                          )
-                        : CircleAvatar(
-                            backgroundImage: NetworkImage(profileImageUrl!),
-                            radius: 27, // ขนาดใหญ่
-                            backgroundColor: Colors.grey[300],
-                          ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  SizedBox(height: 15),
                   Row(
                     children: [
                       // Search TextField
@@ -1135,8 +1143,10 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                   final shouldRefresh = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          ThreadRepliesAdminPage(thread: thread),
+                      builder: (context) => ThreadRepliesAdminPage(
+                        thread: thread,
+                        likedByUser: likedByUser,
+                      ),
                     ),
                   );
 
@@ -1174,13 +1184,29 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                           children: [
                             Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundImage: NetworkImage(
-                                    thread['picture_url'],
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: const Color(0xFFCEBFA3),
+                                      width: 2,
+                                    ),
                                   ),
-                                  backgroundColor: Colors.grey.shade200,
+                                  child: ClipOval(
+                                    child: Image.network(
+                                      thread['picture_url'],
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                                color: Colors.grey[200],
+                                              ),
+                                    ),
+                                  ),
                                 ),
+
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
@@ -1216,49 +1242,62 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                       SizedBox(height: 4),
                                       Text(
                                         obfuscateEmail(thread['email'] ?? ''),
-                                        style: TextStyle(fontSize: 12.3),
+                                        style: TextStyle(
+                                          fontSize: 12.3,
+                                          color: Colors.grey[600],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 10),
-                            // Divider(
-                            //   color: const Color.fromARGB(255, 226, 225, 225),
-                            //   thickness: 1,
-                            // ),
-                            const SizedBox(height: 12),
-                            Align(
-                              alignment: Alignment.centerLeft,
+                            SizedBox(height: 9),
+
+                            SizedBox(height: 5),
+
+                            // ข้อความของ thread
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               child: Text(
                                 thread['message'],
-                                style: const TextStyle(fontSize: 15),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 10),
+
+                            // Divider บางๆ
+                            Divider(
+                              color: Colors.grey.shade300,
+                              thickness: 0.7,
+                            ),
+                            const SizedBox(height: 6),
+
+                            // ปุ่ม Like / Comment / Report
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.report,
-                                        color: const Color.fromARGB(
-                                          255,
-                                          144,
-                                          143,
-                                          143,
-                                        ),
-                                      ),
-                                      onPressed: () =>
-                                          _showRejectDialog2(thread),
-                                    ),
-                                  ],
+                                // Report
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.report,
+                                    color: Colors.grey[600],
+                                  ),
+                                  onPressed: () => _showRejectDialog2(thread),
                                 ),
-                                Spacer(),
+                                const Spacer(),
+
+                                // Like button
                                 InkWell(
                                   onTap: () {
                                     toggleLike(
@@ -1269,23 +1308,18 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                   borderRadius: BorderRadius.circular(20),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 15,
+                                      horizontal: 12,
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
                                       color: likedByUser
-                                          ? Colors.red.shade100
-                                          : Colors.grey.shade200,
+                                          ? Colors.red.shade50
+                                          : Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
                                         color: likedByUser
-                                            ? Colors.red
-                                            : const Color.fromARGB(
-                                                255,
-                                                102,
-                                                100,
-                                                100,
-                                              ),
+                                            ? Colors.red.shade200
+                                            : Colors.grey.shade300,
                                       ),
                                     ),
                                     child: Row(
@@ -1295,12 +1329,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                           size: 18,
                                           color: likedByUser
                                               ? Colors.red
-                                              : const Color.fromARGB(
-                                                  255,
-                                                  0,
-                                                  0,
-                                                  0,
-                                                ),
+                                              : Colors.grey[600],
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
@@ -1309,12 +1338,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                             fontWeight: FontWeight.w600,
                                             color: likedByUser
                                                 ? Colors.red.shade700
-                                                : const Color.fromARGB(
-                                                    255,
-                                                    0,
-                                                    0,
-                                                    0,
-                                                  ),
+                                                : Colors.grey[700],
                                             fontSize: 14,
                                           ),
                                         ),
@@ -1322,17 +1346,19 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 20),
+                                const SizedBox(width: 12),
+
+                                // Comment button
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 7,
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
                                     color: Colors.blue.shade50,
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
-                                      color: Colors.blue.shade200,
+                                      color: Colors.blue.shade100,
                                     ),
                                   ),
                                   child: Row(
@@ -1342,7 +1368,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                         size: 18,
                                         color: Colors.blue,
                                       ),
-                                      const SizedBox(width: 10),
+                                      const SizedBox(width: 6),
                                       Text(
                                         '${thread['total_comments']}',
                                         style: const TextStyle(
@@ -1354,7 +1380,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                     ],
                                   ),
                                 ),
-                                SizedBox(width: 20),
+                                const SizedBox(width: 20),
                               ],
                             ),
                           ],
@@ -1385,114 +1411,143 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
           const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 175, 128, 52),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Leaderboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.memory),
-            label: 'AI Assistant',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Threads'),
-        ],
-      ),
-      bottomSheet: Container(
-        height: 80,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, -2),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            FutureBuilder<String?>(
-              future: fetchUserPictureUrl(userId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.grey.shade300,
-                    child: const CircularProgressIndicator(),
-                  );
-                } else if (snapshot.hasError || snapshot.data == null) {
-                  return CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.grey.shade300,
-                    child: const Icon(Icons.person),
-                  );
-                } else {
-                  return CircleAvatar(
-                    radius: 22,
-                    backgroundImage: NetworkImage(snapshot.data!),
-                    backgroundColor: Colors.grey.shade300,
-                  );
-                }
-              },
-            ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: const Color(0xFFCEBFA3),
+            unselectedItemColor: Colors.grey,
+            backgroundColor: Colors.white,
+            elevation: 8,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.emoji_events),
+                label: 'Leaderboard',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.memory),
+                label: 'AI Assistant',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.forum),
+                label: 'Threads',
+              ),
+            ],
+          ),
+        ),
+      ),
 
-            const SizedBox(width: 10),
+      bottomSheet: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(
+            context,
+          ).viewInsets.bottom, // กันข้อความโดนคีย์บอร์ดบัง
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 8,
+                offset: Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Avatar
+              FutureBuilder<String?>(
+                future: fetchUserPictureUrl(userId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.grey.shade300,
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  } else if (snapshot.hasError || snapshot.data == null) {
+                    return CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.grey.shade300,
+                      child: const Icon(Icons.person, color: Colors.white),
+                    );
+                  } else {
+                    return CircleAvatar(
+                      radius: 22,
+                      backgroundImage: NetworkImage(snapshot.data!),
+                      backgroundColor: Colors.grey.shade300,
+                    );
+                  }
+                },
+              ),
 
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: const Color.fromARGB(221, 148, 143, 143),
+              const SizedBox(width: 12),
+
+              // Text Field
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 150),
-                  child: Scrollbar(
-                    child: TextField(
-                      controller: _textController,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      decoration: const InputDecoration(
-                        hintText: 'Write a new thread...',
-                        border: InputBorder.none,
-                        isDense: true,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 150),
+                    child: SingleChildScrollView(
+                      reverse: true, // เลื่อนตามบรรทัดล่าสุด
+                      child: TextField(
+                        controller: _textController,
+                        maxLines: null, // ให้ขยายได้หลายบรรทัด
+                        keyboardType: TextInputType.multiline,
+                        decoration: InputDecoration(
+                          hintText: 'Write a new thread...',
+                          hintStyle: TextStyle(color: Colors.grey.shade600),
+                          border: InputBorder.none,
+                          isDense: true,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(width: 10),
+              const SizedBox(width: 12),
 
-            InkWell(
-              onTap: sendThread,
-              borderRadius: BorderRadius.circular(25),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Colors.deepOrangeAccent,
-                  shape: BoxShape.circle,
+              // Send Button
+              InkWell(
+                onTap: sendThread,
+                borderRadius: BorderRadius.circular(25),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFCEBFA3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send, color: Colors.white, size: 24),
                 ),
-                child: const Icon(Icons.send, color: Colors.white),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
