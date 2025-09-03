@@ -672,9 +672,9 @@ app.get('/api/my_reviews/:userId', async (req, res) => {
   try {
     connection = await db.promise().getConnection();
     await connection.beginTransaction();
-    
+
     const userId = req.params.userId;
-    
+
     const query = `
       SELECT 
         r.Review_ID, r.Restaurant_ID, r.rating_overall, r.rating_hygiene, 
@@ -687,21 +687,27 @@ app.get('/api/my_reviews/:userId', async (req, res) => {
         u.User_ID as user_id, u.username as user_username, u.email as user_email, 
         u.fullname as user_fullname,
         up.picture_url as user_picture
-        FROM Review r
+      FROM Review r
       INNER JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
-      LEFT JOIN Admin_check_inappropriate_review ac ON r.Review_ID = ac.Review_ID
+      LEFT JOIN (
+          SELECT * FROM (
+              SELECT *, ROW_NUMBER() OVER(PARTITION BY Review_ID ORDER BY admin_checked_at DESC) as rn
+              FROM Admin_check_inappropriate_review 
+          ) tmp
+          WHERE rn = 1
+      ) ac ON r.Review_ID = ac.Review_ID
       LEFT JOIN User a ON ac.Admin_ID = a.User_ID
       INNER JOIN User u ON r.User_ID = u.User_ID
       LEFT JOIN user_Profile_Picture up ON u.User_ID = up.User_ID AND up.is_active = 1
       WHERE r.User_ID = ?
       ORDER BY r.created_at DESC
     `;
-    
+
     const [results] = await connection.execute(query, [userId]);
-    
+
     await connection.commit();
     res.json(results);
-    
+
   } catch (error) {
     if (connection) await connection.rollback();
     console.error('Error fetching user reviews:', error);
@@ -2690,6 +2696,44 @@ app.post('/threads/AdminManual-check/reject', async (req, res) => {
     console.error(error);
     if (connection) await connection.rollback();
     res.status(500).json({ error: 'Failed to reject thread' });
+  }
+});
+app.post('/review/AdminManual-check/reject', async (req, res) => {
+  const { rewiewId, adminId, reason } = req.body;
+  
+  try {
+   const connection = await db.promise().getConnection();
+   const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    await connection.beginTransaction();
+    
+    // Update thread status in Thread table
+    await connection.execute(
+      'UPDATE Review SET  created_at= ?,  message_status = "Banned" WHERE Review_ID = ?',
+      [now,rewiewId]
+    );
+    
+    // Update or create record in Admin_check_inappropriate_thread table
+
+    
+ 
+  
+      // Create new record
+      await connection.execute(
+        `INSERT INTO Admin_check_inappropriate_review 
+         (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
+         VALUES (?, ?, 'Banned', ?, ?)`,
+        [rewiewId, adminId, now,reason]
+      );
+   
+    
+    await connection.commit();
+    connection.release();
+    
+    res.json({ success: true, message: 'Banned Review successfully' });
+  } catch (error) {
+    console.error(error);
+    if (connection) await connection.rollback();
+    res.status(500).json({ error: 'Failed to Banned Review' });
   }
 });
 

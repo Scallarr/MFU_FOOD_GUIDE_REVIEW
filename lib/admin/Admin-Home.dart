@@ -18,7 +18,6 @@ import 'package:myapp/admin/Admin-Edit-Restaurant.dart';
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:myapp/threads.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';

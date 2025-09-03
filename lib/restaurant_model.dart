@@ -66,6 +66,7 @@ class Review {
   final int totalLikes;
   final String createdAt;
   final bool isLiked;
+  final String ai_evaluation;
   Review({
     required this.id,
     required this.ratingOverall,
@@ -76,6 +77,7 @@ class Review {
     required this.totalLikes,
     required this.createdAt,
     required this.isLiked,
+    required this.ai_evaluation,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -91,6 +93,7 @@ class Review {
       totalLikes: json['total_likes'] ?? 0,
       createdAt: json['created_at'] ?? '',
       isLiked: json['isLiked'] ?? false,
+      ai_evaluation: json['ai_evaluation'] ?? 'sfdsfsdfes',
     );
   }
 }

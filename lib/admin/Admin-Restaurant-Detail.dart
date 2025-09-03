@@ -26,6 +26,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   bool isLoading = true;
   bool isExpanded = false;
   bool isReviewExpanded = false;
+  final Color _primaryColor = Color(0xFF4285F4);
+  final Color _successColor = Color(0xFF34A853);
+  final Color _warningColor = Color(0xFFFBBC05);
+  final Color _dangerColor = Color(0xFFEA4335);
+  final Color _cardColor = Colors.white;
+  final Color _textColor = Color(0xFF202124);
+  final Color _secondaryTextColor = Color(0xFF5F6368);
 
   int? userId;
   Map<int, bool> likedReviews = {};
@@ -121,6 +128,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
               createdAt: oldReview.createdAt,
               isLiked: likedNow,
               email: oldReview.email,
+              ai_evaluation: oldReview.ai_evaluation,
             );
 
             restaurant!.reviews[index] = updatedReview;
@@ -997,7 +1005,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                                 backgroundImage: NetworkImage(
                                   review.pictureUrl,
                                 ),
-                                radius: 30,
+                                radius: 33,
                                 backgroundColor: Colors.grey[200],
                               ),
                             ),
@@ -1064,7 +1072,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                                           obfuscateEmail(review.email),
                                           style: TextStyle(fontSize: 10.5),
                                         ),
-                                        SizedBox(height: 10),
+                                        SizedBox(height: 7),
                                         Row(
                                           children: List.generate(5, (i) {
                                             if (i <
@@ -1097,7 +1105,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                                     ),
                                   ),
 
-                                  SizedBox(height: 12),
+                                  SizedBox(height: 0),
                                   Padding(
                                     padding: EdgeInsetsGeometry.only(
                                       right: 7,
@@ -1118,9 +1126,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                                               },
                                               child: Padding(
                                                 padding: EdgeInsets.only(
-                                                  right: 00,
+                                                  right: 0,
                                                   left: 60,
-                                                  top: 20,
+                                                  top: 25,
                                                   bottom: 0,
                                                 ), // ปรับตามต้องการ
                                                 child: Icon(
@@ -1158,16 +1166,27 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                             ),
                           ],
                         ),
-
+                        SizedBox(height: 7),
                         // ข้อความรีวิว - ย้ายมาอยู่ใต้รูป
                         Padding(
                           padding: EdgeInsets.only(
-                            right: 80,
-                            left: 15, // เพิ่ม padding ซ้ายเพื่อจัดตำแหน่ง
+                            right: 0,
+                            left: 0, // เพิ่ม padding ซ้ายเพื่อจัดตำแหน่ง
                           ),
-                          child: Text(
-                            review.comment,
-                            style: TextStyle(fontSize: 13),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              review.comment,
+                              style: TextStyle(fontSize: 13),
+                            ),
                           ),
                         ),
 
@@ -1176,14 +1195,38 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            IconButton(
-                              padding: EdgeInsets.zero, // ❌ ไม่มี padding
-                              constraints:
-                                  BoxConstraints(), // ❌ ไม่บังคับขนาด 48x48
-                              icon: Icon(Icons.report, size: 20),
-                              onPressed: () {},
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.analytics,
+                                  size: 20,
+                                  color: Color(0xFF4285F4),
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  "AI Analysis: ${review.ai_evaluation ?? 'N/A'}",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF4285F4),
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text('ff'),
+                            IconButton(
+                              padding: EdgeInsets.all(
+                                4,
+                              ), // มีระยะกด แต่ไม่เยอะเกิน
+                              constraints: BoxConstraints(),
+                              icon: Icon(
+                                Icons.report,
+                                size: 25,
+                                color: const Color.fromARGB(255, 56, 52, 52),
+                              ),
+                              onPressed: () => _showRejectDialog2(review.id),
+                              tooltip:
+                                  "Report this review", // เพิ่ม tooltip เวลา hover
+                            ),
                           ],
                         ),
                       ],
@@ -1290,6 +1333,182 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
+    }
+  }
+
+  Future<void> _showRejectDialog2(int reviewID) async {
+    final reasonController = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _dangerColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 40,
+                          color: _dangerColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Confirm Rejection',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Are you sure you want to reject this thread?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 20),
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    labelText: 'Reason (optional)',
+                    labelStyle: TextStyle(color: _secondaryTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  maxLines: 2,
+                  style: TextStyle(color: _textColor),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _banThread2(reviewID, reason: reasonController.text);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Reject',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // เพิ่มเมธอดสำหรับเรียก API แบน
+  Future<void> _banThread2(int reviewID, {String reason = ''}) async {
+    try {
+      final int review_ID = reviewID;
+      final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
+      final response = await http.post(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/review/AdminManual-check/reject',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'rewiewId': review_ID,
+          'adminId': userId,
+          'reason': rejectionReason,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Thread banned successfully')));
+        fetchRestaurant(); // รีเฟรชรายการ threads
+      } else {
+        throw Exception('Failed to ban thread');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
