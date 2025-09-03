@@ -1846,13 +1846,19 @@ app.get('/reviews/pending', async (req, res) => {
         u.fullname,
         u.username,
         u.email,
-        p.picture_url
+        p.picture_url,
+        res.restaurant_name,
+        res.location,
+        res.photos,
+        res.category
       FROM 
         Review r
       JOIN 
         User u ON r.User_ID = u.User_ID
       LEFT JOIN 
         user_Profile_Picture p ON u.User_ID = p.User_ID AND p.is_active = 1
+      JOIN
+        Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
       WHERE 
         r.Restaurant_ID = ? 
         AND r.message_status = 'Pending'
@@ -1868,6 +1874,7 @@ app.get('/reviews/pending', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch pending reviews' });
   }
 });
+
 
 
 // Approve review endpoint

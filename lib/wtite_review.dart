@@ -235,7 +235,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                 onPressed: () => onRatingSelected(ratingValue),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isSelected
-                      ? Color.fromARGB(255, 247, 103, 25)
+                      ? Color.fromARGB(255, 75, 73, 73)
                       : const Color.fromARGB(255, 255, 255, 255),
                   foregroundColor: isSelected
                       ? Colors.white
@@ -330,7 +330,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(context).pop(false),
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: Colors.black,
+                          backgroundColor: Colors.black.withOpacity(0.7),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: const BorderSide(color: Colors.deepPurple),
                           shape: RoundedRectangleBorder(
@@ -351,7 +351,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                       child: ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromARGB(255, 247, 103, 25),
+                          backgroundColor: Color(0xFFEA4335).withOpacity(0.7),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

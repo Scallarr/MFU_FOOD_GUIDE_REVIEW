@@ -33,6 +33,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   final Color _cardColor = Colors.white;
   final Color _textColor = Color(0xFF202124);
   final Color _secondaryTextColor = Color(0xFF5F6368);
+  final Color _colorButton = Color.fromARGB(255, 75, 73, 73);
 
   int? userId;
   Map<int, bool> likedReviews = {};
@@ -270,22 +271,17 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                         avatar: Icon(
                           Icons.local_offer_rounded,
                           size: 18,
-                          color: const Color.fromARGB(255, 83, 83, 83),
+                          color: const Color.fromARGB(255, 255, 255, 255),
                         ),
                         label: Text(
                           restaurant!.category,
                           style: TextStyle(
-                            color: const Color.fromARGB(255, 95, 94, 94),
+                            color: const Color.fromARGB(255, 255, 255, 255),
                             fontWeight: FontWeight.w500,
                             fontSize: 17,
                           ),
                         ),
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          228,
-                          192,
-                          135,
-                        ), // สีน้ำตาลโกโก้ดูหรู
+                        backgroundColor: _colorButton, // สีน้ำตาลโกโก้ดูหรู
                         padding: EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
@@ -441,11 +437,11 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                             },
 
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(
+                              backgroundColor: Color.fromARGB(
                                 255,
-                                75,
-                                73,
-                                73,
+                                245,
+                                240,
+                                230,
                               ),
                               padding: EdgeInsets.symmetric(
                                 vertical:
@@ -454,12 +450,16 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
+                              side: BorderSide(
+                                color: Color.fromARGB(255, 225, 225, 225),
+                                width: 2,
+                              ),
                             ),
                             child: Text(
                               'Write a Review',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white,
+                                color: const Color.fromARGB(255, 37, 18, 18),
                               ),
                             ),
                           ),
@@ -790,7 +790,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                             children: [
                               Icon(Icons.edit, color: Colors.blue),
                               SizedBox(width: 8),
-                              Text('แก้ไขเมนู'),
+                              Text('Edit Menu'),
                             ],
                           ),
                         ),
@@ -800,7 +800,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                             children: [
                               Icon(Icons.delete, color: Colors.red),
                               SizedBox(width: 8),
-                              Text('ลบเมนู'),
+                              Text('Delete Menu'),
                             ],
                           ),
                         ),
@@ -828,9 +828,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                   });
                 },
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color.fromARGB(255, 197, 172, 152),
+                  backgroundColor: _colorButton,
                   foregroundColor: const Color.fromARGB(255, 255, 255, 255),
-                  padding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                  padding: EdgeInsets.symmetric(horizontal: 0, vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                     side: BorderSide(
@@ -845,7 +845,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                   ),
                 ),
                 child: Text(
-                  isExpanded ? "Show Less ▲" : "View Full Menu ▼",
+                  isExpanded ? "Show Less Menu ▲" : "View Full Menu ▼",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
@@ -1255,38 +1255,38 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
         }).toList(),
 
         // ปุ่ม View Full Review / Show Less
-        if (restaurant!.reviews.length > 3)
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                setState(() {
-                  isReviewExpanded = !isReviewExpanded;
-                });
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: Color.fromARGB(255, 231, 219, 202),
-                foregroundColor: const Color.fromARGB(255, 51, 50, 50),
-                padding: EdgeInsets.symmetric(vertical: 0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(
-                    color: const Color.fromARGB(
-                      255,
-                      177,
-                      145,
-                      131,
-                    ), // ← สีเส้นขอบที่ต้องการ
-                    width: 1.5, // ← ความหนาของเส้นขอบ
-                  ),
+        if (restaurant!.reviews.length > 3) SizedBox(height: 15),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () {
+              setState(() {
+                isReviewExpanded = !isReviewExpanded;
+              });
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: _colorButton,
+              foregroundColor: const Color.fromARGB(255, 255, 255, 255),
+              padding: EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: const Color.fromARGB(
+                    255,
+                    177,
+                    145,
+                    131,
+                  ), // ← สีเส้นขอบที่ต้องการ
+                  width: 1.5, // ← ความหนาของเส้นขอบ
                 ),
               ),
-              child: Text(
-                isReviewExpanded ? "Show Less ▲" : "View Full Reviews ▼",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+            ),
+            child: Text(
+              isReviewExpanded ? "Show Less ▲" : "View Full Reviews ▼",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
+        ),
       ],
     );
   }
@@ -1433,7 +1433,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          backgroundColor: Colors.black,
+                          backgroundColor: Colors.black.withOpacity(0.7),
                           side: BorderSide(color: Colors.grey.shade300),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -1454,7 +1454,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                           _banThread2(reviewID, reason: reasonController.text);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _dangerColor,
+                          backgroundColor: _dangerColor.withOpacity(0.8),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

@@ -1171,9 +1171,9 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 7,
+                        spreadRadius: 1,
                       ),
                     ],
                   ),
