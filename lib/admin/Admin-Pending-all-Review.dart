@@ -106,8 +106,8 @@ class _RestaurantallPendingrewiewPageState
               'total_likes': review['total_likes'],
               'created_at': review['created_at'],
               'ai_evaluation': review['ai_evaluation'],
-              'message_status': review['message_status'] = "Pending",
-              'status': status = "Pending",
+              'message_status': review['message_status'],
+              'status': status,
 
               // User info
               'user_id': review['user_id'],
@@ -333,7 +333,7 @@ class _RestaurantallPendingrewiewPageState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'By ${item['user_username'] ?? 'Unknown User'}',
+                              ' ${item['user_username'] ?? 'Unknown User'}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: _textColor,
@@ -633,7 +633,7 @@ class _RestaurantallPendingrewiewPageState
                                 ),
                                 SizedBox(width: 10),
                                 Text(
-                                  'Approval Details',
+                                  'Review Details',
                                   style: TextStyle(
                                     fontSize: 15,
                                     color: statusColor,
@@ -673,8 +673,8 @@ class _RestaurantallPendingrewiewPageState
                             'Review ID',
                             'ID ${item['Review_ID']}',
                             Icons.reviews,
-                            action == 'Safe'
-                                ? Colors.green
+                            action == 'Pending'
+                                ? _warningColor
                                 : const Color.fromARGB(255, 255, 10, 10),
                           ),
 
@@ -683,8 +683,8 @@ class _RestaurantallPendingrewiewPageState
                               'AI Analysis',
                               item['ai_evaluation'],
                               Icons.psychology_outlined,
-                              action == 'Safe'
-                                  ? Colors.green
+                              action == 'Pending'
+                                  ? _warningColor
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
 

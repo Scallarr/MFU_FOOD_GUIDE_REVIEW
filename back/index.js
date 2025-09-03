@@ -613,6 +613,9 @@ app.get('/api/admin_review_history/:userId', async (req, res) => {
     if (connection) connection.release();
   }
 });
+
+
+
 // Returns Pending Review of all restaurant
 app.get('/Pending_review-all-restaurants', async (req, res) => {
   let connection;
@@ -1136,9 +1139,9 @@ app.post('/submit_reviews', async (req, res) => {
     if (ai_evaluation !== 'Safe') {
   await db.promise().execute(
     `INSERT INTO Admin_check_inappropriate_review 
-      (Review_ID, Admin_ID, admin_action_taken, admin_checked_at)
-     VALUES (?, ?, 'Pending', ?)`,
-    [reviewId, 1, now] // 1 = admin placeholder
+      (Review_ID,admin_action_taken, admin_checked_at)
+     VALUES (?,'Pending', ?)`,
+    [reviewId,now] // 1 = admin placeholder
   );
 }
 
