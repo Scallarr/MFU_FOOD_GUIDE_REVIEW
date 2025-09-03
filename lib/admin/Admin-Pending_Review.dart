@@ -71,6 +71,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
           pendingReviews = jsonDecode(response.body);
           filteredReviews = pendingReviews;
           isLoading = false;
+          print(filteredReviews);
         });
       } else {
         throw Exception('Failed to load reviews');
@@ -178,7 +179,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          backgroundColor: Colors.black,
+                          backgroundColor: Colors.black.withOpacity(0.7),
                           side: BorderSide(color: Colors.black),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -201,7 +202,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                           _approveReview(reviewId);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: _successColor.withOpacity(0.7),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -334,7 +335,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                         onPressed: () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
-                          backgroundColor: Colors.black,
+                          backgroundColor: Colors.black.withOpacity(0.7),
                           side: BorderSide(color: Colors.grey.shade300),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -360,7 +361,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _dangerColor,
+                          backgroundColor: _dangerColor.withOpacity(0.7),
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -509,23 +510,22 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
   }
 
   Widget _buildReviewCard(Map<String, dynamic> review) {
-    final action = review['admin_action_taken'];
+    final action = review['message_status'];
     Color statusColor;
     String statusText;
     Color containerColor;
     IconData statusIcon;
-    bool isExpanded = true;
 
     switch (action) {
       case 'Safe':
         statusColor = _successColor;
-        statusText = 'Approvedddd';
+        statusText = 'Approved';
         containerColor = _successColor.withOpacity(0.05);
         statusIcon = Icons.check_circle_outline;
         break;
       case 'Banned':
         statusColor = _dangerColor;
-        statusText = 'Bannedddddd';
+        statusText = 'Banned';
         containerColor = _dangerColor.withOpacity(0.05);
         statusIcon = Icons.block;
         break;
@@ -535,560 +535,548 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
         containerColor = _warningColor.withOpacity(0.05);
         statusIcon = Icons.access_time;
     }
-    return Container(
-      margin: EdgeInsets.only(bottom: 16, top: 5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 7,
-            spreadRadius: 1,
-            offset: Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            spreadRadius: 0.5,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: _successColor.withOpacity(0.3), width: 2),
-        ),
-        color: _cardColor,
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Restaurant Header
-              SizedBox(height: 4),
 
-              // User info and ratings
-              Row(
+    // ใช้ StatefulBuilder เพื่อจัดการ state ภายใน card
+    return StatefulBuilder(
+      builder: (context, setState) {
+        bool isExpanded = _expandedReviewId == review['Review_ID'];
+
+        return Container(
+          margin: EdgeInsets.only(bottom: 16, top: 5),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+            ),
+            color: _cardColor,
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // User Avatar
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _primaryColor.withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: ClipOval(
-                      child: review['picture_url'] != null
-                          ? Image.network(
-                              review['picture_url'],
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
+                  // ... (ส่วนอื่นๆ ของ UI เหมือนเดิม)
+                  Row(
+                    children: [
+                      // User Avatar
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _primaryColor.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
+                        child: ClipOval(
+                          child: review['picture_url'] != null
+                              ? Image.network(
+                                  review['picture_url'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: _primaryColor.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.person,
+                                        color: _primaryColor,
+                                        size: 20,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
                                   color: _primaryColor.withOpacity(0.1),
                                   child: Icon(
                                     Icons.person,
                                     color: _primaryColor,
                                     size: 20,
                                   ),
-                                );
-                              },
-                            )
-                          : Container(
-                              color: _primaryColor.withOpacity(0.1),
-                              child: Icon(
-                                Icons.person,
-                                color: _primaryColor,
-                                size: 20,
+                                ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              ' ${review['username'] ?? 'Unknown User'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _textColor,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                    ),
+                            Text(
+                              _formatDate(
+                                review['created_at'],
+                              ), // This should already return a string
+                              style: TextStyle(fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: statusColor.withOpacity(0.4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(statusIcon, size: 16, color: statusColor),
+                            SizedBox(width: 6),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Overall rating
+                    ],
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
+
+                  SizedBox(height: 20),
+                  // Review comment
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Color(0xFFE8EAED), width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          ' ${review['username'] ?? 'Unknown User'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: _textColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          _formatDate(
-                            review['created_at'],
-                          ), // This should already return a string
-                          style: TextStyle(fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _successColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _successColor.withOpacity(0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(statusIcon, size: 16, color: statusColor),
-                        SizedBox(width: 6),
-                        Text(
-                          statusText,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Overall rating
-                ],
-              ),
-
-              SizedBox(height: 16),
-              // Review comment
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Color(0xFFE8EAED), width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Restaurant header
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 63,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: _primaryColor.withOpacity(0.2),
-                                width: 1.5,
-                              ),
+                        // Restaurant header
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: review['restaurant_photo'] != null
-                                ? Image.network(
-                                    review['restaurant_photo'],
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
+                              child: Container(
+                                width: 63,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _primaryColor.withOpacity(0.2),
+                                    width: 1.5,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: review['photos'] != null
+                                    ? Image.network(
+                                        review['photos'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: _primaryColor
+                                                    .withOpacity(0.1),
+                                                child: Icon(
+                                                  Icons.restaurant,
+                                                  color: _primaryColor,
+                                                  size: 28,
+                                                ),
+                                              );
+                                            },
+                                      )
+                                    : Container(
                                         color: _primaryColor.withOpacity(0.1),
                                         child: Icon(
                                           Icons.restaurant,
                                           color: _primaryColor,
                                           size: 28,
                                         ),
-                                      );
-                                    },
-                                  )
-                                : Container(
-                                    color: _primaryColor.withOpacity(0.1),
-                                    child: Icon(
-                                      Icons.restaurant,
-                                      color: _primaryColor,
-                                      size: 28,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                review['restaurant_name'] ??
-                                    'Unknown Restaurant',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: _textColor,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                      ),
                               ),
-                              SizedBox(height: 4),
-                              Column(children: []),
-                              Row(
+                            ),
+                            SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: _secondaryTextColor,
+                                  Text(
+                                    review['restaurant_name'] ??
+                                        'Unknown Restaurant',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _textColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      '${review['restaurant_location']} MFU  • ${review['restaurant_category']?.replaceAll('_', ' ') ?? ''}',
-                                      style: TextStyle(
-                                        fontSize: 12,
+                                  SizedBox(height: 4),
+                                  Column(children: []),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: 14,
                                         color: _secondaryTextColor,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${review['location']} MFU  • ${review['category']?.replaceAll('_', ' ') ?? ''}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: _secondaryTextColor,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: 14),
-
-                    // Divider line (เพื่อแยกหัวกับ comment)
-                    Divider(color: Colors.grey[200], thickness: 1),
-
-                    SizedBox(height: 10),
-
-                    // Comment section
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        review['comment'] ?? 'No comment',
-                        textAlign: TextAlign.start,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: _textColor,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 16),
-
-              // Rating breakdown
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Color(0xFFE8EAED), width: 1),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Overall Rating',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        // SizedBox(height: 20),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(5),
-                            border: Border.all(
-                              color: _primaryColor.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: Colors.amber,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    review['rating_overall'] ?? '0.0',
-                                    style: TextStyle(
-                                      color: _textColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    _buildRatingBar(
-                      'Hygiene',
-                      review['rating_hygiene'].toDouble() ?? 0.0,
-                    ),
-                    SizedBox(height: 8),
-                    _buildRatingBar(
-                      'Flavor',
-                      review['rating_flavor'].toDouble() ?? 0.0,
-                    ),
-                    SizedBox(height: 8),
-                    _buildRatingBar(
-                      'Service',
-                      review['rating_service'].toDouble() ?? 0.0,
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 16),
-
-              // Status details
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: containerColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: statusColor.withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                statusIcon,
-                                size: 18,
-                                color: statusColor,
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Review Details',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: statusColor,
-                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
                         ),
-                        IconButton(
-                          icon: Icon(
-                            isExpanded ? Icons.expand_less : Icons.expand_more,
-                            color: statusColor,
-                            size: 22,
+
+                        SizedBox(height: 14),
+
+                        // Divider line (เพื่อแยกหัวกับ comment)
+                        Divider(color: Colors.grey[200], thickness: 1),
+
+                        SizedBox(height: 10),
+
+                        // Comment section
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              isExpanded = !isExpanded;
-                            });
-                          },
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
+                          child: Text(
+                            review['comment'] ?? 'No comment',
+                            textAlign: TextAlign.start,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: _textColor,
+                              height: 1.5,
+                            ),
+                          ),
                         ),
                       ],
                     ),
+                  ),
 
-                    if (isExpanded) ...[
-                      if (action == 'Posted') SizedBox(height: 12),
-                      Divider(color: statusColor.withOpacity(0.2), height: 1),
-                      SizedBox(height: 12),
+                  SizedBox(height: 20),
 
-                      _buildEnhancedInfoRow(
-                        'Review ID',
-                        'ID ${review['Review_ID']}',
-                        Icons.reviews,
-                        action == 'Pending'
-                            ? _warningColor
-                            : const Color.fromARGB(255, 255, 10, 10),
-                      ),
-
-                      if (review['ai_evaluation'] != null)
-                        _buildEnhancedInfoRow(
-                          'AI Analysis',
-                          review['ai_evaluation'],
-                          Icons.psychology_outlined,
-                          action == 'Pending'
-                              ? _warningColor
-                              : const Color.fromARGB(255, 255, 10, 10),
-                        ),
-
-                      if (review['username'] != null)
-                        _buildEnhancedInfoRow(
-                          action == 'Banned' ? 'Banned by' : 'written by',
-                          review['username'],
-                          Icons.admin_panel_settings,
-                          action == 'Pending'
-                              ? _warningColor
-                              : const Color.fromARGB(255, 255, 10, 10),
-                        ),
-
-                      if (review['email'] != null)
-                        _buildEnhancedInfoRow(
-                          action == 'Banned' ? 'Reason' : 'Writer Email',
-                          review['email'],
-                          Icons.email_outlined,
-                          action == 'Pending'
-                              ? _warningColor
-                              : const Color.fromARGB(255, 255, 10, 10),
-                        ),
-
-                      if (review['created_at'] != null)
-                        _buildEnhancedInfoRow(
-                          'Written at',
-                          _formatDate(review['created_at']),
-                          Icons.calendar_today,
-                          action == 'Pending'
-                              ? _warningColor
-                              : const Color.fromARGB(255, 255, 10, 10),
-                        ),
-                      if (review['message_status'] != null)
-                        _buildEnhancedInfoRow(
-                          review['message_status'] == 'Banned'
-                              ? 'Current Review Status'
-                              : 'Current Review Status',
-                          review['message_status'],
-                          Icons.info_outline,
-                          review['message_status'] == 'Pending'
-                              ? _warningColor
-                              : const Color.fromARGB(255, 255, 10, 10),
-                        ),
-                    ],
-                  ],
-                ),
-              ),
-
-              SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Approve Button
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _successColor.withOpacity(
-                        0.7,
-                      ), // สีเขียวสำหรับ approve
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12), // โค้งมน
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      elevation: 3,
+                  // Rating breakdown
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Color(0xFFE8EAED), width: 1),
                     ),
-                    onPressed: () => _showApproveDialog(review['Review_ID']),
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text(
-                      "Approve",
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Overall Rating',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            // SizedBox(height: 20),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(5),
+                                border: Border.all(
+                                  color: _primaryColor.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.star,
+                                        size: 16,
+                                        color: Colors.amber,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        review['rating_overall'] ?? '0.0',
+                                        style: TextStyle(
+                                          color: _textColor,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        _buildRatingBar(
+                          'Hygiene',
+                          review['rating_hygiene'].toDouble() ?? 0.0,
+                        ),
+                        SizedBox(height: 8),
+                        _buildRatingBar(
+                          'Flavor',
+                          review['rating_flavor'].toDouble() ?? 0.0,
+                        ),
+                        SizedBox(height: 8),
+                        _buildRatingBar(
+                          'Service',
+                          review['rating_service'].toDouble() ?? 0.0,
+                        ),
+                      ],
                     ),
                   ),
 
-                  // Reject Button
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _dangerColor.withOpacity(
-                        0.8,
-                      ), // สีแดงสำหรับ reject
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      elevation: 3,
-                    ),
-                    onPressed: () => _showRejectDialog(review['Review_ID']),
-                    icon: const Icon(Icons.cancel_outlined),
-                    label: const Text(
-                      "Reject",
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
+                  SizedBox(height: 20),
+
+                  // Status details section - แก้ไขส่วนนี้
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: containerColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: statusColor.withOpacity(0.3),
+                        width: 1.5,
                       ),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    statusIcon,
+                                    size: 18,
+                                    color: statusColor,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Review Details',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                isExpanded
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                                color: statusColor,
+                                size: 22,
+                              ),
+                              onPressed: () {
+                                // ใช้ setState ของ StatefulBuilder เพื่ออัปเดต UI
+                                setState(() {
+                                  if (isExpanded) {
+                                    _expandedReviewId = null;
+                                  } else {
+                                    _expandedReviewId = review['Review_ID'];
+                                  }
+                                });
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
+                        ),
+
+                        if (isExpanded) ...[
+                          if (action == 'Posted') SizedBox(height: 12),
+                          Divider(
+                            color: statusColor.withOpacity(0.2),
+                            height: 1,
+                          ),
+                          SizedBox(height: 12),
+
+                          _buildEnhancedInfoRow(
+                            'Review ID',
+                            'ID ${review['Review_ID']}',
+                            Icons.reviews,
+                            action == 'Pending' ? _warningColor : _primaryColor,
+                          ),
+
+                          if (review['ai_evaluation'] != null)
+                            _buildEnhancedInfoRow(
+                              'AI Analysis',
+                              review['ai_evaluation'],
+                              Icons.psychology_outlined,
+                              action == 'Pending'
+                                  ? _warningColor
+                                  : _primaryColor,
+                            ),
+
+                          if (review['username'] != null)
+                            _buildEnhancedInfoRow(
+                              action == 'Banned' ? 'Banned by' : 'Written by',
+                              review['username'],
+                              Icons.person_outline,
+                              action == 'Pending'
+                                  ? _warningColor
+                                  : _primaryColor,
+                            ),
+
+                          if (review['email'] != null)
+                            _buildEnhancedInfoRow(
+                              action == 'Banned' ? 'Reason' : 'Writer Email',
+                              review['email'],
+                              Icons.email_outlined,
+                              action == 'Pending'
+                                  ? _warningColor
+                                  : _primaryColor,
+                            ),
+
+                          if (review['created_at'] != null)
+                            _buildEnhancedInfoRow(
+                              'Written at',
+                              _formatDate(review['created_at']),
+                              Icons.calendar_today,
+                              action == 'Pending'
+                                  ? _warningColor
+                                  : _primaryColor,
+                            ),
+
+                          if (review['message_status'] != null)
+                            _buildEnhancedInfoRow(
+                              'Current Status',
+                              review['message_status'],
+                              Icons.info_outline,
+                              action == 'Pending'
+                                  ? _warningColor
+                                  : _primaryColor,
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Action buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Approve Button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _successColor.withOpacity(0.7),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          elevation: 3,
+                        ),
+                        onPressed: () =>
+                            _showApproveDialog(review['Review_ID']),
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text(
+                          "Approve",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+
+                      // Reject Button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor.withOpacity(0.8),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          elevation: 3,
+                        ),
+                        onPressed: () => _showRejectDialog(review['Review_ID']),
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text(
+                          "Reject",
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRatingChip(double rating) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 60, 59, 59),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.star, size: 16, color: Colors.white),
-          SizedBox(width: 4),
-          Text(
-            rating.toStringAsFixed(1),
-            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
