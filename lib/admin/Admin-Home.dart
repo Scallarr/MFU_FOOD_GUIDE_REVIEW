@@ -92,6 +92,12 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   String? profileImageUrl;
   int? userId;
   bool _isDeleting = false;
+  int get totalPendingReviews {
+    return allRestaurants.fold(
+      0,
+      (sum, restaurant) => sum + restaurant.pendingReviewsCount,
+    );
+  }
 
   final List<String> locationOptions = [
     'D1',
@@ -513,66 +519,160 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                       },
                     ),
                   ),
-                  SizedBox(width: 4),
+                  SizedBox(width: 10),
                   // เพิ่ม PopupMenuButton ตรงนี้
-                  Container(
-                    width: 30,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF5F0E6),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border(),
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: Color(0xFF5D4037),
+                      size: 30,
                     ),
-                    child: PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: Color(0xFF5D4037),
-                        size: 30,
+                    itemBuilder: (BuildContext context) => [
+                      PopupMenuItem(
+                        value: 'approve',
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.reviews, color: Colors.blue),
+                              ),
+                              SizedBox(width: 15),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Approve Reviews'),
+                                    if (totalPendingReviews > 0)
+                                      Text(
+                                        '$totalPendingReviews pending',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+
+                              if (totalPendingReviews > 0)
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFFFF4757),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$totalPendingReviews',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'approve',
+                      PopupMenuItem(
+                        value: 'history',
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+
                           child: Row(
                             children: [
-                              Icon(Icons.reviews, color: Colors.blue),
-                              SizedBox(width: 8),
-                              Text('Approve Reviews'),
+                              Container(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.history,
+                                  color: Colors.green.shade700,
+                                ),
+                              ),
+                              SizedBox(width: 15),
+
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('My Review History'),
+                                    // if (totalPendingReviews > 0)
+                                    // Text(
+                                    //   'See Your History here',
+                                    //   style: TextStyle(
+                                    //     fontSize: 12,
+                                    //     color: Colors.grey.shade600,
+                                    //   ),
+                                    // ),
+                                  ],
+                                ),
+                              ),
+
+                              // if (totalPendingReviews > 0)
+                              //   Container(
+                              //     width: 24,
+                              //     height: 24,
+                              //     decoration: BoxDecoration(
+                              //       color: Color(0xFFFF4757),
+                              //       shape: BoxShape.circle,
+                              //     ),
+                              //     child: Center(
+                              //       child: Text(
+                              //         '$totalPendingReviews',
+                              //         style: TextStyle(
+                              //           color: Colors.white,
+                              //           fontSize: 11,
+                              //           fontWeight: FontWeight.bold,
+                              //         ),
+                              //       ),
+                              //     ),
+                              //   ),
                             ],
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'history',
-                          child: Row(
-                            children: [
-                              Icon(Icons.history, color: Colors.green),
-                              SizedBox(width: 8),
-                              Text('My History'),
-                            ],
+                      ),
+                    ],
+                    onSelected: (String value) async {
+                      if (value == 'approve') {
+                        final shoulfRefresh = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                RestaurantallPendingrewiewPage(),
                           ),
-                        ),
-                      ],
-                      onSelected: (String value) {
-                        if (value == 'approve') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RestaurantallPendingrewiewPage(),
-                            ),
-                          );
-                        } else if (value == 'history') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RestaurantReviewHistoryPage(),
-                            ),
-                          );
+                        );
+                        if (shoulfRefresh) {
+                          _refreshRestaurantData();
+                          setState(() {});
                         }
-                      },
-                    ),
+                      } else if (value == 'history') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RestaurantReviewHistoryPage(),
+                          ),
+                        );
+                      }
+                    },
                   ),
-                  SizedBox(width: 4),
                 ],
               ),
             ),

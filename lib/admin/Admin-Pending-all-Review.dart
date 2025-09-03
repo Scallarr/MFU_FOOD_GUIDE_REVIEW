@@ -149,6 +149,10 @@ class _RestaurantallPendingrewiewPageState
         backgroundColor: _appBarColor,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context, true),
+        ),
       ),
       body: _isLoading
           ? _buildLoadingView()
@@ -717,6 +721,17 @@ class _RestaurantallPendingrewiewPageState
                                   ? _warningColor
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
+                          if (item['message_status'] != null)
+                            _buildEnhancedInfoRow(
+                              item['message_status'] == 'Banned'
+                                  ? 'Current Review Status'
+                                  : 'Current Review Status',
+                              item['message_status'],
+                              Icons.info_outline,
+                              item['message_status'] == 'Pending'
+                                  ? _warningColor
+                                  : const Color.fromARGB(255, 255, 10, 10),
+                            ),
                         ],
                       ],
                     ),
@@ -747,7 +762,7 @@ class _RestaurantallPendingrewiewPageState
                         label: const Text(
                           "Approve",
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -774,7 +789,7 @@ class _RestaurantallPendingrewiewPageState
                         label: const Text(
                           "Reject",
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1094,10 +1109,12 @@ class _RestaurantallPendingrewiewPageState
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        _fetchReviewApprovalHistory();
-        _showSnackBar(
-          responseData['message'] ?? 'Review approved successfully',
-        );
+        _showSnackBar('Review approved successfully');
+        setState(() {
+          _reviewApprovalHistory.removeWhere(
+            (item) => item['Review_ID'] == reviewId,
+          );
+        });
       } else {
         throw Exception(responseData['message'] ?? 'Failed to approve review');
       }
@@ -1121,8 +1138,12 @@ class _RestaurantallPendingrewiewPageState
       );
 
       if (response.statusCode == 200) {
-        _fetchReviewApprovalHistory();
         _showSnackBar('Review rejected successfully');
+        setState(() {
+          _reviewApprovalHistory.removeWhere(
+            (item) => item['Review_ID'] == reviewId,
+          );
+        });
       } else {
         throw Exception('Failed to reject review');
       }

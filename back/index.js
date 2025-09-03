@@ -303,7 +303,7 @@ app.get('/restaurant/:id', (req, res) => {
   const reviewQuery = `
     SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
            r.rating_service, r.comment, r.total_likes, r.created_at,
-           r.message_status,
+           r.message_status,r.ai_evaluation,
            u.username, u.email, p.picture_url,
            EXISTS (
              SELECT 1 FROM Review_Likes rl

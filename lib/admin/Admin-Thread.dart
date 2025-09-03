@@ -953,7 +953,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                             fontSize: 14,
                                           ),
                                         ),
-                                        if (_pendingThreadsCount > 0)
+                                        if (_pendingThreadsCount > -1)
                                           Text(
                                             '$_pendingThreadsCount pending',
                                             style: TextStyle(
@@ -1019,7 +1019,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                             fontSize: 13.5,
                                           ),
                                         ),
-                                        if (_pendingRepliedThreadsCount > 0)
+                                        if (_pendingRepliedThreadsCount > -1)
                                           Text(
                                             '$_pendingRepliedThreadsCount pending',
                                             style: TextStyle(

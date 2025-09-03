@@ -835,7 +835,6 @@ class _RestaurantReviewHistoryPageState
                         '${item['total_likes'] ?? 0}', // Ensure this is a string
                         _getBackgroundColor(item['admin_action_taken']),
                       ),
-                      SizedBox(width: 12),
                     ],
                   ),
                 ],
@@ -931,14 +930,29 @@ class _RestaurantReviewHistoryPageState
                           ),
                         ),
                         child: ClipOval(
-                          child: Container(
-                            color: _primaryColor.withOpacity(0.1),
-                            child: Icon(
-                              Icons.person,
-                              color: _primaryColor,
-                              size: 20,
-                            ),
-                          ),
+                          child: item['user_picture'] != null
+                              ? Image.network(
+                                  item['user_picture'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: _primaryColor.withOpacity(0.1),
+                                      child: Icon(
+                                        Icons.person,
+                                        color: _primaryColor,
+                                        size: 20,
+                                      ),
+                                    );
+                                  },
+                                )
+                              : Container(
+                                  color: _primaryColor.withOpacity(0.1),
+                                  child: Icon(
+                                    Icons.person,
+                                    color: _primaryColor,
+                                    size: 20,
+                                  ),
+                                ),
                         ),
                       ),
                       SizedBox(width: 12),
@@ -947,7 +961,7 @@ class _RestaurantReviewHistoryPageState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'My Review',
+                              item['user_username'],
                               style: TextStyle(
                                 fontSize: 14,
                                 color: _textColor,
@@ -1277,62 +1291,132 @@ class _RestaurantReviewHistoryPageState
                           ),
                           SizedBox(height: 12),
 
-                          _buildEnhancedInfoRow(
-                            'Review ID',
-                            'ID ${item['Review_ID']}',
-                            Icons.reviews,
-                            Colors.blue,
-                          ),
-
-                          if (item['ai_evaluation'] != null)
+                          if (status == 'Banned') ...[
                             _buildEnhancedInfoRow(
-                              'AI Analysis',
+                              'Review ID',
+                              'ID ' + item['Review_ID'].toString(),
+                              Icons.forum,
+                              _dangerColor,
+                            ),
+                            _buildEnhancedInfoRow(
+                              'Ai Analysis',
                               item['ai_evaluation'],
                               Icons.psychology_outlined,
-                              _primaryColor,
+                              _dangerColor,
                             ),
-
-                          if (status == 'Banned' &&
-                              item['admin_username'] != null)
                             _buildEnhancedInfoRow(
-                              'Banned by',
-                              item['admin_username'],
+                              'Admin Action',
+                              'Banned by ${item['admin_username'] ?? 'Unknown Admin'}',
                               Icons.gavel,
                               _dangerColor,
                             ),
-
-                          if (status == 'Banned' &&
-                              item['reason_for_taken'] != null)
+                            if (item['reason_for_taken'] != null)
+                              _buildEnhancedInfoRow(
+                                'Banned Reason',
+                                item['reason_for_taken'],
+                                Icons.info_outline,
+                                _dangerColor,
+                              ),
+                            if (item['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Action Taken',
+                                _formatDate(item['admin_checked_at']),
+                                Icons.calendar_today,
+                                _dangerColor,
+                              ),
+                          ] else if (status == 'Posted') ...[
                             _buildEnhancedInfoRow(
-                              'Reason',
-                              item['reason_for_taken'],
-                              Icons.info_outline,
-                              _secondaryTextColor,
+                              'Review ID',
+                              'ID ${item['Review_ID']}',
+                              Icons.forum,
+                              _successColor,
                             ),
-
-                          if (item['admin_checked_at'] != null)
                             _buildEnhancedInfoRow(
-                              'Action Taken',
-                              _formatDate(item['admin_checked_at']),
-                              Icons.calendar_today,
-                              _secondaryTextColor,
-                            ),
-
-                          if (status == 'Posted')
-                            _buildEnhancedInfoRow(
-                              'Posted at',
-                              _formatDate(item['created_at']),
-                              Icons.calendar_today,
+                              'Visibility',
+                              'Publicly visible to all users',
+                              Icons.visibility,
                               _successColor,
                             ),
 
-                          if (status == 'Pending')
+                            if (item['ai_evaluation'] != null)
+                              _buildEnhancedInfoRow(
+                                'AI Analysis',
+                                item['ai_evaluation'],
+                                Icons.psychology_outlined,
+                                _successColor,
+                              ),
+                            if (item['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true ||
+                                item['admin_username'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approved by',
+                                item['admin_username'] ?? 'Unknown Admin',
+                                Icons.admin_panel_settings,
+                                _successColor,
+                              ),
+                            if (item['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true &&
+                                item['reason_for_taken'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approval Reason',
+                                item['reason_for_taken'],
+                                Icons.info_outline,
+                                _successColor,
+                              ),
+                            if (item['ai_evaluation']?.contains(
+                                      'Inappropriate',
+                                    ) ==
+                                    true &&
+                                item['admin_checked_at'] != null)
+                              _buildEnhancedInfoRow(
+                                'Approved At',
+                                _formatDate(item['admin_checked_at']),
+                                Icons.calendar_today,
+                                _successColor,
+                              ),
+                          ] else if (status == 'Pending') ...[
+                            _buildEnhancedInfoRow(
+                              'Review ID',
+                              'ID ' + item['Review_ID'].toString(),
+                              Icons.forum,
+                              _warningColor,
+                            ),
+                            // _buildEnhancedInfoRow(
+                            //   'Current Status',
+                            //   'Awaiting admin approval',
+                            //   Icons.access_time,
+                            //   _warningColor,
+                            // ),
+                            if (item['ai_evaluation'] != null)
+                              _buildEnhancedInfoRow(
+                                'AI Analysis',
+                                item['ai_evaluation'],
+                                Icons.psychology_outlined,
+                                _warningColor,
+                              ),
                             _buildEnhancedInfoRow(
                               'Estimated Time',
                               'Usually reviewed within 24 hours',
                               Icons.schedule,
                               _warningColor,
                             ),
+                          ],
+                          _buildEnhancedInfoRow(
+                            'Current Review status ',
+                            (item['status'] == 'Posted')
+                                ? 'Posted'
+                                : item['status'],
+                            getThreadStatusIcon(item['status']),
+                            item['status'] == 'Pending'
+                                ? _warningColor
+                                : item['status'] == 'Posted'
+                                ? _successColor
+                                : _dangerColor,
+                          ),
                         ],
                       ],
                     ),
@@ -1347,12 +1431,6 @@ class _RestaurantReviewHistoryPageState
                         '${item['total_likes'] ?? 0}',
                         _getBackgroundColor(item['status']),
                       ),
-                      SizedBox(width: 12),
-                      _buildMetricChipWithIcon(
-                        Icons.calendar_today,
-                        _formatDate(item['created_at']),
-                        _primaryColor,
-                      ),
                     ],
                   ),
                 ],
@@ -1362,6 +1440,20 @@ class _RestaurantReviewHistoryPageState
         );
       },
     );
+  }
+
+  IconData getThreadStatusIcon(String status) {
+    switch (status) {
+      case 'Safe':
+      case 'Posted':
+        return Icons.check_circle;
+      case 'Banned':
+        return Icons.block;
+      case 'Pending':
+        return Icons.hourglass_empty;
+      default:
+        return Icons.forum;
+    }
   }
 
   Widget _buildRatingBar(String label, double rating) {
@@ -1455,7 +1547,7 @@ class _RestaurantReviewHistoryPageState
 
   Widget _buildMetricChipWithIcon(IconData icon, String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(15),
@@ -1463,14 +1555,14 @@ class _RestaurantReviewHistoryPageState
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.white),
+          Icon(icon, size: 20, color: Colors.white),
           SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
-              fontSize: 12,
+              fontSize: 15,
             ),
           ),
         ],

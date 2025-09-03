@@ -983,178 +983,208 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                       left: 15,
                       top: 13,
                       right: 14,
-                      bottom: 11,
+                      bottom: 0,
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: EdgeInsets.only(top: 17),
-                          child: CircleAvatar(
-                            backgroundImage: NetworkImage(review.pictureUrl),
-                            radius: 40,
-                            backgroundColor: Colors.grey[200],
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(right: 0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(top: 10),
+                              child: CircleAvatar(
+                                backgroundImage: NetworkImage(
+                                  review.pictureUrl,
+                                ),
+                                radius: 30,
+                                backgroundColor: Colors.grey[200],
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(
-                                              review.username,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14.5,
-                                              ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  review.username,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14.5,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 7),
+                                                Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.blue,
+                                                  size: 19,
+                                                ),
+                                              ],
                                             ),
-                                            SizedBox(width: 7),
-                                            Icon(
-                                              Icons.check_circle,
-                                              color: Colors.blue,
-                                              size: 19,
+                                            SizedBox(width: 10),
+                                            Text(
+                                              getTimeAgo(
+                                                    DateTime.parse(
+                                                      review.createdAt,
+                                                    ).toLocal(), // ✅ แปลงเป็น Local
+                                                  ).isNotEmpty
+                                                  ? getTimeAgo(
+                                                      DateTime.parse(
+                                                        review.createdAt,
+                                                      ).toLocal(), // ✅
+                                                    )
+                                                  : _formatDate(
+                                                      review.createdAt,
+                                                    ),
+                                              style: TextStyle(
+                                                color: const Color.fromARGB(
+                                                  255,
+                                                  0,
+                                                  0,
+                                                  0,
+                                                ),
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        SizedBox(width: 10),
+                                        SizedBox(height: 5),
                                         Text(
-                                          getTimeAgo(
-                                                DateTime.parse(
-                                                  review.createdAt,
-                                                ).toLocal(), // ✅ แปลงเป็น Local
-                                              ).isNotEmpty
-                                              ? getTimeAgo(
-                                                  DateTime.parse(
-                                                    review.createdAt,
-                                                  ).toLocal(), // ✅
-                                                )
-                                              : _formatDate(review.createdAt),
-                                          style: TextStyle(
-                                            color: const Color.fromARGB(
-                                              255,
-                                              0,
-                                              0,
-                                              0,
-                                            ),
-                                            fontSize: 12,
-                                          ),
+                                          obfuscateEmail(review.email),
+                                          style: TextStyle(fontSize: 10.5),
                                         ),
-                                      ],
-                                    ),
-                                    SizedBox(height: 5),
-                                    Text(
-                                      obfuscateEmail(review.email),
-                                      style: TextStyle(fontSize: 10.5),
-                                    ),
-                                    SizedBox(height: 10),
-                                    Row(
-                                      children: List.generate(5, (i) {
-                                        if (i < review.ratingOverall.floor()) {
-                                          return Icon(
-                                            Icons.star,
-                                            size: 24,
-                                            color: Colors.amber,
-                                          );
-                                        } else if (i < review.ratingOverall &&
-                                            review.ratingOverall - i >= 0.5) {
-                                          return Icon(
-                                            Icons.star_half,
-                                            size: 24,
-                                            color: Colors.amber,
-                                          );
-                                        } else {
-                                          return Icon(
-                                            Icons.star_border,
-                                            size: 24,
-                                            color: Colors.amber,
-                                          );
-                                        }
-                                      }),
-                                    ),
-
-                                    SizedBox(height: 10),
-                                    Row(children: []),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                        right: 80,
-                                      ), // ปรับตามต้องการ
-                                      child: Text(
-                                        review.comment,
-                                        style: TextStyle(fontSize: 13),
-                                      ),
-                                    ),
-                                    SizedBox(height: 10),
-                                  ],
-                                ),
-                              ),
-
-                              SizedBox(height: 12),
-                              Padding(
-                                padding: EdgeInsetsGeometry.only(
-                                  right: 7,
-                                  top: 30,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Column(
-                                      // mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: () {
-                                            if (userId != null) {
-                                              likeReview(review.id);
+                                        SizedBox(height: 10),
+                                        Row(
+                                          children: List.generate(5, (i) {
+                                            if (i <
+                                                review.ratingOverall.floor()) {
+                                              return Icon(
+                                                Icons.star,
+                                                size: 24,
+                                                color: Colors.amber,
+                                              );
+                                            } else if (i <
+                                                    review.ratingOverall &&
+                                                review.ratingOverall - i >=
+                                                    0.5) {
+                                              return Icon(
+                                                Icons.star_half,
+                                                size: 24,
+                                                color: Colors.amber,
+                                              );
+                                            } else {
+                                              return Icon(
+                                                Icons.star_border,
+                                                size: 24,
+                                                color: Colors.amber,
+                                              );
                                             }
-                                          },
-                                          child: Padding(
-                                            padding: EdgeInsets.only(
-                                              right: 00,
-                                              left: 60,
-                                              top: 20,
-                                              bottom: 0,
-                                            ), // ปรับตามต้องการ
-                                            child: Icon(
-                                              Icons.favorite,
-                                              color: isLiked
-                                                  ? Colors.red
-                                                  : Colors.grey,
-                                              size: 40,
-                                            ),
-                                          ),
+                                          }),
                                         ),
-                                        SizedBox(height: 4),
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            left: 60,
-                                            bottom: 20,
-                                          ), // ปรับตามต้องการ
-                                          child: Text(
-                                            "${review.totalLikes} Likes",
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              // color: Colors.grey[700],
+                                        SizedBox(height: 10),
+                                      ],
+                                    ),
+                                  ),
+
+                                  SizedBox(height: 12),
+                                  Padding(
+                                    padding: EdgeInsetsGeometry.only(
+                                      right: 7,
+                                      top: 10,
+                                      bottom: 0,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Column(
+                                          // mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () {
+                                                if (userId != null) {
+                                                  likeReview(review.id);
+                                                }
+                                              },
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                  right: 00,
+                                                  left: 60,
+                                                  top: 20,
+                                                  bottom: 0,
+                                                ), // ปรับตามต้องการ
+                                                child: Icon(
+                                                  Icons.favorite,
+                                                  color: isLiked
+                                                      ? Colors.red
+                                                      : Colors.grey,
+                                                  size: 40,
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                            SizedBox(height: 4),
+                                            Padding(
+                                              padding: EdgeInsets.only(
+                                                left: 60,
+                                                bottom: 5,
+                                              ), // ปรับตามต้องการ
+                                              child: Text(
+                                                "${review.totalLikes} Likes",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  // color: Colors.grey[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
-                              ),
+                                  ),
 
-                              // SizedBox(height: 20),
-                            ],
+                                  // SizedBox(height: 20),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // ข้อความรีวิว - ย้ายมาอยู่ใต้รูป
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: 80,
+                            left: 15, // เพิ่ม padding ซ้ายเพื่อจัดตำแหน่ง
                           ),
+                          child: Text(
+                            review.comment,
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+
+                        SizedBox(height: 10),
+                        Divider(height: 1),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              padding: EdgeInsets.zero, // ❌ ไม่มี padding
+                              constraints:
+                                  BoxConstraints(), // ❌ ไม่บังคับขนาด 48x48
+                              icon: Icon(Icons.report, size: 20),
+                              onPressed: () {},
+                            ),
+                            Text('ff'),
+                          ],
                         ),
                       ],
                     ),
