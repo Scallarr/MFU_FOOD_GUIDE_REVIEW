@@ -684,10 +684,15 @@ app.get('/api/my_reviews/:userId', async (req, res) => {
         res.operating_hours, res.phone_number,
         ac.admin_action_taken, ac.admin_checked_at, ac.reason_for_taken,
         a.username as admin_username
-      FROM Review r
+        u.User_ID as user_id, u.username as user_username, u.email as user_email, 
+        u.fullname as user_fullname,
+        up.picture_url as user_picture,
+        FROM Review r
       INNER JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
       LEFT JOIN Admin_check_inappropriate_review ac ON r.Review_ID = ac.Review_ID
       LEFT JOIN User a ON ac.Admin_ID = a.User_ID
+      INNER JOIN User u ON r.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture up ON u.User_ID = up.User_ID AND up.is_active = 1
       WHERE r.User_ID = ?
       ORDER BY r.created_at DESC
     `;

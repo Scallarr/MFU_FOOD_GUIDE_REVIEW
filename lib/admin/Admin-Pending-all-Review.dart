@@ -78,7 +78,7 @@ class _RestaurantallPendingrewiewPageState
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-
+        _isLoading = false;
         setState(() {
           _reviewApprovalHistory = data.map((review) {
             // Helper function to safely convert any value to double
@@ -688,33 +688,33 @@ class _RestaurantallPendingrewiewPageState
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
 
-                          if (item['admin_username'] != null)
+                          if (item['user_username'] != null)
                             _buildEnhancedInfoRow(
-                              action == 'Banned' ? 'Banned by' : 'Approved by',
-                              item['admin_username'],
+                              action == 'Banned' ? 'Banned by' : 'written by',
+                              item['user_username'],
                               Icons.admin_panel_settings,
-                              action == 'Safe'
-                                  ? Colors.green
+                              action == 'Pending'
+                                  ? _warningColor
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
 
-                          if (item['reason_for_taken'] != null)
+                          if (item['user_email'] != null)
                             _buildEnhancedInfoRow(
-                              action == 'Banned' ? 'Reason' : 'Notes',
-                              item['reason_for_taken'],
-                              Icons.info_outline,
-                              action == 'Safe'
-                                  ? Colors.green
+                              action == 'Banned' ? 'Reason' : 'Writer Email',
+                              item['user_email'],
+                              Icons.email_outlined,
+                              action == 'Pending'
+                                  ? _warningColor
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
 
                           if (item['admin_checked_at'] != null)
                             _buildEnhancedInfoRow(
-                              'Reviewed at',
+                              'Written at',
                               _formatDate(item['admin_checked_at']),
                               Icons.calendar_today,
-                              action == 'Safe'
-                                  ? Colors.green
+                              action == 'Pending'
+                                  ? _warningColor
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
                         ],
@@ -724,14 +724,61 @@ class _RestaurantallPendingrewiewPageState
 
                   SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildMetricChipWithIcon(
-                        Icons.favorite_outline,
-                        '${item['total_likes'] ?? 0}', // Ensure this is a string
-                        _getBackgroundColor(item['admin_action_taken']),
+                      // Approve Button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _successColor.withOpacity(
+                            0.7,
+                          ), // สีเขียวสำหรับ approve
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12), // โค้งมน
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          elevation: 3,
+                        ),
+                        onPressed: () => _showApproveDialog(item['Review_ID']),
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text(
+                          "Approve",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                      SizedBox(width: 12),
+
+                      // Reject Button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor.withOpacity(
+                            0.8,
+                          ), // สีแดงสำหรับ reject
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          elevation: 3,
+                        ),
+                        onPressed: () => _showRejectDialog(item['Review_ID']),
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: const Text(
+                          "Reject",
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -740,6 +787,353 @@ class _RestaurantallPendingrewiewPageState
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showApproveDialog(int reviewId) async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated Icon
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _successColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check_circle_outline,
+                          size: 40,
+                          color: _successColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+
+                // Title
+                Text(
+                  'Confirm Approval',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Are you sure you want to approve this review?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 24),
+
+                // Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Cancel Button
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black.withOpacity(0.7),
+                          side: BorderSide(color: Colors.black),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+
+                    // Approve Button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _approveReview(reviewId);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _successColor.withOpacity(0.7),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Approve',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showRejectDialog(int reviewId) async {
+    final reasonController = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated Warning Icon
+                TweenAnimationBuilder(
+                  duration: Duration(milliseconds: 300),
+                  tween: Tween<double>(begin: 0, end: 1),
+                  builder: (context, double value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _dangerColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          size: 40,
+                          color: _dangerColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+
+                // Title
+                Text(
+                  'Confirm Rejection',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 12),
+
+                // Message
+                Text(
+                  'Are you sure you want to reject this review?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _secondaryTextColor,
+                    height: 1.4,
+                  ),
+                ),
+                SizedBox(height: 20),
+
+                // Reason Input Field
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    labelText: 'Reason (optional)',
+                    labelStyle: TextStyle(color: _secondaryTextColor),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _primaryColor),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  maxLines: 2,
+                  style: TextStyle(color: _textColor),
+                ),
+                SizedBox(height: 24),
+
+                // Buttons Row
+                Row(
+                  children: [
+                    // Cancel Button
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.black.withOpacity(0.7),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16),
+
+                    // Reject Button
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _rejectReview(
+                            reviewId,
+                            reason: reasonController.text,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dangerColor.withOpacity(0.8),
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Reject',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _approveReview(int reviewId) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/api/reviews/approve',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'reviewId': reviewId, 'adminId': userId}),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        _fetchReviewApprovalHistory();
+        _showSnackBar(
+          responseData['message'] ?? 'Review approved successfully',
+        );
+      } else {
+        throw Exception(responseData['message'] ?? 'Failed to approve review');
+      }
+    } catch (e) {
+      _showSnackBar('Error: ${e.toString()}');
+    }
+  }
+
+  Future<void> _rejectReview(int reviewId, {String reason = ''}) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://mfu-food-guide-review.onrender.com/api/reviews/reject',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'reviewId': reviewId,
+          'adminId': userId,
+          'reason': reason,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        _fetchReviewApprovalHistory();
+        _showSnackBar('Review rejected successfully');
+      } else {
+        throw Exception('Failed to reject review');
+      }
+    } catch (e) {
+      _showSnackBar('Error: ${e.toString()}');
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.black),
     );
   }
 

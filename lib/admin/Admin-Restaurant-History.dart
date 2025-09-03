@@ -164,9 +164,6 @@ class _RestaurantReviewHistoryPageState
 
             return {
               'Review_ID': review['Review_ID'],
-              'Restaurant_ID': review['Restaurant_ID'],
-              'restaurant_name': review['restaurant_name'],
-              'restaurant_location': review['location'],
               'rating_overall': review['rating_overall'],
               'rating_hygiene': review['rating_hygiene'],
               'rating_flavor': review['rating_flavor'],
@@ -183,11 +180,22 @@ class _RestaurantReviewHistoryPageState
               'restaurant_category': review['category'],
               'restaurant_operating_hours': review['operating_hours'],
               'restaurant_phone': review['phone_number'],
+              'Restaurant_ID': review['Restaurant_ID'],
+              'restaurant_name': review['restaurant_name'],
+              'restaurant_location': review['location'],
+
+              // User info
+              'user_id': review['user_id'],
+              'user_username': review['user_username'],
+              'user_email': review['user_email'],
+              'user_fullname': review['user_fullname'],
+              'user_picture': review['user_picture'],
 
               // Admin info (if available)
               'admin_username': review['admin_username'],
               'admin_checked_at': review['admin_checked_at'],
               'reason_for_taken': review['reason_for_taken'],
+              'admin_action_taken': review['admin_action_taken'],
             };
           }).toList();
         });
@@ -314,6 +322,7 @@ class _RestaurantReviewHistoryPageState
 
   Widget _buildReviewApprovalItem(Map<String, dynamic> item) {
     final action = item['admin_action_taken'];
+    final Review_status = item['message_status'];
     Color statusColor;
     String statusText;
     Color containerColor;
@@ -782,7 +791,9 @@ class _RestaurantReviewHistoryPageState
 
                           if (item['reason_for_taken'] != null)
                             _buildEnhancedInfoRow(
-                              action == 'Banned' ? 'Reason' : 'Notes',
+                              action == 'Banned'
+                                  ? 'Reason For Banned'
+                                  : 'Reason For Approved',
                               item['reason_for_taken'],
                               Icons.info_outline,
                               action == 'Safe'
@@ -796,6 +807,17 @@ class _RestaurantReviewHistoryPageState
                               _formatDate(item['admin_checked_at']),
                               Icons.calendar_today,
                               action == 'Safe'
+                                  ? Colors.green
+                                  : const Color.fromARGB(255, 255, 10, 10),
+                            ),
+                          if (item['message_status'] != null)
+                            _buildEnhancedInfoRow(
+                              Review_status == 'Banned'
+                                  ? 'Current Review Status'
+                                  : 'Current Review Status',
+                              item['message_status'],
+                              Icons.info_outline,
+                              Review_status == 'Posted'
                                   ? Colors.green
                                   : const Color.fromARGB(255, 255, 10, 10),
                             ),
