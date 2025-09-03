@@ -643,7 +643,8 @@ app.get('/Pending_review-all-restaurants', async (req, res) => {
       LEFT JOIN User a ON ac.Admin_ID = a.User_ID
       LEFT JOIN user_Profile_Picture up ON u.User_ID = up.User_ID AND up.is_active = 1
       LEFT JOIN user_Profile_Picture ap ON a.User_ID = ap.User_ID AND ap.is_active = 1
-      ORDER BY ac.admin_checked_at DESC
+      WHERE r.message_status = 'pending'
+      ORDER BY r.created_at DESC
     `;
     
     const [results] = await connection.execute(query);
@@ -653,7 +654,7 @@ app.get('/Pending_review-all-restaurants', async (req, res) => {
     
   } catch (error) {
     if (connection) await connection.rollback();
-    console.error('Error fetching Peding Review:', error);
+    console.error('Error fetching Peding:', error);
     res.status(500).json({ error: 'Internal server error' });
   } finally {
     if (connection) connection.release();
