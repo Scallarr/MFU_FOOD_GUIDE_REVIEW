@@ -646,7 +646,7 @@ app.get('/Pending_review-all-restaurants', async (req, res) => {
       ORDER BY ac.admin_checked_at DESC
     `;
     
-    const [results] = await connection.execute(query, [userId]);
+    const [results] = await connection.execute(query);
     
     await connection.commit();
     res.json(results);

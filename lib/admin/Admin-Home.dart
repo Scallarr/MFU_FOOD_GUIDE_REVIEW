@@ -4,6 +4,7 @@ import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/admin/Admin-AddRestaurant.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
+import 'package:myapp/admin/Admin-Pending-all-Review.dart';
 import 'package:myapp/admin/Admin-Pending_Review.dart';
 import 'package:myapp/admin/Admin-Restaurant-Detail.dart';
 import 'package:myapp/admin/Admin-Restaurant-History.dart';
@@ -556,7 +557,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
-                                  RestaurantReviewHistoryPage(),
+                                  RestaurantallPendingrewiewPage(),
                             ),
                           );
                         } else if (value == 'history') {
