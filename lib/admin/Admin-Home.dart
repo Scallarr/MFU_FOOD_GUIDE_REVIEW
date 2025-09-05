@@ -13,6 +13,7 @@ import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/leaderboard.dart';
+import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
 import 'package:myapp/admin/Admin-Edit-Restaurant.dart';
 
@@ -162,9 +163,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -182,20 +181,116 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin> {
 
   Future<List<Restaurant>> fetchRestaurants() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        _showAlert(context, 'Access Denied Because Invalid Token');
+        return [];
+      }
+
       final response = await http.get(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/restaurants'),
+        Uri.parse('http://10.0.3.201:8080/restaurants'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         List jsonList = json.decode(response.body);
         return jsonList.map((json) => Restaurant.fromJson(json)).toList();
+      } else if (response.statusCode == 401) {
+        // Token หมดอายุ
+        _showAlert(context, 'Session expired');
+        return [];
+      } else if (response.statusCode == 403) {
+        // User ถูกแบน - แสดง alert ตามที่ต้องการ
+        _showAlert(context, 'Your account has been banned.');
+        return [];
       } else {
         throw Exception('Failed to load restaurants: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Error fetching restaurants: $e');
-      throw Exception('Failed to load restaurants');
+      _showAlert(context, 'Failed to load restaurants.');
+      return [];
     }
+  }
+
+  void _goToLogin(BuildContext context) {
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+    ; // ใช้ route login ของคุณ
+  }
+
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ผู้ใช้ต้องกดปุ่ม OK ก่อนปิด
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 5,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Colors.orangeAccent, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 50,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Warning',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteRestaurant(int restaurantId) async {

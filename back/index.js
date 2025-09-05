@@ -4,13 +4,15 @@
   const jwt = require('jsonwebtoken');
   const axios = require('axios');
   const moment = require('moment-timezone');
+  const cron = require('node-cron');
+
   
 
   const app = express();
   app.use(cors());
   app.use(express.json());
 
-  const SECRET_KEY = 'your_secret_key_here'; // 🔐 เปลี่ยนให้ปลอดภัย
+  const SECRET_KEY = 'MFU-FOOD-GUIDE-AND-REVIEW'; // 🔐 เปลี่ยนให้ปลอดภัย
 
   // ✅ เชื่อมต่อ MySQL
   const db = mysql.createPool({
@@ -21,6 +23,135 @@
     database: 'byjsmg8vfii8dqlflpwy',
     timezone: '+07:00',
   });
+
+
+function checkUserStatus(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) return res.status(401).json({ error: 'Invalid or expired token' });
+
+    const userId = decoded.userId;
+
+    // ดึง status ของ user จาก DB
+    const query = 'SELECT status FROM User WHERE User_ID = ?';
+    db.query(query, [userId], (err, results) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+
+      if (results.length === 0) return res.status(404).json({ error: 'User not found' });
+
+      const status = results[0].status;
+
+      if (status === 'Banned') {
+        return res.status(403).json({ error: 'Your account has been banned.' });
+      }
+
+      // ถ้าไม่ ban → ให้ผ่าน
+      req.user = decoded; 
+      next();
+    });
+  });
+}
+
+
+app.post('/user5',(req,res) =>{
+   const query = 'SELECT * FROM Leaderboard_user_total_like';
+
+
+
+db.query(query,(err, results)=>{
+  if (err){
+    console.error('Database error checking user:', err)
+    return res.status(500).json({error:"database Error"});
+  }
+  res.json(results);
+})
+
+
+})
+
+
+
+
+
+
+// ตัวอย่าง endpoint insert leaderboard user
+app.post('/leaderboard/insert', async (req, res) => {
+  const { userId, monthYear, rank, totalLikes, totalReviews } = req.body;
+
+  try {
+    const [result] = await db.promise().query(`
+      INSERT INTO Leaderboard_user_total_like 
+        (User_ID, month_year, \`rank\`, total_likes, total_reviews) 
+      VALUES (?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        \`rank\` = VALUES(\`rank\`),
+        total_likes = VALUES(total_likes),
+        total_reviews = VALUES(total_reviews)
+    `, [userId, monthYear, rank, totalLikes, totalReviews]);
+
+    res.json({
+      success: true,
+      message: 'Leaderboard entry inserted/updated successfully',
+      result
+    });
+  } catch (err) {
+    console.error('❌ Insert error:', err);
+    res.status(500).json({ success: false, error: 'Database error' });
+  }
+});
+
+
+
+
+
+app.post('/user',(req,res) =>{
+   const query = 'SELECT * FROM User';
+
+
+
+db.query(query,(err, results)=>{
+  if (err){
+    console.error('Database error checking user:', err)
+    return res.status(500).json({error:"database Error"});
+  }
+  res.json(results);
+})
+
+
+})
+
+app.post('/user10',(req,res) =>{
+   const query = 'SELECT * FROM Reward_History ';
+
+
+
+db.query(query,(err, results)=>{
+  if (err){
+    console.error('Database error checking user:', err)
+    return res.status(500).json({error:"database Error"});
+  }
+  res.json(results);
+})
+
+
+})
+app.post('/viewleaderboard',(req,res) =>{
+   const query = 'SELECT * FROM Leaderboard_user_total_like';
+
+
+
+db.query(query,(err, results)=>{
+  if (err){
+    console.error('Database error checking user:', err)
+    return res.status(500).json({error:"database Error"});
+  }
+  res.json(results);
+})
+
+
+})
 
 
 
@@ -115,6 +246,7 @@ function handleProfilePictureAndToken(userId, username, email, picture_url, res)
       userId,
       isNewUser: !picResults || picResults.length === 0
     });
+    console.log (token);
   });
 }
 
@@ -158,10 +290,55 @@ function generateUniqueUsername(baseUsername) {
     });
   });
 
+// PUT /user/ban/:id
+app.put('/user/ban/:id', (req, res) => {
+  const userId = req.params.id;
+
+  // อัปเดต status เป็น Banned
+  const sql = 'UPDATE User SET status = "Banned" WHERE User_ID = ?';
+
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('Database error updating status:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, message: `User ${userId} has been banned.` });
+  });
+});
 
 
 
-app.get('/restaurants', (req, res) => {
+app.put('/user/Active/:id', (req, res) => {
+  const userId = req.params.id;
+
+  // อัปเดต status เป็น Banned
+  const sql = 'UPDATE User SET status = "Active" WHERE User_ID = ?';
+
+  db.query(sql, [userId], (err, result) => {
+    if (err) {
+      console.error('Database error updating status:', err);
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, message: `User ${userId} has been banned.` });
+  });
+});
+
+
+
+
+
+
+app.get('/restaurants',checkUserStatus, (req, res) => {
   const sql = `
     SELECT 
       r.Restaurant_ID,
@@ -205,7 +382,7 @@ app.get('/restaurants', (req, res) => {
 
 
 
-app.get('/user-profile-pictures/:userId', (req, res) => {
+app.get('/user-profile-pictures/:userId',checkUserStatus, (req, res) => {
   const userId = parseInt(req.params.userId);
   const sql = `SELECT Picture_ID, picture_url, is_active 
                FROM user_Profile_Picture 
@@ -217,7 +394,7 @@ app.get('/user-profile-pictures/:userId', (req, res) => {
 });
 
 
-app.post('/user-profile-pictures/set-active', (req, res) => {
+app.post('/user-profile-pictures/set-active',checkUserStatus, (req, res) => {
   const { userId, pictureId } = req.body;
 
   const deactivate = `UPDATE user_Profile_Picture 
@@ -243,7 +420,7 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
 
 
 
-  app.get('/user-profile/:id', (req, res) => {
+  app.get('/user-profile/:id',(req, res) => {
   const userId = parseInt(req.params.id, 10);
 
   if (!userId) {
@@ -287,7 +464,7 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
   
 });
 
-app.get('/restaurant/:id', (req, res) => {
+app.get('/restaurant/:id', checkUserStatus,(req, res) => {
   const restaurantId = parseInt(req.params.id);
   console.log("restaurantId from params:", restaurantId);
   const userId = parseInt(req.query.user_id);
@@ -362,7 +539,7 @@ app.get('/restaurant/:id', (req, res) => {
 });
 
 // Like/Unlike route (toggle)
-app.post('/review/:reviewId/like', (req, res) => {
+app.post('/review/:reviewId/like', checkUserStatus,(req, res) => {
   const reviewId = parseInt(req.params.reviewId);
   const userId = parseInt(req.body.user_id);
   if (!userId) return res.status(400).json({ message: 'user_id is required' });
@@ -409,7 +586,7 @@ app.post('/review/:reviewId/like', (req, res) => {
 });
 
 // Express.js route example
-app.put('/user-profile/update/:id', (req, res) => {
+app.put('/user-profile/update/:id', checkUserStatus,(req, res) => {
   const { id } = req.params;
   const { username, bio } = req.body;
    console.log("PUT /user-profile/update/:id", req.body); // ✅ ตรวจข้อมูลที่รับ
@@ -567,7 +744,7 @@ app.put('/user-profile/update/:id', (req, res) => {
 // Returns review approval history for an admin user
 // GET /api/admin_review_history/:userId
 // Returns review approval history for an admin user
-app.get('/api/admin_review_history/:userId', async (req, res) => {
+app.get('/api/admin_review_history/:userId', checkUserStatus,async (req, res) => {
   let connection;
   try {
     connection = await db.promise().getConnection();
@@ -617,7 +794,7 @@ app.get('/api/admin_review_history/:userId', async (req, res) => {
 
 
 // Returns Pending Review of all restaurant
-app.get('/Pending_review-all-restaurants', async (req, res) => {
+app.get('/Pending_review-all-restaurants', checkUserStatus,async (req, res) => {
   let connection;
   try {
     connection = await db.promise().getConnection();
@@ -667,7 +844,7 @@ app.get('/Pending_review-all-restaurants', async (req, res) => {
 // Returns all reviews by a specific user
 // GET /api/my_reviews/:userId
 // Returns all reviews by a specific user
-app.get('/api/my_reviews/:userId', async (req, res) => {
+app.get('/api/my_reviews/:userId', checkUserStatus, async (req, res) => {
   let connection;
   try {
     connection = await db.promise().getConnection();
@@ -719,50 +896,168 @@ app.get('/api/my_reviews/:userId', async (req, res) => {
 
 
 
-app.get('/leaderboard', async (req, res) => {
+// อัปเดต leaderboard เดือนปัจจุบัน
+app.get('/leaderboard/update', checkUserStatus, async (req, res) => {
+  const monthYear = req.query.month_year || new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+  console.log('Month:', monthYear);
+
+  const conn = await db.promise().getConnection();
   try {
-    const monthYear = req.query.month_year || '2025-08';
+    await conn.beginTransaction();
 
-    const [topUsers] = await db.promise().query(`
-      SELECT 
+    // ---------- Top Users: likes ในเดือนนั้น + จำนวนรีวิวในเดือนนั้น ----------
+    const [topUsers] = await conn.query(`
+      WITH r_month AS (
+        SELECT User_ID, COUNT(*) AS total_reviews
+        FROM Review
+        WHERE message_status = 'Posted' AND DATE_FORMAT(created_at, '%Y-%m') = ?
+        GROUP BY User_ID
+      ),
+      l_month AS (
+        SELECT r.User_ID, COUNT(*) AS total_likes
+        FROM Review_Likes rl
+        JOIN Review r ON r.Review_ID = rl.Review_ID
+        WHERE DATE_FORMAT(rl.Liked_At, '%Y-%m') = ? AND r.message_status = 'Posted'
+        GROUP BY r.User_ID
+      )
+      SELECT
         u.User_ID,
-        u.username,
-        u.coins,
         u.email,
-        COUNT(r.Review_ID) AS total_reviews,
-        SUM(r.total_likes) AS total_likes,
-        ROW_NUMBER() OVER (ORDER BY SUM(r.total_likes) DESC) AS \`rank\`,
+        u.username,
+        COALESCE(rm.total_reviews, 0) AS total_reviews,
+        COALESCE(lm.total_likes, 0) AS total_likes,
+        ROW_NUMBER() OVER (ORDER BY COALESCE(lm.total_likes,0) DESC) AS \`rank\`,
         upp.picture_url AS profile_image
-      FROM Review r
-      JOIN User u ON r.User_ID = u.User_ID
+      FROM User u
+      LEFT JOIN r_month rm ON rm.User_ID = u.User_ID
+      LEFT JOIN l_month lm ON lm.User_ID = u.User_ID
       LEFT JOIN user_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
-      WHERE r.message_status = 'Posted' AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
-      GROUP BY u.User_ID
-      ORDER BY total_likes DESC
+      WHERE u.status = 'Active'
+      ORDER BY total_likes DESC, u.User_ID
       LIMIT 3
-    `, [monthYear]);
+    `, [monthYear, monthYear]);  // <-- ผูกพารามิเตอร์ครบ 2 ตัว
 
-    const [topRestaurants] = await db.promise().query(`
-      SELECT 
-        r.Restaurant_ID,
+    // เคลียร์ของเดือนนี้ก่อนแล้วค่อย insert ใหม่
+    await conn.query('DELETE FROM Leaderboard_user_total_like WHERE month_year = ?', [monthYear]);
+
+    let rank = 1;
+    for (const u of topUsers) {
+      const coins = rank === 1 ? 100 : rank === 2 ? 60 : 40; // จะ fix เป็น 100 ก็ได้
+      await conn.query(`
+        INSERT INTO Leaderboard_user_total_like
+          (\`rank\`, User_ID, month_year, total_likes, total_reviews, coins_awarded, notified)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+      `, [rank, u.User_ID, monthYear, u.total_likes || 0, u.total_reviews || 0, coins]);
+      rank++;
+    }
+
+    // ---------- Top Restaurants: ค่าเฉลี่ยคะแนนของรีวิวเดือนนั้น + จำนวนรีวิวเดือนนั้น ----------
+    const [topRestaurants] = await conn.query(`
+      SELECT
+        res.Restaurant_ID,
         res.restaurant_name,
+        res.photos,
         AVG(r.rating_overall) AS overall_rating,
         COUNT(r.Review_ID) AS total_reviews,
-        res.photos AS restaurant_image,
         ROW_NUMBER() OVER (ORDER BY AVG(r.rating_overall) DESC) AS \`rank\`
-      FROM Review r
-      JOIN Restaurant res ON r.Restaurant_ID = res.Restaurant_ID
+      FROM Restaurant res
+      JOIN Review r ON r.Restaurant_ID = res.Restaurant_ID
       WHERE r.message_status = 'Posted' AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
-      GROUP BY r.Restaurant_ID
+      GROUP BY res.Restaurant_ID
       ORDER BY overall_rating DESC
       LIMIT 3
     `, [monthYear]);
 
+    await conn.query('DELETE FROM Leaderboard_restaurant WHERE month_year = ?', [monthYear]);
+
+    rank = 1;
+    for (const r of topRestaurants) {
+      await conn.query(`
+        INSERT INTO Leaderboard_restaurant
+          (\`rank\`, Restaurant_ID, month_year, overall_rating, total_reviews)
+        VALUES (?, ?, ?, ?, ?)
+      `, [rank, r.Restaurant_ID, monthYear, r.overall_rating, r.total_reviews]);
+      rank++;
+    }
+
+    await conn.commit();
+
     res.json({
+      message: 'Leaderboard updated successfully',
       month_year: monthYear,
       topUsers,
-      topRestaurants,
+      topRestaurants
     });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+});
+
+
+// GET coins reward from previous month
+app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    // หาเดือนก่อนหน้า
+    let previousMonth = currentMonth - 1;
+    // let previousMonth = currentMonth ;
+    let previousYear = currentYear;
+    
+    if (previousMonth < 0) {
+      previousMonth = 11;
+      previousYear = currentYear - 1;
+    }
+    
+    const previousMonthYear = `${previousYear}-${String(previousMonth + 1).padStart(2, '0')}`;
+    
+    const thaiMonths = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    const previousMonthName = thaiMonths[previousMonth];
+
+    // ✅ ดึงข้อมูลจาก Reward_History แทน
+    const [rewardRows] = await db.promise().query(
+      `SELECT rh.rank, rh.coins_awarded, rh.awarded_at,
+              l.total_likes, l.total_reviews
+       FROM Reward_History rh
+       LEFT JOIN Leaderboard_user_total_like l 
+         ON rh.User_ID = l.User_ID AND rh.month_year = l.month_year
+       WHERE rh.User_ID = ? AND rh.month_year = ?`,
+      [userId, previousMonthYear]
+    );
+
+    if (rewardRows.length === 0) {
+      return res.json({ 
+        success: false,
+        hasData: false,
+        message: `ไม่มีข้อมูลรางวัลสำหรับเดือน${previousMonthName}`,
+      });
+    }
+
+    const rewardData = rewardRows[0];
+
+    return res.json({
+      success: true,
+      hasData: true,
+      coins_awarded: rewardData.coins_awarded,
+      rank: rewardData.rank,
+      total_likes: rewardData.total_likes || 0,
+      total_reviews: rewardData.total_reviews || 0,
+      month_year: previousMonthYear,
+      month_name: previousMonthName,
+      awarded_at: rewardData.awarded_at,
+      message: `ผลการจัดอันดับเดือน${previousMonthName}`
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -770,7 +1065,585 @@ app.get('/leaderboard', async (req, res) => {
 });
 
 
-app.post('/leaderboard/update-auto', async (req, res) => {
+// // GET coins reward from previous month
+// app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) => {
+//   try {
+//     const userId = req.user.userId;
+//     const currentDate = new Date();
+//     const currentMonth = currentDate.getMonth();
+//     const currentYear = currentDate.getFullYear();
+
+//     // หาเดือนก่อนหน้า
+//     let previousMonth = currentMonth - 1;
+//     let previousYear = currentYear;
+    
+//     if (previousMonth < 0) {
+//       previousMonth = 11;
+//       previousYear = currentYear - 1;
+//     }
+    
+//     const previousMonthYear = `${previousYear}-${String(previousMonth + 1).padStart(2, '0')}`;
+    
+//     const thaiMonths = [
+//       'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+//       'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+//     ];
+//     const previousMonthName = thaiMonths[previousMonth];
+
+//     // ดึงข้อมูลจาก Reward_History
+//     const [rewardRows] = await db.promise().query(
+//       `SELECT rh.rank, rh.coins_awarded, rh.awarded_at,
+//               l.total_likes, l.total_reviews
+//        FROM Reward_History rh
+//        INNER JOIN Leaderboard_user_total_like l 
+//          ON rh.User_ID = l.User_ID AND rh.month_year = l.month_year
+//        WHERE rh.User_ID = ? AND rh.month_year = ?`,
+//       [userId, previousMonthYear]
+//     );
+
+//     if (rewardRows.length === 0) {
+//       return res.json({ 
+//         success: false,
+//         hasData: false,
+//         message: `ไม่มีข้อมูลรางวัลสำหรับเดือน${previousMonthName}`,
+//       });
+//     }
+
+//     const rewardData = rewardRows[0];
+
+//     return res.json({
+//       success: true,
+//       hasData: true,
+//       coins_awarded: rewardData.coins_awarded,
+//       rank: rewardData.rank,
+//       total_likes: rewardData.total_likes,
+//       total_reviews: rewardData.total_reviews,
+//       month_year: previousMonthYear,
+//       month_name: previousMonthName,
+//       awarded_at: rewardData.awarded_at,
+//       message: `ผลการจัดอันดับเดือน${previousMonthName}`
+//     });
+
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// });
+
+
+
+
+
+
+
+
+
+
+
+// Function สำหรับคำนวณรางวัลตามอันดับ
+function calculateCoinsByRank(rank) {
+  switch(rank) {
+    case 1: return 2000;
+    case 2: return 1000;
+    case 3: return 500;
+
+    default: return 0;
+  }
+}
+
+// API สำหรับแจก coins อัตโนมัติทุกวันที่ 1 และบันทึกประวัติ
+app.post('/leaderboard/award-monthly-coins', async (req, res) => {
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+
+    const currentDate = new Date();
+    const currentDay = currentDate.getDate();
+    
+    // ตรวจสอบว่าเป็นวันที่ 1 ของเดือนหรือไม่
+    if (currentDay !== 5) {
+      return res.json({ 
+        success: false, 
+        message: 'สามารถแจก coins ได้เฉพาะวันที่ 1 ของเดือนเท่านั้น' 
+      });
+    }
+
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+
+    // หาเดือนก่อนหน้า (เดือนที่แล้ว)
+    let previousMonth = currentMonth - 1;
+    //  let previousMonth = currentMonth  ;
+    let previousYear = currentYear;
+    
+    if (previousMonth < 0) {
+      previousMonth = 11;
+      previousYear = currentYear - 1;
+    }
+    
+    const previousMonthYear = `${previousYear}-${String(previousMonth + 1).padStart(2, '0')}`;
+
+    // Function สำหรับคำนวณ coins ตามอันดับ
+    const calculateCoinsByRank = (rank) => {
+      switch(rank) {
+        case 1: return 2000;
+        case 2: return 1000;
+        case 3: return 500;
+   
+        default: return 0;
+      }
+    };
+
+    // ดึงข้อมูลอันดับทั้งหมดจากเดือนที่แล้ว
+    const [leaderboardRows] = await connection.query(
+      `SELECT Leaderboard_ID, User_ID, \`rank\`, total_likes
+       FROM Leaderboard_user_total_like
+       WHERE month_year = ? AND \`rank\` <= 10
+       ORDER BY \`rank\` ASC`,
+      [previousMonthYear]
+    );
+
+    if (leaderboardRows.length === 0) {
+      await connection.rollback();
+      return res.json({ 
+        success: false, 
+        message: 'ไม่มีข้อมูล leaderboard สำหรับเดือนที่แล้ว' 
+      });
+    }
+
+    const awardResults = [];
+    const thaiMonths = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+    const previousMonthName = thaiMonths[previousMonth];
+
+    // ให้รางวัลตามอันดับ
+    for (const row of leaderboardRows) {
+      const coinsToAward = calculateCoinsByRank(row.rank);
+      
+      if (coinsToAward > 0) {
+        // อัปเดต coins ในตาราง User
+        const [updateResult] = await connection.query(
+          `UPDATE User 
+           SET coins = coins + ?
+           WHERE User_ID = ?`,
+          [coinsToAward, row.User_ID]
+        );
+ const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทยแบบ JS Date
+        // อัปเดต coins_awarded ในตาราง Leaderboard
+        const [updateLeaderboard] = await connection.query(
+          `UPDATE Leaderboard_user_total_like
+           SET coins_awarded = ?, notified = 0
+           WHERE Leaderboard_ID = ?`,
+          [coinsToAward,row.Leaderboard_ID]
+        );
+
+        // ✅ บันทึกประวัติการให้รางวัลลงใน Reward_History
+        const [historyResult] = await connection.query(
+          `INSERT INTO Reward_History (User_ID, month_year, \`rank\`, coins_awarded,awarded_at)
+           VALUES (?, ?, ?, ?,?)`,
+          [row.User_ID, previousMonthYear, row.rank, coinsToAward, now]
+        );
+
+        awardResults.push({
+          user_id: row.User_ID,
+          rank: row.rank,
+          coins_awarded: coinsToAward,
+          total_likes: row.total_likes,
+          reward_id: historyResult.insertId // ได้รับ ID ของ record ที่เพิ่ม
+        });
+      }
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      month: previousMonthName,
+      month_year: previousMonthYear,
+      total_users_awarded: awardResults.length,
+      total_coins_awarded: awardResults.reduce((sum, item) => sum + item.coins_awarded, 0),
+      awards: awardResults
+    });
+
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error('Error awarding monthly coins:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (connection)
+       connection.release();
+  }
+});
+
+// ตั้งค่า cron job สำหรับแจก coins อัตโนมัติทุกวันที่ 1
+
+
+// รันทุกวันเวลา 22:12 (เที่ยงคืน 1 นาที)
+cron.schedule('25 12 * * *', async () => {
+  try {
+    console.log('Running automatic coin award at 10:40 AM Thailand time...');
+    
+    const response = await fetch('http://localhost:8080/leaderboard/award-monthly-coins', {
+      method: 'POST'
+    });
+    
+    const result = await response.json();
+    console.log('Monthly coin award result:', result);
+  } catch (error) {
+    console.error('Error in automatic coin award:', error);
+  }
+}, {
+  timezone: "Asia/Bangkok" // ตั้ง timezone ให้ตรงประเทศไทย
+});
+
+
+
+
+
+
+
+// API สำหรับดึงประวัติการให้รางวัลของผู้ใช้
+app.get('/reward-history/:userId', checkUserStatus, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const [rows] = await db.promise().query(
+      `SELECT rh.month_year, rh.rank, rh.coins_awarded, rh.awarded_at,
+              u.username, u.email
+       FROM Reward_History rh
+       INNER JOIN User u ON rh.User_ID = u.User_ID
+       WHERE rh.User_ID = ?
+       ORDER BY rh.awarded_at DESC`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      total_rewards: rows.length,
+      total_coins: rows.reduce((sum, item) => sum + item.coins_awarded, 0),
+      history: rows
+    });
+
+  } catch (err) {
+    console.error('Error fetching reward history:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API สำหรับดึงประวัติการให้รางวัลทั้งหมด (Admin)
+app.get('/admin/reward-history',  async (req, res) => {
+  try {
+    const { page = 1, limit = 20, month } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT rh.Reward_ID, rh.month_year, rh.rank, rh.coins_awarded, rh.awarded_at,
+             u.User_ID, u.username, u.email, u.coins as current_coins
+      FROM Reward_History rh
+      INNER JOIN User u ON rh.User_ID = u.User_ID
+    `;
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM Reward_History rh
+      INNER JOIN User u ON rh.User_ID = u.User_ID
+    `;
+    const queryParams = [];
+
+    if (month) {
+      query += ' WHERE rh.month_year = ?';
+      countQuery += ' WHERE rh.month_year = ?';
+      queryParams.push(month);
+    }
+
+    query += ' ORDER BY rh.awarded_at DESC LIMIT ? OFFSET ?';
+    queryParams.push(parseInt(limit), parseInt(offset));
+
+    const [rows] = await db.promise().query(query, queryParams);
+    const [countResult] = await db.promise().query(countQuery, month ? [month] : []);
+    const total = countResult[0].total;
+
+    res.json({
+      success: true,
+      total_records: total,
+      total_pages: Math.ceil(total / limit),
+      current_page: parseInt(page),
+      rewards: rows
+    });
+
+  } catch (err) {
+    console.error('Error fetching admin reward history:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+// API สำหรับ管理员จัดการ coins
+app.post('/admin/manage-coins',checkUserStatus, async (req, res) => {
+  let connection;
+  try {
+   
+    const adminId = req.user.userId;
+    const { targetUserId, actionType, coinsAmount, reason } = req.body;
+
+    // 验证输入
+    if (!targetUserId || !actionType || !coinsAmount || !reason) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields' 
+      });
+    }
+
+    if (coinsAmount <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Coins amount must be positive' 
+      });
+    }
+
+    if (!['ADD', 'SUBTRACT'].includes(actionType)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid action type' 
+      });
+    }
+
+    connection = await db.promise().getConnection();
+    await connection.beginTransaction();
+
+    // 检查目标用户是否存在
+    const [userRows] = await connection.query(
+      'SELECT User_ID, coins FROM User WHERE User_ID = ?',
+      [targetUserId]
+    );
+
+    if (userRows.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    const user = userRows[0];
+    let newCoins = user.coins;
+
+    // 根据操作类型更新硬币数量
+    if (actionType === 'ADD') {
+      newCoins += coinsAmount;
+    } else if (actionType === 'SUBTRACT') {
+      if (user.coins < coinsAmount) {
+        await connection.rollback();
+        return res.status(400).json({ 
+          success: false, 
+          message: 'User does not have enough coins' 
+        });
+      }
+      newCoins -= coinsAmount;
+    }
+
+    // 更新用户硬币数量
+    const [updateResult] = await connection.query(
+      'UPDATE User SET coins = ? WHERE User_ID = ?',
+      [newCoins, targetUserId]
+    );
+
+    if (updateResult.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to update user coins' 
+      });
+    }
+ const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทยแบบ JS Date
+    // 记录管理员操作历史
+    const [historyResult] = await connection.query(
+      `INSERT INTO Admin_Coin_History 
+       (Admin_ID, User_ID, action_type, coins_amount, reason,created_at) 
+       VALUES (?, ?, ?, ?, ?,?)`,
+      [adminId, targetUserId, actionType, coinsAmount, reason,now]
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: `Coins ${actionType === 'ADD' ? 'added' : 'subtracted'} successfully`,
+      newBalance: newCoins,
+      historyId: historyResult.insertId
+    });
+
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error('Error managing coins:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (connection) 
+      connection.release();
+  }
+});
+
+
+
+
+// API สำหรับดึงประวัติการจัดการ coins โดย管理员
+app.get('/admin/coin-history', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, userId, adminId } = req.query;
+    const offset = (page - 1) * limit;
+
+    let query = `
+      SELECT ach.History_ID, ach.action_type, ach.coins_amount, ach.reason, ach.created_at,
+             admin.User_ID as admin_id, admin.username as admin_username, admin.email as admin_email,
+             user.User_ID as user_id, user.username as user_username, user.email as user_email
+      FROM Admin_Coin_History ach
+      INNER JOIN User admin ON ach.Admin_ID = admin.User_ID
+      INNER JOIN User user ON ach.User_ID = user.User_ID
+    `;
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM Admin_Coin_History ach
+      INNER JOIN User admin ON ach.Admin_ID = admin.User_ID
+      INNER JOIN User user ON ach.User_ID = user.User_ID
+    `;
+    const queryParams = [];
+    const whereConditions = [];
+
+    if (userId) {
+      whereConditions.push('ach.User_ID = ?');
+      queryParams.push(userId);
+    }
+
+    if (adminId) {
+      whereConditions.push('ach.Admin_ID = ?');
+      queryParams.push(adminId);
+    }
+
+    if (whereConditions.length > 0) {
+      query += ' WHERE ' + whereConditions.join(' AND ');
+      countQuery += ' WHERE ' + whereConditions.join(' AND ');
+    }
+
+    query += ' ORDER BY ach.created_at DESC LIMIT ? OFFSET ?';
+    queryParams.push(parseInt(limit), parseInt(offset));
+
+    const [rows] = await db.promise().query(query, queryParams);
+    const [countResult] = await db.promise().query(countQuery, queryParams.slice(0, -2));
+    const total = countResult[0].total;
+
+    res.json({
+      success: true,
+      total_records: total,
+      total_pages: Math.ceil(total / limit),
+      current_page: parseInt(page),
+      history: rows
+    });
+
+  } catch (err) {
+    console.error('Error fetching admin coin history:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// API สำหรับค้นหาผู้ใช้
+app.get('/admin/search-users',  async (req, res) => {
+  try {
+    const { query: searchQuery } = req.query;
+
+    if (!searchQuery || searchQuery.length < 2) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Search query must be at least 2 characters long' 
+      });
+    }
+
+    const [users] = await db.promise().query(
+      `SELECT User_ID, username, email, coins, status, role
+       FROM User 
+       WHERE (username LIKE ? OR email LIKE ?) 
+       AND status = 'Active'
+       ORDER BY username
+       LIMIT 20`,
+      [`%${searchQuery}%`, `%${searchQuery}%`]
+    );
+
+    res.json({
+      success: true,
+      users: users
+    });
+
+  } catch (err) {
+    console.error('Error searching users:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+// GET /reward-history/:userId
+app.get('/rewards-history/:userId', checkUserStatus, async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    // ดึงข้อมูลจาก Leaderboard
+    const [leaderboardRows] = await db.promise().query(
+      `SELECT rh.month_year, rh.rank, rh.coins_awarded, rh.awarded_at
+       FROM Reward_History rh
+       WHERE rh.User_ID = ?
+       ORDER BY rh.awarded_at DESC`,
+      [userId]
+    );
+
+    // ดึงข้อมูลจาก Admin_Coin_History
+    const [adminRows] = await db.promise().query(
+      `SELECT ach.action_type, ach.coins_amount AS coins_awarded, ach.reason, ach.created_at, u.username AS admin_username
+       FROM Admin_Coin_History ach
+       INNER JOIN User u ON ach.Admin_ID = u.User_ID
+       WHERE ach.User_ID = ?
+       ORDER BY ach.created_at DESC`,
+      [userId]
+    );
+
+    // แปลง Admin row ให้เหมือนกับ Leaderboard
+    const adminHistory = adminRows.map(row => ({
+      month_year: row.created_at.toISOString().substring(0,7), // 'YYYY-MM'
+      action_type: row.action_type,
+      coins_awarded: row.coins_awarded,
+      reason: row.reason,
+      admin_username: row.admin_username
+    }));
+
+    // รวมทั้งสอง
+    const history = [...leaderboardRows, ...adminHistory].sort((a, b) => {
+      const dateA = new Date(a.awarded_at || a.created_at);
+      const dateB = new Date(b.awarded_at || b.created_at);
+      return dateB - dateA; // ใหม่ไปเก่า
+    });
+
+    const total_coins = history.reduce((sum, item) => sum + item.coins_awarded, 0);
+
+    res.json({
+      success: true,
+      total_coins,
+      history
+    });
+
+  } catch (err) {
+    console.error('Error fetching reward history:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+
+
+app.post('/leaderboard/update-auto', checkUserStatus,async (req, res) => {
   try {
     const { month_year } = req.body;
     console.log(month_year);
@@ -869,7 +1742,7 @@ LEFT JOIN Review r ON u.User_ID = r.User_ID AND DATE_FORMAT(r.created_at, '%Y-%m
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-app.get('/profile-exchange/:userId', (req, res) => {
+app.get('/profile-exchange/:userId', checkUserStatus,(req, res) => {
   const userId = req.params.userId;
   console.log("User ID:", userId); // ✅ ดูว่าได้ค่าไหม
 
@@ -1168,7 +2041,7 @@ app.post('/submit_reviews', async (req, res) => {
   }
 });
 
-app.get('/all_threads/:userId', async (req, res) => {
+app.get('/all_threads/:userId',checkUserStatus, async (req, res) => {
   const userId = req.params.userId;
 
   try {

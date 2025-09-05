@@ -9,8 +9,10 @@ import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/dashboard.dart';
 import 'dart:convert';
 import 'package:myapp/home.dart';
+import 'package:myapp/login.dart';
 import 'package:myapp/threads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class LeaderboardPageAdmin extends StatefulWidget {
   const LeaderboardPageAdmin({super.key});
@@ -26,6 +28,31 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   String monthYear = '';
   int? userId;
   String? profileImageUrl;
+  DateTime _selectedDate = DateTime.now();
+  bool _isLoading = false;
+
+  // ตัวเลือกเดือน
+  final List<String> _months = [
+    'January',
+    'Febuary',
+    'มีนาคม',
+    'เมษายน',
+    'พฤษภาคม',
+    'มิถุนายน',
+    'กรกฎาคม',
+    'สิงหาคม',
+    'กันยายน',
+    'ตุลาคม',
+    'พฤศจิกายน',
+    'ธันวาคม',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchLeaderboard();
+    loadUserIdAndFetchProfile();
+  }
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -55,14 +82,6 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchLeaderboard();
-
-    loadUserIdAndFetchProfile();
-  }
-
   Future<void> loadUserIdAndFetchProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final storedUserId = prefs.getInt('user_id');
@@ -79,16 +98,13 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
           profileImageUrl = data['picture_url'];
-          print(profileImageUrl);
         });
       } else {
         print('Failed to load profile picture');
@@ -98,10 +114,226 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     }
   }
 
-  Future<void> fetchLeaderboard() async {
+  Future<void> checkPreviousMonthReward(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // ตรวจสอบว่าเคยแสดงรางวัลเดือนนี้แล้วหรือยัง
+    final now = DateTime.now();
+    final currentMonthKey = 'reward_shown_${now.year}-${now.month}';
+    prefs.remove(currentMonthKey);
+    final rewardShown = prefs.getBool(currentMonthKey) ?? false;
+
+    if (rewardShown) {
+      print('Already shown reward for current month');
+      return;
+    }
+
+    final token = prefs.getString('jwt_token');
+    if (token == null) return;
+
     try {
+      final response = await http.put(
+        Uri.parse('http://10.0.3.201:8080/leaderboard/coins/previous-month'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('Previous month reward response: $data');
+
+        if (data['success'] == true && data['hasData'] == true) {
+          _showMonthlyRewardAlert(
+            context,
+            data['month_name'],
+            data['rank'],
+            data['coins_awarded'],
+            data['total_likes'],
+            data['total_reviews'],
+          );
+
+          // บันทึกว่าได้แสดงรางวัลเดือนนี้แล้ว
+          await prefs.setBool(currentMonthKey, true);
+        } else if (data['message'] != null) {
+          // แสดงข้อความว่าไม่มีข้อมูล
+          _showAlert2(context, data['message']);
+
+          // บันทึกว่าได้ตรวจสอบแล้ว (แม้ไม่มีข้อมูล)
+          await prefs.setBool(currentMonthKey, true);
+        }
+      } else {
+        print('Failed to check previous month reward: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error checking previous month reward: $e');
+    }
+  }
+
+  void _showMonthlyRewardAlert(
+    BuildContext context,
+    String previousMonthName,
+    int rank,
+    int coinsAwarded,
+    int totalLikes,
+    int totalReviews,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFD700), Color(0xFFFFC400)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ไอคอนรางวัล
+              Icon(Icons.emoji_events, size: 60, color: Colors.deepOrange),
+
+              SizedBox(height: 16),
+
+              // หัวข้อ
+              Text(
+                '🏆 ผลการจัดอันดับเดือน$previousMonthName',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.brown.shade900,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              SizedBox(height: 20),
+
+              // ข้อมูลอันดับ
+              _buildRewardItem('อันดับที่', '$rank', Icons.leaderboard),
+
+              SizedBox(height: 12),
+
+              // ข้อมูลเหรียญ
+              _buildRewardItem(
+                'ได้รับเหรียญ',
+                '$coinsAwarded เหรียญ',
+                Icons.monetization_on,
+              ),
+
+              SizedBox(height: 12),
+
+              // จำนวนไลค์
+              _buildRewardItem('จำนวนไลค์', '$totalLikes ไลค์', Icons.thumb_up),
+
+              SizedBox(height: 12),
+
+              // จำนวนรีวิว
+              _buildRewardItem(
+                'จำนวนรีวิว',
+                '$totalReviews รีวิว',
+                Icons.rate_review,
+              ),
+
+              SizedBox(height: 24),
+
+              // ปุ่ม OK
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepOrange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'เข้าใจแล้ว',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRewardItem(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.shade300, width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.amber.shade700, size: 24),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.brown.shade800,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepOrange,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAlert2(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('รางวัล!'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> fetchLeaderboard({String? customMonthYear}) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      String url = 'http://10.0.3.201:8080/leaderboard/update';
+      if (customMonthYear != null) {
+        url += '?month_year=$customMonthYear';
+      }
+
       final response = await http.get(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/leaderboard'),
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -109,13 +341,149 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
         setState(() {
           topUsers = data['topUsers'] ?? [];
           topRestaurants = data['topRestaurants'] ?? [];
-          monthYear = data['month_year'] ?? 'f';
+          monthYear = data['month_year'] ?? '';
+          _isLoading = false;
+        });
+
+        // เรียกตรวจสอบรางวัลจากเดือนที่แล้ว (แสดงครั้งแรกของเดือน)
+        await checkPreviousMonthReward(context);
+      } else if (response.statusCode == 401) {
+        _showAlert(context, 'Session expired');
+        setState(() {
+          _isLoading = false;
+        });
+      } else if (response.statusCode == 403) {
+        _showAlert(context, 'Your account has been banned.');
+        setState(() {
+          _isLoading = false;
         });
       } else {
         print('Failed to load leaderboard');
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       print('Error fetching leaderboard: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 5,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Colors.orangeAccent, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 50,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Warning',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ฟังก์ชันเลือกเดือน/ปี
+  Future<void> _selectMonthYear(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+      initialDatePickerMode: DatePickerMode.year,
+    );
+
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+
+      // แปลงวันที่เป็นรูปแบบ YYYY-MM
+      final selectedMonthYear = DateFormat('yyyy-MM').format(picked);
+      await fetchLeaderboard(customMonthYear: selectedMonthYear);
+    }
+  }
+
+  // ฟังก์ชันเลือกเดือนจาก dropdown
+  void _selectMonthFromDropdown(String? month) {
+    if (month != null) {
+      final monthIndex = _months.indexOf(month) + 1;
+      final monthString = monthIndex.toString().padLeft(2, '0');
+      final selectedMonthYear = '${_selectedDate.year}-$monthString';
+      fetchLeaderboard(customMonthYear: selectedMonthYear);
+    }
+  }
+
+  // ฟังก์ชันเลือกปีจาก dropdown
+  void _selectYearFromDropdown(String? year) {
+    if (year != null) {
+      final selectedYear = int.parse(year);
+      setState(() {
+        _selectedDate = DateTime(selectedYear, _selectedDate.month);
+      });
+      final monthString = _selectedDate.month.toString().padLeft(2, '0');
+      final selectedMonthYear = '$year-$monthString';
+      fetchLeaderboard(customMonthYear: selectedMonthYear);
     }
   }
 
@@ -491,9 +859,9 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                     ],
                     image: DecorationImage(
                       image:
-                          (restaurant['restaurant_image'] != null &&
-                              restaurant['restaurant_image'].isNotEmpty)
-                          ? NetworkImage(restaurant['restaurant_image'])
+                          (restaurant['photos'] != null &&
+                              restaurant['photos'].isNotEmpty)
+                          ? NetworkImage(restaurant['photos'])
                           : const AssetImage('assets/default_restaurant.png')
                                 as ImageProvider,
                       fit: BoxFit.cover,
@@ -566,159 +934,228 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
           ),
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: fetchLeaderboard,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              toolbarHeight: 80,
-              backgroundColor: const Color(0xFFCEBFA3),
-              pinned: false,
-              floating: true,
-              snap: true,
-              elevation: 6,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(20),
-                ),
-              ),
-              title: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Leaderboard',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            offset: const Offset(0, 2),
-                            blurRadius: 4,
-                            color: Colors.black.withOpacity(0.3),
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () async {
-                        final shouldRefresh = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfilePageAdmin(),
-                          ),
-                        );
+      body: Column(
+        children: [
+          // Header with date selector
+          _buildHeader(context),
 
-                        if (shouldRefresh == true) {
-                          fetchProfilePicture(userId!);
-                        }
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: profileImageUrl == null
-                            ? CircleAvatar(
-                                backgroundColor: Colors.grey[300],
-                                child: Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
-                                radius: 27,
-                              )
-                            : CircleAvatar(
-                                backgroundImage: NetworkImage(profileImageUrl!),
-                                radius: 27,
-                                backgroundColor: Colors.grey[300],
+          // Content
+          Expanded(
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: () => fetchLeaderboard(),
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverList(
+                          delegate: SliverChildListDelegate([
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    '🏆 Monthly Like Leaders ',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (monthYear.isNotEmpty)
+                                    Text(
+                                      '($monthYear)',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                        color: Color.fromARGB(255, 80, 77, 77),
+                                      ),
+                                    ),
+                                ],
                               ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 20),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        '🏆 Monthly Like Leaders ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      if (monthYear.isNotEmpty)
-                        Text(
-                          '($monthYear)',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontStyle: FontStyle.italic,
-                            color: Color.fromARGB(255, 80, 77, 77),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...topUsers.asMap().entries.map(
-                  (entry) => buildUserCard(entry.value, entry.key),
-                ),
-                const Divider(thickness: 2, height: 32),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.restaurant_menu,
-                            size: 32,
-                            color: Colors.brown.shade700,
-                          ),
-
-                          Text(
-                            ' Best Restaurants ',
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.bold,
                             ),
-                          ),
-                        ],
-                      ),
-                      if (monthYear.isNotEmpty)
-                        Text(
-                          '($monthYear)',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontStyle: FontStyle.italic,
-                            color: Color.fromARGB(255, 80, 77, 77),
-                          ),
+                            const SizedBox(height: 8),
+                            ...topUsers.asMap().entries.map(
+                              (entry) => buildUserCard(entry.value, entry.key),
+                            ),
+                            const Divider(thickness: 2, height: 32),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.restaurant_menu,
+                                        size: 32,
+                                        color: Colors.brown.shade700,
+                                      ),
+                                      Text(
+                                        ' Best Restaurants ',
+                                        style: TextStyle(
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (monthYear.isNotEmpty)
+                                    Text(
+                                      '($monthYear)',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontStyle: FontStyle.italic,
+                                        color: Color.fromARGB(255, 80, 77, 77),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...topRestaurants.asMap().entries.map(
+                              (entry) =>
+                                  buildRestaurantCard(entry.value, entry.key),
+                            ),
+                            const SizedBox(height: 30),
+                          ]),
                         ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFCEBFA3),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Leaderboard',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 28,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                        color: Colors.black.withOpacity(0.3),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...topRestaurants.asMap().entries.map(
-                  (entry) => buildRestaurantCard(entry.value, entry.key),
+                GestureDetector(
+                  onTap: () async {
+                    final shouldRefresh = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePageAdmin(),
+                      ),
+                    );
+                    if (shouldRefresh == true) {
+                      fetchProfilePicture(userId!);
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: profileImageUrl == null
+                        ? CircleAvatar(
+                            backgroundColor: Colors.grey[300],
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                            radius: 27,
+                          )
+                        : CircleAvatar(
+                            backgroundImage: NetworkImage(profileImageUrl!),
+                            radius: 27,
+                            backgroundColor: Colors.grey[300],
+                          ),
+                  ),
                 ),
-                const SizedBox(height: 30),
-              ]),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Date selector
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _months[_selectedDate.month - 1],
+                    items: _months.map((String month) {
+                      return DropdownMenuItem<String>(
+                        value: month,
+                        child: Text(month),
+                      );
+                    }).toList(),
+                    onChanged: _selectMonthFromDropdown,
+                    decoration: InputDecoration(
+                      labelText: 'เลือกเดือน',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedDate.year.toString(),
+                    items: List.generate(5, (index) {
+                      final year = DateTime.now().year - index;
+                      return DropdownMenuItem<String>(
+                        value: year.toString(),
+                        child: Text(year.toString()),
+                      );
+                    }).toList(),
+                    onChanged: _selectYearFromDropdown,
+                    decoration: InputDecoration(
+                      labelText: 'เลือกปี',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                IconButton(
+                  onPressed: () => _selectMonthYear(context),
+                  icon: Icon(Icons.calendar_today, color: Colors.white),
+                  tooltip: 'เลือกวันที่',
+                ),
+              ],
             ),
           ],
         ),

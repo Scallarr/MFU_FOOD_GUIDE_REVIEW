@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/Profileshop.dart';
 import 'package:myapp/admin/Admin-Home.dart';
+import 'package:myapp/admin/Admin-Mangecoin.dart';
+import 'package:myapp/admin/Admin-coin_History.dart';
 import 'package:myapp/admin/Admin-profile-shop.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/login.dart';
@@ -701,6 +703,67 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                       child: const Text(
                         'Profile Shop Management',
                         style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                  ),
+                  // 在现有的 "Profile Shop Management" 按钮下面添加这个按钮
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange[100],
+                        foregroundColor: Colors.orange[800],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RewardHistoryPage(),
+                          ),
+                        );
+                      },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.history, size: 20),
+                          SizedBox(width: 8),
+                          Text('View Coin History'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[100],
+                        foregroundColor: Colors.red[800],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AdminCoinManagementPage(),
+                          ),
+                        );
+                      },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.admin_panel_settings, size: 20),
+                          SizedBox(width: 8),
+                          Text('Admin Coin Management'),
+                        ],
                       ),
                     ),
                   ),

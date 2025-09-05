@@ -60,7 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/user/login'),
+        Uri.parse('http://10.0.3.201:8080/user/login'),
+        // Uri.parse('https://mfu-food-guide-review.onrender.com/user/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'fullname': googleUser.displayName,
@@ -78,9 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
         print('dg' + userPhotoUrl.toString());
         // ดึงข้อมูล user เพิ่มเติมจาก API (เช่น role, bio, etc.)
         final userInfoResponse = await http.get(
-          Uri.parse(
-            'https://mfu-food-guide-review.onrender.com/user/info/$userId',
-          ),
+          Uri.parse('http://10.0.3.201:8080/user/info/$userId'),
           headers: {'Authorization': 'Bearer $token'},
         );
 
@@ -100,18 +99,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // ไปหน้า HomePage ตาม role
           if (role == 'User') {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => RestaurantListPageUser()),
-            );
-          } else if (role == 'Admin') {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => RestaurantListPageAdmin()),
+              (Route<dynamic> route) => false,
+            );
+          } else if (role == 'Admin') {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => RestaurantListPageAdmin()),
+              (Route<dynamic> route) => false,
             );
           }
         } else {
-          throw Exception('Failed to get user info');
+          throw Exception('Failed to get user information');
         }
       } else {
         throw Exception('Failed to login');

@@ -14,6 +14,7 @@ import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/leaderboard.dart';
+import 'package:myapp/login.dart';
 import 'package:myapp/thread_reply.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,7 +49,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   void initState() {
     super.initState();
     _loadUserID();
-    loadUserIdAndFetchProfile();
+    // loadUserIdAndFetchProfile();
     fetchPendingThreadsCount();
     fetchPendingRepliedThreadsCount();
   }
@@ -56,7 +57,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchPendingThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/pending'),
+        Uri.parse('http://10.0.3.201:8080/threads/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -81,9 +82,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchPendingRepliedThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/threads-replied/pending',
-        ),
+        Uri.parse('http://10.0.3.201:8080/threads-replied/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -137,9 +136,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -306,11 +303,14 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     String reason = '',
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/threads/reject'),
+        Uri.parse('http://10.0.3.201:8080/threads/reject'),
         headers: {'Content-Type': 'application/json'},
+        // headers: {'Authorization': 'Bearer $token'},
         body: json.encode({
           'threadId': threadId,
           'adminId': userId,
@@ -324,7 +324,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
         ).showSnackBar(SnackBar(content: Text('Thread banned successfully')));
         fetchThreads(); // รีเฟรชรายการ threads
       } else {
-        throw Exception('Failed to ban thread');
+        throw Exception('Failed to banned thread');
       }
     } catch (e) {
       ScaffoldMessenger.of(
@@ -483,12 +483,12 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     String reason = '',
   }) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/threads/AdminManual-check/reject',
-        ),
+        Uri.parse('http://10.0.3.201:8080/threads/AdminManual-check/reject'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'threadId': threadId,
@@ -513,11 +513,12 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   }
 
   Future<void> fetchThreads() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
     if (userId == null) return;
     final response = await http.get(
-      Uri.parse(
-        'https://mfu-food-guide-review.onrender.com/all_threads/$userId',
-      ),
+      Uri.parse('http://10.0.3.201:8080/all_threads/$userId'),
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
@@ -527,14 +528,95 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       print('f');
       print(threads);
       fetchPendingThreadsCount();
+    } else if (response.statusCode == 401) {
+      // Token หมดอายุ
+      _showAlert(context, 'Session expired');
+      return;
+    } else if (response.statusCode == 403) {
+      // User ถูกแบน - แสดง alert ตามที่ต้องการ
+      _showAlert(context, 'Your account has been banned.');
+      return;
     } else {
       throw Exception('Failed to load threads');
     }
   }
 
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ผู้ใช้ต้องกดปุ่ม OK ก่อนปิด
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 5,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Colors.orangeAccent, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 50,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Warning',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> toggleLike(int threadId, bool liked) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
     final response = await http.post(
-      Uri.parse('https://mfu-food-guide-review.onrender.com/like_thread'),
+      Uri.parse('http://10.0.3.201:8080/like_thread'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'User_ID': userId,
@@ -555,12 +637,11 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/user_profile_picture/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/user_profile_picture/$userId'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        final profileImageUrl2 = data['picture_url'];
         return data['picture_url'] as String?;
       }
     } catch (e) {
@@ -572,10 +653,11 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> sendThread() async {
     final message = _textController.text.trim();
     if (message.isEmpty || userId == null) return;
-
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
     try {
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/create_thread'),
+        Uri.parse('http://10.0.3.201:8080/create_thread'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'User_ID': userId, 'message': message}),
       );
