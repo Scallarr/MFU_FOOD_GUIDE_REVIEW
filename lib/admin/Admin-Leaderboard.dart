@@ -35,16 +35,16 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   final List<String> _months = [
     'January',
     'Febuary',
-    'มีนาคม',
-    'เมษายน',
-    'พฤษภาคม',
-    'มิถุนายน',
-    'กรกฎาคม',
-    'สิงหาคม',
-    'กันยายน',
-    'ตุลาคม',
-    'พฤศจิกายน',
-    'ธันวาคม',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   @override
@@ -122,7 +122,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     final currentMonthKey = 'reward_shown_${now.year}-${now.month}';
     prefs.remove(currentMonthKey);
     final rewardShown = prefs.getBool(currentMonthKey) ?? false;
-
+    print(rewardShown);
     if (rewardShown) {
       print('Already shown reward for current month');
       return;
@@ -186,76 +186,114 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: const LinearGradient(
-              colors: [Color(0xFFFFD700), Color(0xFFFFC400)],
+              colors: [Colors.red, Color.fromARGB(255, 244, 244, 243)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ไอคอนรางวัล
-              Icon(Icons.emoji_events, size: 60, color: Colors.deepOrange),
+              // Trophy Icon
+              Icon(
+                Icons.emoji_events,
+                size: 70,
+                color: Colors.deepOrange.shade700,
+              ),
 
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-              // หัวข้อ
+              // Title
               Text(
-                '🏆 ผลการจัดอันดับเดือน$previousMonthName',
+                '🏆 Monthly Ranking Result – $previousMonthName',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Colors.brown.shade900,
                 ),
                 textAlign: TextAlign.center,
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 24),
 
-              // ข้อมูลอันดับ
-              _buildRewardItem('อันดับที่', '$rank', Icons.leaderboard),
-
-              SizedBox(height: 12),
-
-              // ข้อมูลเหรียญ
+              // Ranking Info
               _buildRewardItem(
-                'ได้รับเหรียญ',
-                '$coinsAwarded เหรียญ',
+                'month',
+                '$previousMonthName',
+                Icons.calendar_month,
+                Colors.blueAccent,
+              ),
+
+              const SizedBox(height: 14),
+              // Ranking Info
+              _buildRewardItem(
+                'Rank',
+                '$rank',
+                Icons.leaderboard,
+                Colors.blueAccent,
+              ),
+
+              const SizedBox(height: 14),
+
+              // Coins Awarded
+              _buildRewardItem(
+                'Coins Earned',
+                '$coinsAwarded',
                 Icons.monetization_on,
+                Colors.amber.shade700,
               ),
 
-              SizedBox(height: 12),
+              const SizedBox(height: 14),
 
-              // จำนวนไลค์
-              _buildRewardItem('จำนวนไลค์', '$totalLikes ไลค์', Icons.thumb_up),
-
-              SizedBox(height: 12),
-
-              // จำนวนรีวิว
+              // Total Likes
               _buildRewardItem(
-                'จำนวนรีวิว',
-                '$totalReviews รีวิว',
-                Icons.rate_review,
+                'Total Likes',
+                '$totalLikes',
+                Icons.thumb_up,
+                Colors.pinkAccent,
               ),
 
-              SizedBox(height: 24),
+              const SizedBox(height: 14),
 
-              // ปุ่ม OK
+              // Total Reviews
+              _buildRewardItem(
+                'Total Reviews',
+                '$totalReviews',
+                Icons.rate_review,
+                Colors.green,
+              ),
+
+              const SizedBox(height: 28),
+
+              // OK Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepOrange,
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      245,
+                      11,
+                      11,
+                    ).withOpacity(0.7),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 3,
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'เข้าใจแล้ว',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  child: const Text(
+                    'Got it!',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -266,18 +304,30 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     );
   }
 
-  Widget _buildRewardItem(String title, String value, IconData icon) {
+  Widget _buildRewardItem(
+    String title,
+    String value,
+    IconData icon,
+    Color iconColor,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade300, width: 1),
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amber.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.amber.shade700, size: 24),
-          SizedBox(width: 12),
+          Icon(icon, color: iconColor, size: 26),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               title,
@@ -293,7 +343,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.deepOrange,
+              color: Colors.deepOrange.shade700,
             ),
           ),
         ],
@@ -1118,7 +1168,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                     }).toList(),
                     onChanged: _selectMonthFromDropdown,
                     decoration: InputDecoration(
-                      labelText: 'เลือกเดือน',
+                      labelText: 'Select Month',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -1140,7 +1190,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                     }).toList(),
                     onChanged: _selectYearFromDropdown,
                     decoration: InputDecoration(
-                      labelText: 'เลือกปี',
+                      labelText: 'Select Year',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

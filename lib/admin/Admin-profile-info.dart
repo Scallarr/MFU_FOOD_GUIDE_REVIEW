@@ -6,6 +6,7 @@ import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Mangecoin.dart';
 import 'package:myapp/admin/Admin-coin_History.dart';
 import 'package:myapp/admin/Admin-profile-shop.dart';
+import 'package:myapp/admin/Admin-userManagement.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
@@ -55,9 +56,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> fetchUserData(int userId) async {
     try {
-      final url = Uri.parse(
-        'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
-      );
+      final url = Uri.parse('http://10.0.3.201:8080/user-profile/$userId');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -90,7 +89,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<List<Map<String, dynamic>>> fetchProfilePictures(int userId) async {
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user-profile-pictures/$userId',
+      'http://10.0.3.201:8080/user-profile-pictures/$userId',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -103,7 +102,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> setActiveProfilePicture(int userId, int pictureId) async {
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user-profile-pictures/set-active',
+      'http://10.0.3.201:8080/user-profile-pictures/set-active',
     );
     final response = await http.post(
       url,
@@ -125,9 +124,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
       return;
     }
 
-    final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user-profile/update/$userId',
-    );
+    final url = Uri.parse('http://10.0.3.201:8080/user-profile/update/$userId');
 
     final response = await http.put(
       url,
@@ -718,20 +715,69 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final shouldRefresh = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RewardHistoryPage(),
+                            builder: (context) =>
+                                RewardHistoryPage(), // อย่าลง const ถ้าต้อง return ค่า
                           ),
                         );
+
+                        if (shouldRefresh == true) {
+                          // รีโหลดข้อมูล หรือ setState
+                          loadUserIdAndFetch(); // ฟังก์ชันโหลดข้อมูล user
+                        }
                       },
+
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.history, size: 20),
                           SizedBox(width: 8),
                           Text('View Coin History'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          228,
+                          215,
+                          195,
+                        ),
+                        foregroundColor: Colors.orange[800],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () async {
+                        final shouldRefresh = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AdminUserManagementPage(), // อย่าลง const ถ้าต้อง return ค่า
+                          ),
+                        );
+
+                        if (shouldRefresh == true) {
+                          // รีโหลดข้อมูล หรือ setState
+                          loadUserIdAndFetch(); // ฟังก์ชันโหลดข้อมูล user
+                        }
+                      },
+
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.history, size: 20),
+                          SizedBox(width: 8),
+                          Text('User Management'),
                         ],
                       ),
                     ),
@@ -748,14 +794,19 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final shouldRefresh = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
-                                const AdminCoinManagementPage(),
+                                AdminCoinManagementPage(), // อย่าลง const ถ้าต้อง return ค่า
                           ),
                         );
+
+                        if (shouldRefresh == true) {
+                          // รีโหลดข้อมูล หรือ setState
+                          loadUserIdAndFetch(); // ฟังก์ชันโหลดข้อมูล user
+                        }
                       },
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,

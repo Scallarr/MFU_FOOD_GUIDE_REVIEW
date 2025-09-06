@@ -872,626 +872,648 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverAppBar(
-            toolbarHeight: 80,
-            backgroundColor: const Color(0xFFCEBFA3),
-            pinned: false,
-            floating: true,
-            snap: true,
-            elevation: 6,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-            ),
-            title: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Food Threads',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: const Offset(0, 2),
-                          blurRadius: 4,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () async {
-                      final shouldRefresh = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProfilePageAdmin(),
-                        ),
-                      );
-
-                      if (shouldRefresh == true) {
-                        fetchProfilePicture(userId!);
-                      }
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: profileImageUrl == null
-                          ? CircleAvatar(
-                              backgroundColor: Colors.grey[300],
-                              child: Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 40,
-                              ),
-                              radius: 27,
-                            )
-                          : CircleAvatar(
-                              backgroundImage: NetworkImage(profileImageUrl!),
-                              radius: 27,
-                              backgroundColor: Colors.grey[300],
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 237, 224, 199).withOpacity(1),
+              Color.fromARGB(255, 254, 245, 215).withOpacity(0.7), // เริ่มต้น
+              Color.fromARGB(255, 238, 238, 238),
+            ], // สิ้นสุด],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SizedBox(height: 15),
-                  Row(
-                    children: [
-                      // Search TextField
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.5),
-                                blurRadius: 1,
-                                offset: const Offset(1, 1),
-                              ),
-                            ],
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: 'Search threads ID or urthor Name ... ',
-                              hintStyle: TextStyle(
-                                fontSize: 11.5,
-                                color: Colors.black,
-                              ),
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                            onChanged: (value) {
-                              setState(() {
-                                _searchQuery = value.toLowerCase();
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                      // Three-dot menu button
-                      SizedBox(width: 10),
-                      PopupMenuButton<String>(
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: const Color.fromARGB(255, 0, 0, 0),
-                        ),
-                        itemBuilder: (BuildContext context) => [
-                          PopupMenuItem(
-                            value: 'verify_threads',
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.verified_outlined,
-                                      size: 18,
-                                      color: Colors.blue.shade700,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Verify Threads',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        if (_pendingThreadsCount > -1)
-                                          Text(
-                                            '$_pendingThreadsCount pending',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (_pendingThreadsCount > 0)
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFFF4757),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '$_pendingThreadsCount',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'verify_threads_replied',
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.shade50,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.reply_all_rounded,
-                                      size: 18,
-                                      color: Colors.green.shade700,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Verify Threads Replied',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 13.5,
-                                          ),
-                                        ),
-                                        if (_pendingRepliedThreadsCount > -1)
-                                          Text(
-                                            '$_pendingRepliedThreadsCount pending',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (_pendingRepliedThreadsCount > 0)
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFFF4757),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '$_pendingRepliedThreadsCount',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          // เพิ่มเมนู My History
-                          PopupMenuItem(
-                            value: 'my_history',
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: Colors.purple.shade50,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.history_rounded,
-                                      size: 18,
-                                      color: Colors.purple.shade700,
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'My History',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        Text(
-                                          'See You History Here',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+        ),
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverAppBar(
+              toolbarHeight: 80,
+              backgroundColor: const Color(0xFFCEBFA3),
+              pinned: false,
+              floating: true,
+              snap: true,
+              elevation: 6,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
+              ),
+              title: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Food Threads',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            offset: const Offset(0, 2),
+                            blurRadius: 4,
+                            color: Colors.black.withOpacity(0.3),
                           ),
                         ],
-                        onSelected: (String value) async {
-                          Widget page;
-
-                          if (value == 'verify_threads') {
-                            page = PendingThreadsPage();
-                          } else if (value == 'verify_threads_replied') {
-                            page = PendingThreadsRepliedPage();
-                          } else if (value == 'my_history') {
-                            page = MyHistoryPage(); // หน้าใหม่สำหรับประวัติ
-                          } else {
-                            return;
-                          }
-
-                          final shouldRefresh = await Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => page),
-                          );
-
-                          if (shouldRefresh == true) {
-                            fetchThreads();
-                            fetchPendingThreadsCount();
-                            fetchPendingRepliedThreadsCount();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          SliverList(
-            delegate: SliverChildBuilderDelegate((context, index) {
-              final thread = filteredThreads[index];
-              final likedByUser = thread['is_liked'] == 1;
-
-              return InkWell(
-                onTap: () async {
-                  final shouldRefresh = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ThreadRepliesAdminPage(
-                        thread: thread,
-                        likedByUser: likedByUser,
                       ),
                     ),
-                  );
+                    GestureDetector(
+                      onTap: () async {
+                        final shouldRefresh = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePageAdmin(),
+                          ),
+                        );
 
-                  if (shouldRefresh == true) {
-                    await fetchThreads(); // ฟังก์ชันโหลด thread ใหม่
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Stack(
-                    children: [
-                      Container(
+                        if (shouldRefresh == true) {
+                          fetchProfilePicture(userId!);
+                        }
+                      },
+                      child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color.fromARGB(
-                                255,
-                                0,
-                                0,
-                                0,
-                              ).withOpacity(0.20), // สีเงาและความโปร่งใส
-                              spreadRadius: 3, // ขนาดเงา
-                              blurRadius: 5, // ความฟุ้งของเงา
-                              offset: const Offset(0, 4), // ตำแหน่งเงา (x, y)
-                            ),
-                          ],
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
                         ),
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: const Color(0xFFCEBFA3),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: ClipOval(
-                                    child: Image.network(
-                                      thread['picture_url'],
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                color: Colors.grey[200],
-                                              ),
-                                    ),
-                                  ),
+                        child: profileImageUrl == null
+                            ? CircleAvatar(
+                                backgroundColor: Colors.grey[300],
+                                child: Icon(
+                                  Icons.person,
+                                  color: Colors.white,
+                                  size: 40,
                                 ),
+                                radius: 27,
+                              )
+                            : CircleAvatar(
+                                backgroundImage: NetworkImage(profileImageUrl!),
+                                radius: 27,
+                                backgroundColor: Colors.grey[300],
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(height: 15),
+                    Row(
+                      children: [
+                        // Search TextField
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 1,
+                                  offset: const Offset(1, 1),
+                                ),
+                              ],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText:
+                                    'Search threads ID or urthor Name ... ',
+                                hintStyle: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Colors.black,
+                                ),
+                                prefixIcon: const Icon(Icons.search),
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value.toLowerCase();
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                        // Three-dot menu button
+                        SizedBox(width: 10),
+                        PopupMenuButton<String>(
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                          ),
+                          itemBuilder: (BuildContext context) => [
+                            PopupMenuItem(
+                              value: 'verify_threads',
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.verified_outlined,
+                                        size: 18,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            thread['username'],
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                            'Verify Threads',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 14,
                                             ),
                                           ),
-
-                                          Icon(
-                                            Icons.verified,
-                                            size: 16,
-                                            color: Colors.blue,
+                                          if (_pendingThreadsCount > -1)
+                                            Text(
+                                              '$_pendingThreadsCount pending',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (_pendingThreadsCount > 0)
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFFFF4757),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '$_pendingThreadsCount',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
-                                          Spacer(),
-
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'verify_threads_replied',
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade50,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.reply_all_rounded,
+                                        size: 18,
+                                        color: Colors.green.shade700,
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
                                           Text(
-                                            timeAgo(thread['created_at']),
+                                            'Verify Threads Replied',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 13.5,
+                                            ),
+                                          ),
+                                          if (_pendingRepliedThreadsCount > -1)
+                                            Text(
+                                              '$_pendingRepliedThreadsCount pending',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (_pendingRepliedThreadsCount > 0)
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFFFF4757),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '$_pendingRepliedThreadsCount',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // เพิ่มเมนู My History
+                            PopupMenuItem(
+                              value: 'my_history',
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: Colors.purple.shade50,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.history_rounded,
+                                        size: 18,
+                                        color: Colors.purple.shade700,
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'My History',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          Text(
+                                            'See You History Here',
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.grey[600],
+                                              color: Colors.grey.shade600,
                                             ),
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        obfuscateEmail(thread['email'] ?? ''),
-                                        style: TextStyle(
-                                          fontSize: 12.3,
-                                          color: Colors.grey[600],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          onSelected: (String value) async {
+                            Widget page;
+
+                            if (value == 'verify_threads') {
+                              page = PendingThreadsPage();
+                            } else if (value == 'verify_threads_replied') {
+                              page = PendingThreadsRepliedPage();
+                            } else if (value == 'my_history') {
+                              page = MyHistoryPage(); // หน้าใหม่สำหรับประวัติ
+                            } else {
+                              return;
+                            }
+
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => page),
+                            );
+
+                            if (shouldRefresh == true) {
+                              fetchThreads();
+                              fetchPendingThreadsCount();
+                              fetchPendingRepliedThreadsCount();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final thread = filteredThreads[index];
+                final likedByUser = thread['is_liked'] == 1;
+
+                return InkWell(
+                  onTap: () async {
+                    final shouldRefresh = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ThreadRepliesAdminPage(
+                          thread: thread,
+                          likedByUser: likedByUser,
+                        ),
+                      ),
+                    );
+
+                    if (shouldRefresh == true) {
+                      await fetchThreads(); // ฟังก์ชันโหลด thread ใหม่
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color.fromARGB(
+                                  255,
+                                  0,
+                                  0,
+                                  0,
+                                ).withOpacity(0.20), // สีเงาและความโปร่งใส
+                                spreadRadius: 3, // ขนาดเงา
+                                blurRadius: 5, // ความฟุ้งของเงา
+                                offset: const Offset(0, 4), // ตำแหน่งเงา (x, y)
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFFCEBFA3),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: ClipOval(
+                                      child: Image.network(
+                                        thread['picture_url'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
+                                                  color: Colors.grey[200],
+                                                ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              thread['username'],
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+
+                                            Icon(
+                                              Icons.verified,
+                                              size: 16,
+                                              color: Colors.blue,
+                                            ),
+                                            Spacer(),
+
+                                            Text(
+                                              timeAgo(thread['created_at']),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 4),
+                                        Text(
+                                          obfuscateEmail(thread['email'] ?? ''),
+                                          style: TextStyle(
+                                            fontSize: 12.3,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 9),
+
+                              SizedBox(height: 5),
+
+                              // ข้อความของ thread
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  thread['message'],
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Divider บางๆ
+                              Divider(
+                                color: Colors.grey.shade300,
+                                thickness: 0.7,
+                              ),
+                              const SizedBox(height: 6),
+
+                              // ปุ่ม Like / Comment / Report
+                              Row(
+                                children: [
+                                  // Report
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.report,
+                                      color: Colors.grey[600],
+                                    ),
+                                    onPressed: () => _showRejectDialog2(thread),
+                                  ),
+                                  const Spacer(),
+
+                                  // Like button
+                                  InkWell(
+                                    onTap: () {
+                                      toggleLike(
+                                        thread['Thread_ID'],
+                                        likedByUser,
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: likedByUser
+                                            ? Colors.red.shade50
+                                            : Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: likedByUser
+                                              ? Colors.red.shade200
+                                              : Colors.grey.shade300,
                                         ),
                                       ),
-                                    ],
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.favorite,
+                                            size: 18,
+                                            color: likedByUser
+                                                ? Colors.red
+                                                : Colors.grey[600],
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            '${thread['total_likes']}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: likedByUser
+                                                  ? Colors.red.shade700
+                                                  : Colors.grey[700],
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 9),
+                                  const SizedBox(width: 12),
 
-                            SizedBox(height: 5),
-
-                            // ข้อความของ thread
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                thread['message'],
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            // Divider บางๆ
-                            Divider(
-                              color: Colors.grey.shade300,
-                              thickness: 0.7,
-                            ),
-                            const SizedBox(height: 6),
-
-                            // ปุ่ม Like / Comment / Report
-                            Row(
-                              children: [
-                                // Report
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.report,
-                                    color: Colors.grey[600],
-                                  ),
-                                  onPressed: () => _showRejectDialog2(thread),
-                                ),
-                                const Spacer(),
-
-                                // Like button
-                                InkWell(
-                                  onTap: () {
-                                    toggleLike(
-                                      thread['Thread_ID'],
-                                      likedByUser,
-                                    );
-                                  },
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
+                                  // Comment button
+                                  Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: likedByUser
-                                          ? Colors.red.shade50
-                                          : Colors.grey.shade100,
+                                      color: Colors.blue.shade50,
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: likedByUser
-                                            ? Colors.red.shade200
-                                            : Colors.grey.shade300,
+                                        color: Colors.blue.shade100,
                                       ),
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(
-                                          Icons.favorite,
+                                        const Icon(
+                                          Icons.comment,
                                           size: 18,
-                                          color: likedByUser
-                                              ? Colors.red
-                                              : Colors.grey[600],
+                                          color: Colors.blue,
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          '${thread['total_likes']}',
-                                          style: TextStyle(
+                                          '${thread['total_comments']}',
+                                          style: const TextStyle(
                                             fontWeight: FontWeight.w600,
-                                            color: likedByUser
-                                                ? Colors.red.shade700
-                                                : Colors.grey[700],
+                                            color: Colors.blue,
                                             fontSize: 14,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-
-                                // Comment button
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.blue.shade100,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.comment,
-                                        size: 18,
-                                        color: Colors.blue,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        '${thread['total_comments']}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.blue,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 20),
-                              ],
+                                  const SizedBox(width: 20),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 212, 58, 58),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          ],
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 212, 58, 58),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Icon(
-                            Icons.verified,
-                            size: 20,
-                            color: Colors.white,
+                            child: const Icon(
+                              Icons.verified,
+                              size: 20,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }, childCount: filteredThreads.length),
-          ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
-        ],
+                );
+              }, childCount: filteredThreads.length),
+            ),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
+          ],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

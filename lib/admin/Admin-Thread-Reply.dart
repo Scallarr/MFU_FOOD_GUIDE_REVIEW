@@ -72,7 +72,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
     if (userId == null) return;
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user_profile_picture/$userId',
+      'http://10.0.3.201:8080/user_profile_picture/$userId',
     );
     try {
       final response = await http.get(url);
@@ -91,7 +91,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   Future<void> fetchReplies() async {
     final threadId = widget.thread['Thread_ID'] ?? 0;
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/api/thread_replies/$threadId',
+      'http://10.0.3.201:8080/api/thread_replies/$threadId',
     );
 
     try {
@@ -126,7 +126,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   Future<void> fetchAllUsers() async {
     try {
       final response = await http.get(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/api/all_users'),
+        Uri.parse('http://10.0.3.201:8080/api/all_users'),
       );
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
@@ -151,7 +151,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/api/send_reply'),
+        Uri.parse('http://10.0.3.201:8080/api/send_reply'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'User_ID': userId,
@@ -300,7 +300,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
   // Future<void> toggleLike(int threadId, bool liked) async {
   //   final response = await http.post(
-  //     Uri.parse('https://mfu-food-guide-review.onrender.com/like_thread'),
+  //     Uri.parse('http://10.0.3.201:8080/like_thread'),
   //     headers: {'Content-Type': 'application/json'},
   //     body: json.encode({
   //       'User_ID': userId,
@@ -469,7 +469,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/threads-replied/AdminManual-check/reject',
+          'http://10.0.3.201:8080/threads-replied/AdminManual-check/reject',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -500,9 +500,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
       final threadId = widget.thread['Thread_ID'];
       final likedByUser = widget.likedByUser;
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/pending_replies_count/$threadId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/pending_replies_count/$threadId'),
       );
 
       if (response.statusCode == 200) {
@@ -520,9 +518,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     try {
       final threadId = widget.thread['Thread_ID'];
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/all_threads/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/all_threads/$userId'),
       );
 
       if (response.statusCode == 200) {

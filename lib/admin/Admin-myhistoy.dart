@@ -76,9 +76,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchThreadApprovalHistory() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/admin_thread_history/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/admin_thread_history/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -96,9 +94,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     final Admin = prefs.getInt('user_id');
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/my_admin_thread_replies/$Admin',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/my_admin_thread_replies/$Admin'),
       );
 
       if (response.statusCode == 200) {
@@ -164,9 +160,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchMyThreads() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/my_threads/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/my_threads/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -219,9 +213,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchMyReplies() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/my_thread_replies/$userId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/my_thread_replies/$userId'),
       );
 
       if (response.statusCode == 200) {

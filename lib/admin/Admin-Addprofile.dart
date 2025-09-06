@@ -132,10 +132,11 @@ class _AddProfilePageState extends State<AddProfilePage> {
 
                     // Profile Name
                     _buildSectionTitle('Profile Information'),
-                    _buildTextField(
+                    _buildTextFieldWithCounter(
                       controller: _profileNameController,
                       label: 'Profile Name*',
                       icon: Icons.person,
+                      maxLength: 15,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter profile name';
@@ -146,11 +147,12 @@ class _AddProfilePageState extends State<AddProfilePage> {
                     SizedBox(height: 16),
 
                     // Description
-                    _buildTextField(
+                    _buildTextFieldWithCounter(
                       controller: _descriptionController,
                       label: 'Description*',
                       icon: Icons.description,
                       maxLines: 3,
+                      maxLength: 100,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter description';
@@ -161,7 +163,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
                     SizedBox(height: 16),
 
                     // Required Coins
-                    _buildTextField(
+                    _buildTextFieldWithCounter(
                       controller: _requiredCoinsController,
                       label: 'Required Coins*',
                       icon: Icons.monetization_on,
@@ -169,6 +171,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
                       ],
+                      maxLength: 7,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter required coins';
@@ -223,41 +226,63 @@ class _AddProfilePageState extends State<AddProfilePage> {
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextFieldWithCounter({
     required TextEditingController controller,
     required String label,
     required IconData icon,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
     int? maxLines,
-    List<TextInputFormatter>? inputFormatters, // เพิ่มพารามิเตอร์นี้
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
   }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: _textColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _accentColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(color: _textColor),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _accentColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _accentColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _primaryColor, width: 2),
+            ),
+            prefixIcon: Icon(icon, color: _accentColor),
+            filled: true,
+            fillColor: Colors.white,
+            counterText: '', // ซ่อน counter เริ่มต้น
+          ),
+          keyboardType: keyboardType,
+          validator: validator,
+          maxLines: maxLines,
+          maxLength: maxLength,
+          style: TextStyle(color: _textColor),
+          inputFormatters: inputFormatters,
+          onChanged: (value) {
+            setState(() {}); // อัพเดต UI เมื่อพิมพ์ข้อความ
+          },
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _accentColor),
+        SizedBox(height: 4),
+        // แสดงตัวนับตัวอักษรแบบกำหนดเอง
+        Text(
+          '${controller.text.length}/$maxLength ',
+          style: TextStyle(
+            fontSize: 12,
+            color: controller.text.length >= maxLength!
+                ? const Color.fromARGB(255, 250, 12, 12)
+                : _textColor.withOpacity(1),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primaryColor, width: 2),
-        ),
-        prefixIcon: Icon(icon, color: _accentColor),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      keyboardType: keyboardType,
-      validator: validator,
-      maxLines: maxLines,
-      style: TextStyle(color: _textColor),
-      inputFormatters: inputFormatters, // เพิ่มส่วนนี้
+      ],
     );
   }
 
@@ -363,7 +388,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/Add/profiles'),
+        Uri.parse('http://10.0.3.201:8080/Add/profiles'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'profileName': _profileNameController.text,

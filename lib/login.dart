@@ -76,17 +76,18 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = jsonDecode(response.body);
         final token = data['token'];
         final userId = data['userId'];
+
         print('dg' + userPhotoUrl.toString());
         // ดึงข้อมูล user เพิ่มเติมจาก API (เช่น role, bio, etc.)
         final userInfoResponse = await http.get(
           Uri.parse('http://10.0.3.201:8080/user/info/$userId'),
-          headers: {'Authorization': 'Bearer $token'},
+          // headers: {'Authorization': 'Bearer $token'},
         );
 
         if (userInfoResponse.statusCode == 200) {
           final userInfo = jsonDecode(userInfoResponse.body);
           final role = userInfo['role'] ?? 'User';
-
+          final status = userInfo['status'];
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('jwt_token', token);
           await prefs.setInt('user_id', userId);
@@ -94,23 +95,59 @@ class _LoginScreenState extends State<LoginScreen> {
           await prefs.setString('user_role', role);
           await prefs.setString('user_name', googleUser.displayName ?? '');
           await prefs.setString('user_email', googleUser.email);
-
+          await prefs.setString('status', status);
+          print(status);
           setState(() => _user = googleUser);
 
           // ไปหน้า HomePage ตาม role
-          if (role == 'User') {
+          if (role == 'User' || status != 'Banned') {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => RestaurantListPageAdmin()),
               (Route<dynamic> route) => false,
             );
-          } else if (role == 'Admin') {
+          } else if (role == 'Admin' || status != 'Banned') {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => RestaurantListPageAdmin()),
               (Route<dynamic> route) => false,
             );
           }
+
+          // else if (status == 'Banned') {
+          //   await _googleSignIn.signOut();
+          //   final prefs = await SharedPreferences.getInstance();
+          //   await prefs.clear();
+          //   _showAlert(context, 'Your account has been banned.');
+          //   return;
+          // }
+        } else if (response.statusCode == 401) {
+          // Token หมดอายุ
+          _showAlert(context, 'Session expired');
+          return;
+        } else if (response.statusCode == 403) {
+          // User ถูกแบน - ดึงข้อมูลจาก backend
+          final data = json.decode(response.body);
+
+          String extraMessage = '';
+          if (data['remainingTime'] is Map) {
+            final time = data['remainingTime'];
+            extraMessage =
+                '\nRemaining: ${time['days']}d ${time['hours']}h ${time['minutes']}m ${time['seconds']}s';
+          } else {
+            extraMessage = '\nRemaining: Permanent Ban';
+          }
+
+          _showAlert(
+            context,
+            'Your account has been banned.\n'
+            'Reason: ${data['reason']}\n'
+            'Ban Date: ${data['banDate']}\n'
+            'Expected Unban: ${data['expectedUnbanDate'] ?? "N/A"}'
+            '$extraMessage',
+          );
+
+          return;
         } else {
           throw Exception('Failed to get user information');
         }
@@ -136,6 +173,77 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.remove('jwt_token');
     await prefs.remove('user_id');
     setState(() => _user = null);
+  }
+
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ผู้ใช้ต้องกดปุ่ม OK ก่อนปิด
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 5,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Colors.orangeAccent, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 50,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Warning',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

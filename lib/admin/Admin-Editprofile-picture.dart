@@ -75,10 +75,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
               SizedBox(height: 25),
               _buildSectionTitle('Profile Information'),
               SizedBox(height: 12),
-              _buildTextField(
+              _buildTextFieldWithCounter(
                 controller: _profileNameController,
                 label: 'Profile Name*',
                 icon: Icons.person,
+                maxLength: 15,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter profile name';
@@ -87,11 +88,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 },
               ),
               SizedBox(height: 16),
-              _buildTextField(
+              _buildTextFieldWithCounter(
                 controller: _descriptionController,
                 label: 'Description*',
                 icon: Icons.description,
                 maxLines: 3,
+                maxLength: 100, // กำหนดความยาวสูงสุดสำหรับ description
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter description';
@@ -100,7 +102,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 },
               ),
               SizedBox(height: 16),
-              _buildTextField(
+              _buildTextFieldWithCounter(
                 controller: _requiredCoinsController,
                 label: 'Required Coins*',
                 icon: Icons.monetization_on,
@@ -108,6 +110,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly, // อนุญาตเฉพาะตัวเลข
                 ],
+                maxLength: 7,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter required coins';
@@ -227,6 +230,66 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  Widget _buildTextFieldWithCounter({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+    int? maxLines,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: TextStyle(color: _textColor),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _accentColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _accentColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: _primaryColor, width: 2),
+            ),
+            prefixIcon: Icon(icon, color: _accentColor),
+            filled: true,
+            fillColor: Colors.white,
+            counterText: '', // ซ่อน counter เริ่มต้น
+          ),
+          keyboardType: keyboardType,
+          validator: validator,
+          maxLines: maxLines,
+          maxLength: maxLength,
+          style: TextStyle(color: _textColor),
+          inputFormatters: inputFormatters,
+          onChanged: (value) {
+            setState(() {}); // อัพเดต UI เมื่อพิมพ์ข้อความ
+          },
+        ),
+        SizedBox(height: 4),
+        // แสดงตัวนับตัวอักษรแบบกำหนดเอง
+        Text(
+          '${controller.text.length}/$maxLength ',
+          style: TextStyle(
+            fontSize: 12,
+            color: controller.text.length >= maxLength!
+                ? const Color.fromARGB(255, 250, 12, 12)
+                : _textColor.withOpacity(1),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildUpdateButton() {
     return ElevatedButton(
       onPressed: _isUploading ? null : _submitForm,
@@ -340,7 +403,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final response = await http.put(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/profiles/${widget.profile['id']}',
+          'http://10.0.3.201:8080/api/profiles/${widget.profile['id']}',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({

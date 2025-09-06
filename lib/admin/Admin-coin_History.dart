@@ -83,51 +83,89 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
   }
 
   Widget _buildRewardTile(Map<String, dynamic> reward, int index) {
-    final isLeaderboard = reward.containsKey('rank');
-    // กำหนดค่า coins display
-    final displayCoins = isLeaderboard
-        ? reward['coins_awarded']
-        : (reward['action_type'] == 'SUBTRACT'
-              ? -reward['coins_awarded']
-              : reward['coins_awarded']);
+    final type = reward['type']; // Leaderboard / Admin / Purchase
 
-    final subtitle = isLeaderboard
-        ? 'Rank: ${reward['rank']}'
-        : '${reward['action_type']} by ${reward['admin_username']}';
+    // แปลงวันที่
+    String formattedDate = '';
+    if (reward['awarded_at'] != null) {
+      try {
+        final dateTime = DateTime.parse(reward['awarded_at']);
+        formattedDate = DateFormat('dd MMM yyyy – HH:mm').format(dateTime);
+      } catch (_) {
+        formattedDate = reward['awarded_at'].toString();
+      }
+    }
 
-    // สี
-    Color bgColor = isLeaderboard ? const Color(0xFFF5EBD9) : Color(0xFFEDE7F6);
-    Color borderColor = isLeaderboard
-        ? const Color(0xFFD2B48C)
-        : const Color(0xFFDEB887);
-    Color iconBgColor = isLeaderboard
-        ? const Color(0xFFA0522D)
-        : const Color(0xFF512DA8);
+    // เหรียญ (บวกหรือลบ)
+    final displayCoins = reward['coins_awarded'];
+
+    // กำหนด UI ตาม type
+    String titleText = '';
+    String subtitleText = '';
+    IconData icon = Icons.stars;
+    Color bgColor = Colors.grey[200]!;
+    Color borderColor = Colors.grey;
+    Color iconBgColor = Colors.grey;
+
+    switch (type) {
+      case "Leaderboard":
+        titleText = "From Leaderboard";
+        subtitleText = "🏆 Rank: ${reward['rank']}   (${reward['month_year']})";
+        icon = Icons.emoji_events;
+        bgColor = const Color(0xFFFFF8E1);
+        borderColor = const Color(0xFFFFB74D);
+        iconBgColor = const Color(0xFFFF9800);
+        break;
+      case "Admin":
+        titleText = "From Admin";
+        subtitleText = reward['action_type'] == 'ADD'
+            ? '🎉 Coins Received'
+            : '⚠️ Coins Deducted';
+        icon = Icons.verified_user;
+        bgColor = const Color(0xFFEDE7F6);
+        borderColor = const Color(0xFF9575CD);
+        iconBgColor = const Color(0xFF673AB7);
+        break;
+      case "Purchase":
+        titleText = "Profile Purchase";
+        subtitleText = '🛒 ${reward['profile_name']}';
+        icon = Icons.shopping_cart;
+        bgColor = const Color(0xFFE3F2FD);
+        borderColor = const Color(0xFF64B5F6);
+        iconBgColor = const Color(0xFF2196F3);
+        break;
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.brown.withOpacity(0.1),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 6,
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(color: borderColor, width: 1.2),
+        gradient: LinearGradient(
+          colors: [bgColor, bgColor.withOpacity(0.9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         leading: Container(
           width: 50,
           height: 50,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                iconBgColor,
-                Color.alphaBlend(iconBgColor.withOpacity(0.7), Colors.white),
-              ],
+              colors: [iconBgColor, iconBgColor.withOpacity(0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -136,39 +174,40 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
               BoxShadow(
                 color: iconBgColor.withOpacity(0.4),
                 blurRadius: 6,
-                offset: const Offset(0, 2),
+                offset: const Offset(0, 3),
               ),
             ],
           ),
-          child: Icon(
-            isLeaderboard ? Icons.emoji_events : Icons.verified_user,
-            color: Colors.white,
-            size: 26,
-          ),
+          child: Icon(icon, color: Colors.white, size: 26),
         ),
         title: Text(
-          _formatMonthYear(reward['month_year']),
+          titleText,
           style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
             color: Colors.brown[800],
           ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 6),
             Text(
-              subtitle,
-              style: TextStyle(fontSize: 14, color: Colors.brown[600]),
+              subtitleText,
+              style: const TextStyle(
+                fontSize: 11.9,
+                fontWeight: FontWeight.w500,
+                color: Colors.deepOrange,
+              ),
             ),
-            if (!isLeaderboard && reward['reason'] != null)
+            if (formattedDate.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Reason: ${reward['reason']}',
+                  '📅 $formattedDate',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.brown[400],
+                    fontSize: 11.5,
+                    color: Colors.grey[700],
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -180,7 +219,13 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
           decoration: BoxDecoration(
             color: iconBgColor.withOpacity(0.15),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: iconBgColor.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: iconBgColor.withOpacity(0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -188,7 +233,7 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
               Icon(Icons.monetization_on, color: iconBgColor, size: 18),
               const SizedBox(width: 4),
               Text(
-                '${displayCoins > 0 ? '+' : ''}$displayCoins', // เพิ่ม + หน้าเลขบวก
+                '${displayCoins > 0 ? '+' : ''}$displayCoins',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -208,24 +253,20 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(
-          255,
-          233,
-          229,
-          226,
-        ), // Dark brown background
+        color: Colors.amber[100],
         borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [
-            Color.fromARGB(255, 236, 232, 231),
-            Color.fromARGB(255, 142, 142, 142),
-          ],
+            Color.fromARGB(255, 115, 115, 115),
+            Color.fromARGB(255, 255, 255, 255), // เริ่มต้น
+            Color.fromARGB(255, 175, 175, 175),
+          ], // สิ้นสุด
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.brown.withOpacity(0.4),
+            color: Colors.black.withOpacity(0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -237,58 +278,30 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
             'Your Total Coins',
             style: TextStyle(
               fontSize: 20,
-              color: Color.fromARGB(255, 0, 0, 0),
               fontWeight: FontWeight.w600,
+              color: Colors.brown,
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-
-              // gradient: const LinearGradient(
-              //   begin: Alignment.topLeft,
-              //   end: Alignment.bottomRight,
-              //   colors: [Color(0xFFFFD54F), Color(0xFFFFB300)], // Gold gradient
-              // ),
-              // boxShadow: [
-              //   BoxShadow(
-              //     color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.4),
-              //     blurRadius: 10,
-              //     offset: const Offset(0, 5),
-              //   ),
-              // ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.monetization_on,
-                  color: Color.fromARGB(255, 26, 25, 25),
-                  size: 36,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.monetization_on, color: Colors.brown, size: 36),
+              const SizedBox(width: 10),
+              Text(
+                '$totalCoins',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.brown,
                 ),
-                SizedBox(width: 10),
-                const SizedBox(height: 8),
-                Text(
-                  '$totalCoins',
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color.fromARGB(255, 0, 0, 0),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-
+          const SizedBox(height: 12),
           Text(
-            'From ${rewardHistory.length} rewards',
-            style: TextStyle(
-              color: const Color.fromARGB(255, 0, 0, 0),
-              fontSize: 14,
-            ),
+            'From ${rewardHistory.length} Activities',
+            style: const TextStyle(fontSize: 14, color: Colors.brown),
           ),
         ],
       ),
@@ -303,6 +316,15 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color.fromARGB(255, 237, 224, 199),
+              Color.fromARGB(255, 254, 245, 215), // เริ่มต้น
+              Color.fromARGB(255, 238, 238, 238), // สิ้นสุด
+            ],
           ),
         ),
         child: Column(
@@ -325,16 +347,16 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 6,
+                      vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD2B48C),
+                      color: const Color.fromARGB(255, 57, 56, 56),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
                       '${rewardHistory.length} items',
                       style: TextStyle(
-                        color: Colors.brown[800],
+                        color: const Color.fromARGB(255, 255, 255, 255),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -440,23 +462,52 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFCEBFA3),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Coin History',
           style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF8B4513),
-            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            fontSize: 28,
+            color: Color.fromARGB(255, 255, 255, 255),
+            shadows: [
+              Shadow(
+                offset: Offset(0, 2),
+                blurRadius: 4,
+                color: Colors.black.withOpacity(0.3),
+              ),
+            ],
           ),
         ),
-        backgroundColor: const Color(0xFFCEBFA3),
+        backgroundColor: const Color.fromARGB(255, 229, 210, 173),
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Color(0xFF8B4513)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            // Refresh the previous page and go back
+            Navigator.pop(
+              context,
+              true,
+            ); // 'true' indicates a refresh is needed
+          },
+        ),
       ),
-      body: Column(
-        children: [_buildTotalCoinsSection(), _buildHistorySection()],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFF5E5C0), // สีบน
+              Color(0xFFCEBFA3), // สีล่าง
+            ],
+          ),
+        ),
+        child: Column(
+          children: [_buildTotalCoinsSection(), _buildHistorySection()],
+        ),
       ),
     );
   }

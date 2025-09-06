@@ -472,3 +472,112 @@
 
 // subplot(2,2,3), imshow(img_rot, []), title('Image Rotated 90°');
 // subplot(2,2,4), imshow(spectrum_rot, []), title('Fourier Spectrum (Rotated)');
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+class BanChecker {
+  static Future<void> checkBan(BuildContext context, String apiUrl) async {
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+
+      if (response.statusCode == 403) {
+        final data = json.decode(response.body);
+
+        DateTime? expectedUnban = data['expectedUnbanDate'] != null
+            ? DateTime.parse(data['expectedUnbanDate'])
+            : null;
+
+        _showBanDialog(
+          context,
+          reason: data['reason'] ?? "Unknown",
+          banDate: data['banDate'] ?? "N/A",
+          expectedUnban: expectedUnban,
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Ban error: $e");
+    }
+  }
+
+  static void _showBanDialog(
+    BuildContext context, {
+    required String reason,
+    required String banDate,
+    DateTime? expectedUnban,
+  }) {
+    Timer? timer;
+    String remainingTime = "Permanent Ban";
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ปิด dialog ด้วยการกดนอกไม่ได้
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // เริ่มนับถอยหลัง
+            timer ??= Timer.periodic(const Duration(seconds: 1), (t) {
+              if (expectedUnban == null) {
+                setState(() {
+                  remainingTime = "Permanent Ban";
+                });
+              } else {
+                final now = DateTime.now();
+                final diff = expectedUnban.difference(now);
+
+                if (diff.isNegative) {
+                  setState(() {
+                    remainingTime = "Ban Expired (pending unban)";
+                  });
+                  t.cancel();
+                } else {
+                  setState(() {
+                    remainingTime =
+                        "${diff.inDays}d ${diff.inHours % 24}h ${diff.inMinutes % 60}m ${diff.inSeconds % 60}s";
+                  });
+                }
+              }
+            });
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                "🚫 Your account has been banned",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Reason: $reason"),
+                  Text("Ban Date: $banDate"),
+                  Text("Expected Unban: ${expectedUnban ?? "N/A"}"),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Remaining: $remainingTime",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    timer?.cancel(); // ปิด timer ตอนปิด dialog
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("OK"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) => timer?.cancel()); // กัน memory leak
+  }
+}

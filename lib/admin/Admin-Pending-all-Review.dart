@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/login.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -70,10 +71,11 @@ class _RestaurantallPendingrewiewPageState
 
   Future<void> _fetchReviewApprovalHistory() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/Pending_review-all-restaurants',
-        ),
+        Uri.parse('http://10.0.3.201:8080/Pending_review-all-restaurants'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -133,33 +135,156 @@ class _RestaurantallPendingrewiewPageState
             };
           }).toList();
         });
+      } else if (response.statusCode == 401) {
+        // Token หมดอายุ
+        _showAlert(context, jsonDecode(response.body)['error']);
+        return;
+      } else if (response.statusCode == 403) {
+        // User ถูกแบน - แสดง alert ตามที่ต้องการ
+        _showAlert(context, jsonDecode(response.body)['error']);
+        return;
       }
     } catch (e) {
       print('Error fetching review approval history: $e');
     }
   }
 
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ผู้ใช้ต้องกดปุ่ม OK ก่อนปิด
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 5,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Colors.orangeAccent, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 50,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Warning',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF7F4EF),
       appBar: AppBar(
-        title: Text('Review History', style: TextStyle(color: Colors.white)),
+        title: Padding(
+          padding: EdgeInsetsGeometry.only(top: 10),
+          child: Text(
+            'Manage Pending Reviews',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: const Color.fromARGB(255, 255, 253, 253),
+              shadows: [
+                Shadow(
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
+                  color: const Color.fromARGB(255, 68, 68, 68).withOpacity(0.7),
+                ),
+              ],
+            ),
+          ),
+        ),
         centerTitle: true,
-        backgroundColor: _appBarColor,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+        toolbarHeight: 70,
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 16, 14, 14)),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context, true),
         ),
-      ),
-      body: _isLoading
-          ? _buildLoadingView()
-          : TabBarView(
-              controller: _tabController,
-              children: [_buildReviewApprovalHistory()],
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color.fromARGB(255, 229, 210, 173),
+                const Color.fromARGB(255, 229, 210, 173),
+                // สิ้นสุด
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+          ),
+        ),
+      ),
+
+      // Body ปกติ
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 237, 224, 199),
+              Color.fromARGB(255, 254, 245, 215), // เริ่มต้น
+              Color.fromARGB(255, 238, 238, 238),
+            ], // สิ้นสุด],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: _isLoading
+            ? _buildLoadingView()
+            : TabBarView(
+                controller: _tabController,
+                children: [_buildReviewApprovalHistory()],
+              ),
+      ),
     );
   }
 
@@ -1099,9 +1224,7 @@ class _RestaurantallPendingrewiewPageState
   Future<void> _approveReview(int reviewId) async {
     try {
       final response = await http.post(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/reviews/approve',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/reviews/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'reviewId': reviewId, 'adminId': userId}),
       );
@@ -1126,9 +1249,7 @@ class _RestaurantallPendingrewiewPageState
   Future<void> _rejectReview(int reviewId, {String reason = ''}) async {
     try {
       final response = await http.post(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/reviews/reject',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/reviews/reject'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reviewId': reviewId,

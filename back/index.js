@@ -24,6 +24,43 @@
     timezone: '+07:00',
   });
 
+function checkAdminStatus(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) return res.status(401).json({ error: 'Invalid or expired token' });
+
+    const userId = decoded.userId;
+
+    // ดึง status + role ของ user จาก DB
+    const query = 'SELECT status, role FROM User WHERE User_ID = ?';
+    db.query(query, [userId], (err, results) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+
+      if (results.length === 0) return res.status(404).json({ error: 'User not found' });
+
+      const { status, role } = results[0];
+
+      // ❌ บัญชีถูกแบน
+      if (status === 'Banned') {
+        return res.status(403).json({ error: 'Your account has been banned.' });
+      }
+
+      // ❌ ไม่ใช่ admin
+      if (role !== 'Admin') {
+        return res.status(403).json({ error: 'Access denied. Admins only.' });
+      }
+
+      // ✅ ผ่าน
+      req.user = decoded; 
+      next();
+    });
+  });
+}
+
+
+
 
 function checkUserStatus(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -34,26 +71,71 @@ function checkUserStatus(req, res, next) {
 
     const userId = decoded.userId;
 
-    // ดึง status ของ user จาก DB
-    const query = 'SELECT status FROM User WHERE User_ID = ?';
-    db.query(query, [userId], (err, results) => {
+    // ดึง status ของ user
+    const queryUser = 'SELECT status FROM User WHERE User_ID = ?';
+    db.query(queryUser, [userId], (err, results) => {
       if (err) return res.status(500).json({ error: 'Database error' });
-
       if (results.length === 0) return res.status(404).json({ error: 'User not found' });
 
       const status = results[0].status;
 
       if (status === 'Banned') {
-        return res.status(403).json({ error: 'Your account has been banned.' });
-      }
+        // ✅ ดึงข้อมูล ban ล่าสุดที่ยังไม่ถูกปลด
+        const queryBan = `
+          SELECT ban_reason, ban_date, expected_unban_date,ban_duration_days
+          FROM Ban_History
+          WHERE user_id = ? AND unban_date IS NULL
+          ORDER BY ban_date DESC
+          LIMIT 1
+        `;
 
-      // ถ้าไม่ ban → ให้ผ่าน
-      req.user = decoded; 
-      next();
+        db.query(queryBan, [userId], (err, banResults) => {
+          if (err) return res.status(500).json({ error: 'Database error' });
+
+          if (banResults.length === 0) {
+            return res.status(403).json({ 
+              error: 'Your account has been banned (no ban details found).' 
+            });
+          }
+
+          const banInfo = banResults[0];
+          let remainingTime = null;
+
+          if (banInfo.expected_unban_date) {
+            const now = moment().tz('Asia/Bangkok');
+            const unbanDate = moment(banInfo.expected_unban_date).tz('Asia/Bangkok');
+
+            if (unbanDate.isAfter(now)) {
+              const diff = moment.duration(unbanDate.diff(now));
+              remainingTime = {
+                days: diff.days(),
+                hours: diff.hours(),
+                minutes: diff.minutes(),
+                seconds: diff.seconds(),
+              };
+            }
+          }
+
+          return res.status(403).json({
+            error: 'Your account has been banned.',
+            reason: banInfo.ban_reason,
+            ban_duration_days: banInfo.ban_duration_days,
+            banDate: moment(banInfo.ban_date).tz('Asia/Bangkok').format('YYYY-MM-DD HH:mm:ss'),
+            expectedUnbanDate: banInfo.expected_unban_date 
+              ? moment(banInfo.expected_unban_date).tz('Asia/Bangkok').format('YYYY-MM-DD HH:mm:ss')
+              : null,
+            remainingTime: remainingTime || 'Permanent Ban',
+          });
+        });
+
+      } else {
+        // ไม่ถูกแบน → ผ่านได้
+        req.user = decoded;
+        next();
+      }
     });
   });
 }
-
 
 app.post('/user5',(req,res) =>{
    const query = 'SELECT * FROM Leaderboard_user_total_like';
@@ -108,6 +190,21 @@ app.post('/leaderboard/insert', async (req, res) => {
 
 app.post('/user',(req,res) =>{
    const query = 'SELECT * FROM User';
+
+
+
+db.query(query,(err, results)=>{
+  if (err){
+    console.error('Database error checking user:', err)
+    return res.status(500).json({error:"database Error"});
+  }
+  res.json(results);
+})
+
+
+})
+app.post('/user111',(req,res) =>{
+   const query = 'SELECT * FROM Thread';
 
 
 
@@ -287,6 +384,7 @@ function generateUniqueUsername(baseUsername) {
       }
 
       res.json(results[0]);
+      console.log('s'+results[0]);
     });
   });
 
@@ -382,7 +480,7 @@ app.get('/restaurants',checkUserStatus, (req, res) => {
 
 
 
-app.get('/user-profile-pictures/:userId',checkUserStatus, (req, res) => {
+app.get('/user-profile-pictures/:userId', (req, res) => {
   const userId = parseInt(req.params.userId);
   const sql = `SELECT Picture_ID, picture_url, is_active 
                FROM user_Profile_Picture 
@@ -394,7 +492,7 @@ app.get('/user-profile-pictures/:userId',checkUserStatus, (req, res) => {
 });
 
 
-app.post('/user-profile-pictures/set-active',checkUserStatus, (req, res) => {
+app.post('/user-profile-pictures/set-active', (req, res) => {
   const { userId, pictureId } = req.body;
 
   const deactivate = `UPDATE user_Profile_Picture 
@@ -539,7 +637,7 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
 });
 
 // Like/Unlike route (toggle)
-app.post('/review/:reviewId/like', checkUserStatus,(req, res) => {
+app.post('/review/:reviewId/like',(req, res) => {
   const reviewId = parseInt(req.params.reviewId);
   const userId = parseInt(req.body.user_id);
   if (!userId) return res.status(400).json({ message: 'user_id is required' });
@@ -744,7 +842,7 @@ app.put('/user-profile/update/:id', checkUserStatus,(req, res) => {
 // Returns review approval history for an admin user
 // GET /api/admin_review_history/:userId
 // Returns review approval history for an admin user
-app.get('/api/admin_review_history/:userId', checkUserStatus,async (req, res) => {
+app.get('/api/admin_review_history/:userId', checkAdminStatus,async (req, res) => {
   let connection;
   try {
     connection = await db.promise().getConnection();
@@ -794,7 +892,7 @@ app.get('/api/admin_review_history/:userId', checkUserStatus,async (req, res) =>
 
 
 // Returns Pending Review of all restaurant
-app.get('/Pending_review-all-restaurants', checkUserStatus,async (req, res) => {
+app.get('/Pending_review-all-restaurants', checkAdminStatus,async (req, res) => {
   let connection;
   try {
     connection = await db.promise().getConnection();
@@ -1019,8 +1117,8 @@ app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) =
     const previousMonthYear = `${previousYear}-${String(previousMonth + 1).padStart(2, '0')}`;
     
     const thaiMonths = [
-      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      'January', 'Febuary', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const previousMonthName = thaiMonths[previousMonth];
 
@@ -1161,8 +1259,8 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
     const currentDate = new Date();
     const currentDay = currentDate.getDate();
     
-    // ตรวจสอบว่าเป็นวันที่ 1 ของเดือนหรือไม่
-    if (currentDay !== 5) {
+    // ตรวจสอบว่าเป็นวันที่ 6 ของเดือนหรือไม่
+    if (currentDay !== 6) {
       return res.json({ 
         success: false, 
         message: 'สามารถแจก coins ได้เฉพาะวันที่ 1 ของเดือนเท่านั้น' 
@@ -1267,6 +1365,7 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
       total_coins_awarded: awardResults.reduce((sum, item) => sum + item.coins_awarded, 0),
       awards: awardResults
     });
+   
 
   } catch (err) {
     if (connection) await connection.rollback();
@@ -1281,8 +1380,8 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
 // ตั้งค่า cron job สำหรับแจก coins อัตโนมัติทุกวันที่ 1
 
 
-// รันทุกวันเวลา 22:12 (เที่ยงคืน 1 นาที)
-cron.schedule('25 12 * * *', async () => {
+// รันทุกวันเวลา 1:0 (เที่ยงคืน 1 นาที)
+cron.schedule('22 2 * * *', async () => {
   try {
     console.log('Running automatic coin award at 10:40 AM Thailand time...');
     
@@ -1549,8 +1648,8 @@ app.get('/admin/coin-history', async (req, res) => {
   }
 });
 
-// API สำหรับค้นหาผู้ใช้
-app.get('/admin/search-users',  async (req, res) => {
+// API สำหรับค้นหาผู้ใช้พร้อมรูปโปรไฟล์ active
+app.get('/admin/search-users',checkUserStatus, async (req, res) => {
   try {
     const { query: searchQuery } = req.query;
 
@@ -1562,13 +1661,16 @@ app.get('/admin/search-users',  async (req, res) => {
     }
 
     const [users] = await db.promise().query(
-      `SELECT User_ID, username, email, coins, status, role
-       FROM User 
-       WHERE (username LIKE ? OR email LIKE ?) 
-       AND status = 'Active'
-       ORDER BY username
+      `SELECT u.User_ID, u.username, u.email, u.coins, u.status, u.role,
+              p.picture_url
+       FROM User u
+       LEFT JOIN user_Profile_Picture p 
+         ON u.User_ID = p.User_ID AND p.is_active = 1
+       WHERE (u.username LIKE ? OR u.email LIKE ? OR u.User_ID LIKE ?)
+         AND u.status = 'Active'
+       ORDER BY u.username
        LIMIT 20`,
-      [`%${searchQuery}%`, `%${searchQuery}%`]
+      [`%${searchQuery}%`, `%${searchQuery}%`,`%${searchQuery}%`]
     );
 
     res.json({
@@ -1584,7 +1686,79 @@ app.get('/admin/search-users',  async (req, res) => {
 
 
 
-// GET /reward-history/:userId
+// API สำหรับค้นหาผู้ใช้ทั้งหมด (ทั้ง Active และ Banned)
+app.get('/admin/search2-users', checkUserStatus, async (req, res) => {
+  try {
+    const { query: searchQuery } = req.query;
+
+    if (!searchQuery || searchQuery.length < 2) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Search query must be at least 2 characters long' 
+      });
+    }
+
+   const [users] = await db.promise().query(
+  `SELECT 
+    u.User_ID, 
+    u.username, 
+    u.email, 
+    u.coins, 
+    u.status, 
+    u.role,
+    p.picture_url,
+    bh.ban_reason,
+    bh.ban_duration_days,
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00') AS expected_unban_date,
+    CONVERT_TZ(bh.unban_date, '+00:00', '+07:00') AS unban_date,
+    CASE 
+      WHEN u.status = 'Banned' AND bh.expected_unban_date IS NULL 
+        THEN 'Permanent Ban'
+      WHEN u.status = 'Banned' AND bh.expected_unban_date > NOW() 
+        THEN CONCAT(
+  'Temporary Ban (',
+  DATEDIFF(
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00'),
+    CONVERT_TZ(NOW(), '+00:00', '+07:00')
+  ),
+  ' days left)'
+)
+
+      WHEN u.status = 'Banned' 
+        THEN 'Ban Expired (pending unban)'
+      ELSE ''
+    END as ban_info
+   FROM User u
+   LEFT JOIN user_Profile_Picture p 
+     ON u.User_ID = p.User_ID AND p.is_active = 1
+   LEFT JOIN Ban_History bh 
+     ON u.User_ID = bh.user_id AND bh.unban_date IS NULL
+   WHERE (u.username LIKE ? OR u.email LIKE ? OR u.User_ID LIKE ?)
+   ORDER BY u.username
+   LIMIT 20`,
+  [`%${searchQuery}%`, `%${searchQuery}%`, `%${searchQuery}%`]
+);
+
+
+    res.json({
+      success: true,
+      users: users
+    });
+
+  } catch (err) {
+    console.error('Error searching users:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error' 
+    });
+  }
+});
+
+
+
+
+
+// GET /rewards-history/:userId
 app.get('/rewards-history/:userId', checkUserStatus, async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -1600,7 +1774,7 @@ app.get('/rewards-history/:userId', checkUserStatus, async (req, res) => {
 
     // ดึงข้อมูลจาก Admin_Coin_History
     const [adminRows] = await db.promise().query(
-      `SELECT ach.action_type, ach.coins_amount AS coins_awarded, ach.reason, ach.created_at, u.username AS admin_username
+      `SELECT ach.action_type, ach.coins_amount AS coins_awarded, ach.reason, ach.created_at AS awarded_at, u.username AS admin_username
        FROM Admin_Coin_History ach
        INNER JOIN User u ON ach.Admin_ID = u.User_ID
        WHERE ach.User_ID = ?
@@ -1608,22 +1782,53 @@ app.get('/rewards-history/:userId', checkUserStatus, async (req, res) => {
       [userId]
     );
 
-    // แปลง Admin row ให้เหมือนกับ Leaderboard
+    // ดึงข้อมูลจาก Profile_Purchase_History
+    const [purchaseRows] = await db.promise().query(
+      `SELECT pph.Coins_Spent, pph.Purchased_At, ecs.Profile_Name
+       FROM Profile_Purchase_History pph
+       INNER JOIN exchange_coin_Shop ecs ON pph.Profile_Shop_ID = ecs.Profile_Shop_ID
+       WHERE pph.User_ID = ?
+       ORDER BY pph.Purchased_At DESC`,
+      [userId]
+    );
+
+    // Leaderboard history
+    const leaderboardHistory = leaderboardRows.map(row => ({
+      type: "Leaderboard",
+      month_year: moment(row.awarded_at).tz("Asia/Bangkok").format('YYYY-MM'),
+      awarded_at: moment(row.awarded_at).tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss'),
+      rank: row.rank,
+      coins_awarded: row.coins_awarded
+    }));
+
+    // Admin history
     const adminHistory = adminRows.map(row => ({
-      month_year: row.created_at.toISOString().substring(0,7), // 'YYYY-MM'
+      type: "Admin",
+      month_year: moment(row.awarded_at).tz("Asia/Bangkok").format('YYYY-MM'),
+      awarded_at: moment(row.awarded_at).tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss'),
       action_type: row.action_type,
-      coins_awarded: row.coins_awarded,
+     coins_awarded: row.action_type === 'SUBTRACT' ? -row.coins_awarded : row.coins_awarded,
       reason: row.reason,
       admin_username: row.admin_username
     }));
 
-    // รวมทั้งสอง
-    const history = [...leaderboardRows, ...adminHistory].sort((a, b) => {
-      const dateA = new Date(a.awarded_at || a.created_at);
-      const dateB = new Date(b.awarded_at || b.created_at);
+    // Purchase history (coins ถูกใช้ไป => เป็นค่าลบ)
+    const purchaseHistory = purchaseRows.map(row => ({
+      type: "Purchase",
+      month_year: moment(row.Purchased_At).tz("Asia/Bangkok").format('YYYY-MM'),
+      awarded_at: moment(row.Purchased_At).tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss'),
+      profile_name: row.Profile_Name,
+      coins_awarded: -row.Coins_Spent // ติดลบเพื่อหักออกจากยอดรวม
+    }));
+
+    // รวมทั้งหมด
+    const history = [...leaderboardHistory, ...adminHistory, ...purchaseHistory].sort((a, b) => {
+      const dateA = moment(a.awarded_at, 'YYYY-MM-DD HH:mm:ss').toDate();
+      const dateB = moment(b.awarded_at, 'YYYY-MM-DD HH:mm:ss').toDate();
       return dateB - dateA; // ใหม่ไปเก่า
     });
 
+    // รวมเหรียญทั้งหมด (รวมทั้งบวกจาก Reward/Admin และลบจาก Purchase)
     const total_coins = history.reduce((sum, item) => sum + item.coins_awarded, 0);
 
     res.json({
@@ -1631,6 +1836,8 @@ app.get('/rewards-history/:userId', checkUserStatus, async (req, res) => {
       total_coins,
       history
     });
+
+    console.log(history); // debug
 
   } catch (err) {
     console.error('Error fetching reward history:', err);
@@ -1784,7 +1991,7 @@ app.post('/purchase_profile', (req, res) => {
       console.error('Error getting connection:', err);
       return res.status(500).json({ error: 'Database connection error' });
     }
-
+ const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทยแบบ JS Date
     connection.beginTransaction((err) => {
       if (err) {
         connection.release();
@@ -1817,8 +2024,8 @@ app.post('/purchase_profile', (req, res) => {
 
               // ✅ 3. เพิ่มประวัติการซื้อ
           connection.query(
-              'INSERT INTO Profile_Purchase_History (User_ID, Profile_Shop_ID, Coins_Spent) VALUES (?, ?, ?)',
-                [user_id, profile_id, coins_spent],
+              'INSERT INTO Profile_Purchase_History (User_ID, Profile_Shop_ID, Coins_Spent,Purchased_At) VALUES (?, ?, ?,?)',
+                [user_id, profile_id, coins_spent,now],
                 (err) => {
                   if (err) {
                     return connection.rollback(() => {
@@ -1950,7 +2157,8 @@ app.post('/submit_reviews', async (req, res) => {
   }
 
   try {
-    const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทยแบบ JS Date
+    const nowBkk = moment().tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss');
+await connection.query(`SET time_zone = '+07:00';`);
     const rating_overall =
       (Number(rating_hygiene) + Number(rating_flavor) + Number(rating_service)) / 3;
 
@@ -2233,7 +2441,7 @@ app.post('/create_thread', async (req, res) => {
       ai_evaluation = 'Inappropriate';
       admin_decision = 'Pending';
     }
-const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+const now = moment().tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss');
 
 
     const [result] = await db.promise().execute(
@@ -4189,6 +4397,204 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+
+
+// PUT /admin/users/:userId/ban
+app.put('/admin/users/:userId/ban', checkUserStatus, async (req, res) => {
+  const connection = await db.promise().getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const userId = req.params.userId;
+    const { adminId, reason } = req.body;
+    let durationDays = req.body.durationDays != null ? parseInt(req.body.durationDays, 10) : null;
+    if (Number.isNaN(durationDays)) durationDays = null;
+
+    // ตรวจสอบผู้ใช้
+    const [user] = await connection.execute(
+      'SELECT * FROM User WHERE User_ID = ?',
+      [userId]
+    );
+    if (user.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // อัปเดตสถานะ
+    await connection.execute(
+      'UPDATE User SET status = ? WHERE User_ID = ?',
+      ['Banned', userId]
+    );
+
+    // เวลาไทยปัจจุบัน (moment object)
+    const nowBangkok = moment().tz('Asia/Bangkok');
+
+    // คำนวณ expected unban (ถ้ามี)
+    let expectedUnbanDate = null;
+    if (durationDays && durationDays > 0) {
+      expectedUnbanDate = nowBangkok.clone().add(durationDays, 'days').format('YYYY-MM-DD HH:mm:ss');
+    }
+
+    const banDateStr = nowBangkok.format('YYYY-MM-DD HH:mm:ss');
+
+    // INSERT — note: 6 placeholders สำหรับ 6 ค่า
+    await connection.execute(
+      'INSERT INTO Ban_History (user_id, admin_id, ban_reason, ban_duration_days, ban_date, expected_unban_date) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, adminId || null, reason || null, durationDays || null, banDateStr, expectedUnbanDate]
+    );
+
+    await connection.commit();
+
+    return res.json({
+      success: true,
+      message: 'User banned successfully',
+      duration: durationDays ? `${durationDays} days` : 'Permanent',
+      expectedUnbanDate,
+      user: {
+        id: user[0].User_ID,
+        username: user[0].username,
+        status: 'Banned',
+      },
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error banning user:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message,
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+
+
+
+// ปลดแบนผู้ใช้
+app.put('/admin/users/:userId/unban', async (req, res) => {
+  const connection = await db.promise().getConnection();
+  try {
+     const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    await connection.beginTransaction();
+    
+    const userId = req.params.userId;
+    const { adminId } = req.body;
+
+    // ตรวจสอบว่าผู้ใช้มีอยู่จริง
+    const [user] = await connection.execute(
+      'SELECT * FROM User WHERE User_ID = ?',
+      [userId]
+    );
+
+    if (user.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // อัปเดตสถานะผู้ใช้เป็น Active
+    await connection.execute(
+      'UPDATE User SET status = "Active" WHERE User_ID = ?',
+      [userId]
+    );
+
+    // อัปเดตวันที่ปลดแบนในประวัติ
+    await connection.execute(
+      'UPDATE Ban_History SET unban_date = ? WHERE user_id = ? AND unban_date IS NULL',
+      [now,userId]
+    );
+
+    await connection.commit();
+    res.json({ message: 'User unbanned successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error unbanning user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    connection.release();
+  }
+});
+
+// ฟังก์ชันสำหรับตรวจสอบและปลดแบนอัตโนมัติเมื่อครบกำหนด
+async function checkAndAutoUnban() {
+  const connection = await db.promise().getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    // ใช้เวลาปัจจุบันใน timezone ไทยสำหรับ logging
+    const nowThailand = moment().tz('Asia/Bangkok');
+    console.log(`[${nowThailand.format('YYYY-MM-DD HH:mm:ss')}] เริ่มต้นการตรวจสอบปลดแบนอัตโนมัติ...`);
+    
+    // เนื่องจากตั้งค่า timezone ของ MySQL เป็น +07:00 แล้ว
+    // เราสามารถใช้ NOW() ได้เลย
+    const [bansToUnban] = await connection.execute(
+      `SELECT ban_id, user_id, expected_unban_date
+       FROM Ban_History 
+       WHERE expected_unban_date <= NOW()
+       AND unban_date IS NULL`
+    );
+
+    console.log(`พบ ${bansToUnban.length} รายการที่ต้องปลดแบนอัตโนมัติ`);
+
+    for (const ban of bansToUnban) {
+      try {
+        // ปลดแบนผู้ใช้
+        await connection.execute(
+          'UPDATE User SET status = "Active" WHERE User_ID = ?',
+          [ban.user_id]
+        );
+        
+        // อัปเดตวันที่ปลดแบน
+        await connection.execute(
+          'UPDATE Ban_History SET unban_date = NOW() WHERE ban_id = ?',
+          [ban.ban_id]
+        );
+        
+        console.log(`ปลดแบนผู้ใช้ ID ${ban.user_id} จากแบน ID ${ban.ban_id} เรียบร้อยแล้ว`);
+      } catch (error) {
+        console.error(`เกิดข้อผิดพลาดในการปลดแบนผู้ใช้ ID ${ban.user_id}:`, error);
+      }
+    }
+    
+    await connection.commit();
+    console.log(`[${nowThailand.format('YYYY-MM-DD HH:mm:ss')}] การตรวจสอบปลดแบนอัตโนมัติเสร็จสิ้น`);
+    
+  } catch (error) {
+    await connection.rollback();
+    const errorTime = moment().tz('Asia/Bangkok').format('YYYY-MM-DD HH:mm:ss');
+    console.error(`[${errorTime}] เกิดข้อผิดพลาดในกระบวนการปลดแบนอัตโนมัติ:`, error);
+  } finally {
+    connection.release();
+  }
+}
+
+// กำหนด schedule ด้วย node-cron
+// ตรวจสอบทุกชั่วโมงที่ 0 นาที (เช่น 1:00, 2:00, 3:00, ...)
+cron.schedule('0 * * * *', async () => {
+  console.log('เริ่มการตรวจสอบปลดแบนอัตโนมัติตาม schedule...');
+  await checkAndAutoUnban();
+}, {
+  timezone: 'Asia/Bangkok'
+});
+
+// หรือตรวจสอบทุก 30 นาที
+// cron.schedule('*/30 * * * *', async () => {
+//   console.log('Running scheduled auto-unban check...');
+//   await checkAndAutoUnban();
+// });
+
+// หรือตรวจสอบทุกวันตอนเที่ยงคืน
+// cron.schedule('0 0 * * *', async () => {
+//   console.log('Running daily auto-unban check...');
+//   await checkAndAutoUnban();
+// });
+
+// เริ่มการตรวจสอบทันทีเมื่อเซิร์ฟเวอร์เริ่มทำงาน
+console.log('Initial auto-unban check on server start...');
+checkAndAutoUnban();
+
+
 
 
 

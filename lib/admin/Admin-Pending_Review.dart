@@ -62,7 +62,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
     try {
       final response = await http.get(
         Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/reviews/pending?restaurantId=${widget.restaurantId}',
+          'http://10.0.3.201:8080/reviews/pending?restaurantId=${widget.restaurantId}',
         ),
       );
 
@@ -1216,9 +1216,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
   Future<void> _approveReview(int reviewId) async {
     try {
       final response = await http.post(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/reviews/approve',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/reviews/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'reviewId': reviewId, 'adminId': userId}),
       );
@@ -1241,9 +1239,7 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
   Future<void> _rejectReview(int reviewId, {String reason = ''}) async {
     try {
       final response = await http.post(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/api/reviews/reject',
-        ),
+        Uri.parse('http://10.0.3.201:8080/api/reviews/reject'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reviewId': reviewId,

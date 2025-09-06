@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:myapp/admin/Admin-AddMenu.dart';
 import 'package:myapp/admin/Admin-EditMenu.dart';
 import 'package:myapp/admin/Admin-Pending_Review.dart';
+import 'package:myapp/login.dart';
 import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/restaurant_model.dart';
@@ -59,12 +60,17 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
   Future<void> fetchRestaurant() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
       final uri = Uri.parse(
-        'https://mfu-food-guide-review.onrender.com/restaurant/${widget.restaurantId}'
+        'http://10.0.3.201:8080/restaurant/${widget.restaurantId}'
         '${userId != null ? '?user_id=$userId' : ''}',
       );
 
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -77,12 +83,91 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
           isLoading = false;
         });
         print(data);
+      } else if (response.statusCode == 401) {
+        // Token หมดอายุ
+        _showAlert(context, 'Session expired');
+        return;
+      } else if (response.statusCode == 403) {
+        // User ถูกแบน - แสดง alert ตามที่ต้องการ
+        _showAlert(context, 'Your account has been banned.');
+        return;
       } else {
         print('Failed to load restaurant. Status code: ${response.statusCode}');
       }
     } catch (e) {
       print('Error: $e');
     }
+  }
+
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // ผู้ใช้ต้องกดปุ่ม OK ก่อนปิด
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 5,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: const LinearGradient(
+              colors: [Colors.orangeAccent, Colors.deepOrange],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 50,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Warning',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.deepOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  },
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   bool isProcessing = false;
@@ -94,9 +179,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     if (isProcessing) return;
     isProcessing = true;
 
-    final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/review/$reviewId/like',
-    );
+    final url = Uri.parse('http://10.0.3.201:8080/review/$reviewId/like');
 
     try {
       final response = await http.post(
@@ -154,9 +237,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
   Future<void> updateLeaderboard() async {
     try {
-      final url = Uri.parse(
-        'https://mfu-food-guide-review.onrender.com/leaderboard/update-auto',
-      );
+      final url = Uri.parse('http://10.0.3.201:8080/leaderboard/update-auto');
       // สมมติว่า backend ต้องการเดือนปีใน body (format 'YYYY-MM')
       // คุณอาจจะเก็บเดือนปีที่เหมาะสมไว้ในตัวแปร เช่น currentMonthYear
       final currentMonthYear = DateTime.now();
@@ -429,9 +510,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                               if (result == true) {
                                 // เรียก setState เพื่อรีเฟรชข้อมูล
                                 setState(() {
+                                  isReviewExpanded = false;
+
                                   // เรียกฟังก์ชันโหลดร้านใหม่ หรือดึงข้อมูลใหม่
                                   _loadUserId();
-                                  fetchRestaurant(); // ← ถ้ามีฟังก์ชันนี้ในหน้าแรก
+
+                                  fetchRestaurant();
+                                  // ← ถ้ามีฟังก์ชันนี้ในหน้าแรก
                                 });
                               }
                             },
@@ -1319,9 +1404,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Future<void> _deleteMenu(int menuId) async {
     try {
       final response = await http.delete(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/Delete/menus/$menuId',
-        ),
+        Uri.parse('http://10.0.3.201:8080/Delete/menus/$menuId'),
       );
       if (response.statusCode == 200) {
         fetchRestaurant();
@@ -1486,9 +1569,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       final int review_ID = reviewID;
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/review/AdminManual-check/reject',
-        ),
+        Uri.parse('http://10.0.3.201:8080/review/AdminManual-check/reject'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'rewiewId': review_ID,
