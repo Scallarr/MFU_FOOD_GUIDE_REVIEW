@@ -53,6 +53,12 @@ class Review {
   final int totalLikes;
   final String createdAt;
   final bool isLiked;
+  final String User_ID;
+  final String total_likes;
+  final String coins;
+  final String role;
+  final String status;
+
   Review({
     required this.id,
     required this.ratingOverall,
@@ -63,6 +69,11 @@ class Review {
     required this.totalLikes,
     required this.createdAt,
     required this.isLiked,
+    required this.User_ID,
+    required this.total_likes,
+    required this.coins,
+    required this.role,
+    required this.status,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -78,6 +89,11 @@ class Review {
       totalLikes: json['total_likes'] ?? 0,
       createdAt: json['created_at'] ?? '',
       isLiked: json['isLiked'] ?? false,
+      User_ID: json['User_ID'] ?? '0',
+      total_likes: json['total_likes'] ?? '0',
+      coins: json['coins'] ?? '0',
+      role: json['role'] ?? '0',
+      status: json['status'] ?? '0',
     );
   }
 }

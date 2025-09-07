@@ -26,6 +26,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Restaurant? restaurant;
   bool isLoading = true;
   bool isExpanded = false;
+  Map<String, dynamic>? _selectedUser;
   bool isReviewExpanded = false;
   final Color _primaryColor = Color(0xFF4285F4);
   final Color _successColor = Color(0xFF34A853);
@@ -76,13 +77,15 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
         final data = json.decode(response.body);
         setState(() {
           restaurant = Restaurant.fromJson(data);
-          print(
-            'restaurant.id = ${restaurant!.id}',
-          ); // 👈 ต้องได้ค่าที่ไม่ใช่ null
+          // print('restaurant.id = ${restaurant}'); // 👈 ต้องได้ค่าที่ไม่ใช่ null
+          // print('restaurant.id = ${Restaurant}'); // 👈 ต้องได้ค่าที่ไม่ใช่ null
+          // print(
+          //   // 'user.id = ${reviews!.id}',
+          // ); // 👈 ต้องได้ค่าที่ไม่ใช่ null
           likedReviews = {for (var r in restaurant!.reviews) r.id: r.isLiked};
           isLoading = false;
         });
-        print(data);
+        // print(data.runtimeType);
       } else if (response.statusCode == 401) {
         // Token หมดอายุ
         _showAlert(context, 'Session expired');
@@ -170,6 +173,130 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     );
   }
 
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    final baseColor = color ?? Colors.blue;
+
+    return Container(
+      width: 120, // ให้ขนาดเท่ากัน
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withOpacity(0.95),
+            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: baseColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 3, 3, 3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color.fromARGB(255, 220, 216, 216),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildUserBanner(String? imageUrl) {
+    final placeholder =
+        "https://via.placeholder.com/400x200.png?text=No+Image"; // fallback
+
+    return Container(
+      width: double.infinity,
+      height: 400,
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              (imageUrl != null && imageUrl.isNotEmpty)
+                  ? imageUrl
+                  : placeholder,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: Colors.grey[600],
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool isProcessing = false;
   Future<void> likeReview(int reviewId) async {
     if (userId == null) {
@@ -180,12 +307,17 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     isProcessing = true;
 
     final url = Uri.parse('http://10.0.3.201:8080/review/$reviewId/like');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
 
     try {
       final response = await http.post(
         url,
         body: json.encode({'user_id': userId}),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -213,15 +345,32 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
               isLiked: likedNow,
               email: oldReview.email,
               ai_evaluation: oldReview.ai_evaluation,
+              User_ID: oldReview.User_ID,
+              status: oldReview.status,
+              usertotalLikes: oldReview.usertotalLikes,
+              coins: oldReview.coins,
+              role: oldReview.role,
+              total_reviews: oldReview.total_reviews,
             );
 
             restaurant!.reviews[index] = updatedReview;
+
+            // 如果当前显示的用户信息是被点赞的用户，更新用户信息
+            if (_selectedUser != null &&
+                _selectedUser!['User_ID'] == oldReview.User_ID) {
+              // 使用 then 来处理异步操作，避免使用 await
+              fetchUserInfo(oldReview.User_ID).then((updatedUserInfo) {
+                if (updatedUserInfo != null) {
+                  setState(() {
+                    _selectedUser = updatedUserInfo;
+                  });
+                }
+              });
+            }
           }
         });
 
-        // **เพิ่มตรงนี้** เรียก API อัพเดต leaderboard
-        await updateLeaderboard();
-
+        // await updateLeaderboard();
         isProcessing = false;
       } else {
         print('Failed to like/unlike review');
@@ -235,6 +384,43 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchUserInfo(int userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final uri = Uri.parse('http://10.0.3.201:8080/user/info/$userId');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final userData = json.decode(response.body);
+        return {
+          'User_ID': userId,
+          'username': userData['username'] ?? '',
+          'email': userData['email'] ?? '',
+          'total_likes': userData['total_likes'] ?? 0,
+          'total_reviews': userData['total_reviews'] ?? 0,
+          'coins': userData['coins'] ?? 0,
+          'status': userData['status'] ?? '',
+          'picture_url': userData['picture_url'] ?? '',
+          'role': userData['role'] ?? '',
+        };
+      } else {
+        print('Failed to fetch user info. Status code: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching user info: $e');
+      return null;
+    }
+  }
+
   Future<void> updateLeaderboard() async {
     try {
       final url = Uri.parse('http://10.0.3.201:8080/leaderboard/update-auto');
@@ -243,11 +429,15 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       final currentMonthYear = DateTime.now();
       final formattedMonth =
           "${currentMonthYear.year.toString()}-${currentMonthYear.month.toString().padLeft(2, '0')}";
-
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
       final response = await http.post(
         url,
         body: json.encode({'month_year': formattedMonth}),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -560,6 +750,339 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
           ),
         ],
       ),
+      bottomSheet: _selectedUser != null
+          ? Container(
+              padding: EdgeInsets.only(),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                    const Color.fromARGB(255, 136, 133, 133), // เทาอ่อนด้านบน
+                    const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                  ],
+                ),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: Offset(0, -6),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ส่วนหัว
+
+                    // Container สำหรับ Banner และ Avatar ที่ซ้อนกัน
+                    Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Banner
+                        Container(
+                          margin: EdgeInsets.only(
+                            bottom: 40,
+                          ), // ระยะห่างสำหรับ Avatar
+                          child: buildUserBanner(_selectedUser?['picture_url']),
+                        ),
+
+                        // Avatar (วางซ้อนลงบน Banner)
+                        Positioned(
+                          bottom: 0, // ทำให้ Avatar ยื่นออกมาจาก Banner
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 4),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.blue[100],
+                              backgroundImage:
+                                  (_selectedUser!['picture_url'] != null &&
+                                      _selectedUser!['picture_url'].isNotEmpty)
+                                  ? NetworkImage(_selectedUser!['picture_url'])
+                                  : null,
+                              child:
+                                  (_selectedUser!['picture_url'] == null ||
+                                      _selectedUser!['picture_url'].isEmpty)
+                                  ? Text(
+                                      _selectedUser!['username'][0]
+                                          .toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue[800],
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.close_rounded, size: 40),
+                                color: const Color.fromARGB(255, 237, 235, 235),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedUser = null;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        Positioned(
+                          top: 400,
+                          right: -60,
+                          child: Icon(
+                            Icons.lock_outlined,
+                            size: 120,
+                            color: const Color.fromARGB(
+                              255,
+                              0,
+                              0,
+                              0,
+                            ).withOpacity(0.1),
+                          ),
+                        ),
+                        Positioned(
+                          top: 400,
+                          left: -60,
+                          child: Icon(
+                            Icons.lock_outlined,
+                            size: 120,
+                            color: const Color.fromARGB(
+                              255,
+                              0,
+                              0,
+                              0,
+                            ).withOpacity(0.1),
+                          ),
+                        ),
+                        Positioned(
+                          top: 290,
+                          right: -60,
+                          child: Icon(
+                            Icons.lock_outlined,
+                            size: 120,
+                            color: const Color.fromARGB(
+                              255,
+                              0,
+                              0,
+                              0,
+                            ).withOpacity(0.1),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: -550,
+                          left: 40,
+                          child: Icon(
+                            Icons.group,
+                            size: 340,
+                            color: const Color.fromARGB(
+                              255,
+                              9,
+                              9,
+                              9,
+                            ).withOpacity(0.4),
+                          ),
+                        ),
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedUser = null;
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.all(
+                                8,
+                              ), // ทำให้ Icon มีพื้นที่รอบ ๆ
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.redAccent.shade100,
+                                    Colors.red.shade700,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.4),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4),
+                                  ),
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 28,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // ชื่อและ email (ลดระยะห่างจาก Avatar)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: 7,
+                        bottom: 16,
+                      ), // ลดจาก 60 เป็น 50
+                      child: Column(
+                        children: [
+                          Text(
+                            _selectedUser!['username'],
+                            style: TextStyle(
+                              fontSize: 22, // เพิ่มขนาดฟอนต์
+                              fontWeight: FontWeight.w800, // ตัวหนากว่าเดิม
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
+                          Text(
+                            obfuscateEmail(_selectedUser!['email']),
+                            style: TextStyle(
+                              fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                              color: const Color.fromARGB(255, 222, 220, 220),
+                              fontWeight: FontWeight.w500, // ตัวหนาปานกลาง
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsetsGeometry.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // ชิปข้อมูล
+                          Wrap(
+                            spacing: 16,
+                            runSpacing: 16,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              _buildInfoChip(
+                                Icons.badge_outlined,
+                                "User ID",
+                                "${_selectedUser!['User_ID']}",
+                                color: Colors.blue,
+                              ),
+                              if (_selectedUser!['role'] != null &&
+                                  _selectedUser!['role'].isNotEmpty)
+                                _buildInfoChip(
+                                  Icons.manage_accounts,
+                                  "Role",
+                                  "${_selectedUser!['role']}",
+                                  color: Colors.teal,
+                                ),
+                              _buildInfoChip(
+                                _selectedUser!['status'] == "Active"
+                                    ? Icons.verified_user_outlined
+                                    : Icons.block_outlined,
+                                "Status",
+                                _selectedUser!['status'],
+                                color: _selectedUser!['status'] == "Active"
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                              _buildInfoChip(
+                                Icons.monetization_on_outlined,
+                                "Coins",
+                                "${_selectedUser!['coins']}  ",
+                                color: Colors.orange,
+                              ),
+                              if (_selectedUser!['total_likes'] != null)
+                                _buildInfoChip(
+                                  Icons.favorite_outline,
+                                  "Likes",
+                                  "${_selectedUser!['total_likes']}",
+                                  color: Colors.pink,
+                                ),
+                              if (_selectedUser!['total_reviews'] != null)
+                                _buildInfoChip(
+                                  Icons.reviews_outlined,
+                                  "Reviews",
+                                  "${_selectedUser!['total_reviews']}",
+                                  color: Colors.blue,
+                                ),
+                            ],
+                          ),
+
+                          if (_selectedUser!['ban_info'] != null &&
+                              _selectedUser!['ban_info'].isNotEmpty) ...[
+                            SizedBox(height: 16),
+                            Container(
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange[200]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.orange[700],
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      "Ban Info: ${_selectedUser!['ban_info']}",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.orange[800],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -1086,12 +1609,47 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                           children: [
                             Padding(
                               padding: EdgeInsets.only(top: 10),
-                              child: CircleAvatar(
-                                backgroundImage: NetworkImage(
-                                  review.pictureUrl,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  setState(() {
+                                    if (_selectedUser != null &&
+                                        _selectedUser!['User_ID'] ==
+                                            review.User_ID) {
+                                      _selectedUser = null;
+                                    } else {
+                                      // 先显示加载中的状态
+                                      _selectedUser = {
+                                        'User_ID': review.User_ID,
+                                        'username': review.username,
+                                        'email': review.email,
+                                        'total_likes': review.usertotalLikes,
+                                        'coins': review.coins,
+                                        'status': review.status,
+                                        'picture_url': review.pictureUrl,
+                                        'role': review.role,
+                                        'total_reviews': review.total_reviews,
+                                        'isLoading': true, // 添加加载状态
+                                      };
+                                    }
+                                  });
+
+                                  // 获取最新的用户信息
+                                  final updatedUserInfo = await fetchUserInfo(
+                                    review.User_ID,
+                                  );
+                                  if (updatedUserInfo != null) {
+                                    setState(() {
+                                      _selectedUser = updatedUserInfo;
+                                    });
+                                  }
+                                },
+                                child: CircleAvatar(
+                                  backgroundImage: NetworkImage(
+                                    review.pictureUrl,
+                                  ),
+                                  radius: 33,
+                                  backgroundColor: Colors.grey[200],
                                 ),
-                                radius: 33,
-                                backgroundColor: Colors.grey[200],
                               ),
                             ),
                             SizedBox(width: 16),
@@ -1575,6 +2133,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
           'rewiewId': review_ID,
           'adminId': userId,
           'reason': rejectionReason,
+          'restaurantId': widget.restaurantId,
         }),
       );
 

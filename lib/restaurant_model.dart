@@ -67,6 +67,13 @@ class Review {
   final String createdAt;
   final bool isLiked;
   final String ai_evaluation;
+  final int usertotalLikes; // ← เปลี่ยนเป็น int
+  final int User_ID; // ← เปลี่ยนเป็น int
+  final int coins; // ← เปลี่ยนเป็น int
+  final String role;
+  final String status;
+  final int total_reviews;
+
   Review({
     required this.id,
     required this.ratingOverall,
@@ -78,6 +85,12 @@ class Review {
     required this.createdAt,
     required this.isLiked,
     required this.ai_evaluation,
+    required this.usertotalLikes,
+    required this.User_ID,
+    required this.coins,
+    required this.role,
+    required this.status,
+    required this.total_reviews,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -93,8 +106,22 @@ class Review {
       totalLikes: json['total_likes'] ?? 0,
       createdAt: json['created_at'] ?? '',
       isLiked: json['isLiked'] ?? false,
-      ai_evaluation: json['ai_evaluation'] ?? 'sfdsfsdfes',
+      ai_evaluation: json['ai_evaluation'] ?? '',
+      User_ID: _parseInt(json['User_ID']), // ← ใช้ฟังก์ชันช่วย
+      usertotalLikes: _parseInt(json['User_totallikes']), // ← ใช้ฟังก์ชันช่วย
+      coins: _parseInt(json['coins']), // ← ใช้ฟังก์ชันช่วย
+      role: json['role']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      total_reviews: json['total_reviews'] ?? 0,
     );
+  }
+
+  // ฟังก์ชันช่วยสำหรับแปลงค่าเป็น integer
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
   }
 }
 

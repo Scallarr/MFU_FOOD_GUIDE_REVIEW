@@ -37,9 +37,11 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   final Color _textColor = Color(0xFF202124);
   final Color _secondaryTextColor = Color(0xFF5F6368);
   TextEditingController _textController = TextEditingController();
+  Map<String, dynamic>? _selectedUser;
   int _pendingRepliedThreadsCount = 0;
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool isSending = false;
 
   String? profileImageUrl;
   int _pendingThreadsCount = 0; // เพิ่มตัวแปรเก็บจำนวน pending threads
@@ -49,7 +51,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   void initState() {
     super.initState();
     _loadUserID();
-    // loadUserIdAndFetchProfile();
+    loadUserIdAndFetchProfile();
     fetchPendingThreadsCount();
     fetchPendingRepliedThreadsCount();
   }
@@ -330,6 +332,43 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _fetchCurrentUserInfo(int userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final uri = Uri.parse('http://10.0.3.201:8080/user/info/$userId');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final userData = json.decode(response.body);
+        setState(() {
+          _selectedUser = {
+            'User_ID': userId,
+            'username': userData['username'] ?? '',
+            'email': userData['email'] ?? '',
+            'total_likes': userData['total_likes'] ?? 0,
+            'total_reviews': userData['total_reviews'] ?? 0,
+            'coins': userData['coins'] ?? 0,
+            'status': userData['status'] ?? '',
+            'picture_url': userData['picture_url'] ?? '',
+            'role': userData['role'] ?? '',
+          };
+        });
+      } else {
+        print('Failed to fetch user info. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching user info: $e');
     }
   }
 
@@ -639,6 +678,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       final response = await http.get(
         Uri.parse('http://10.0.3.201:8080/user_profile_picture/$userId'),
       );
+      setState(() => isSending = true);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final profileImageUrl2 = data['picture_url'];
@@ -656,6 +696,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
     try {
+      setState(() => isSending = true);
       final response = await http.post(
         Uri.parse('http://10.0.3.201:8080/create_thread'),
         headers: {'Content-Type': 'application/json'},
@@ -780,11 +821,17 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
         } else {
           // โชว์ snackbar ว่าส่งโพสต์สำเร็จ
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Thread posted successfully')),
+            const SnackBar(
+              content: Text('Thread posted successfully'),
+              duration: Duration(seconds: 1), // แสดง 1 วิ
+            ),
           );
         }
       } else {
         throw Exception('Failed to post thread');
+      }
+      {
+        if (mounted) setState(() => isSending = false);
       }
     } catch (e) {
       ScaffoldMessenger.of(
@@ -856,6 +903,148 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     }
   }
 
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    final baseColor = color ?? Colors.blue;
+
+    return Container(
+      width: 120, // ให้ขนาดเท่ากัน
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withOpacity(0.95),
+            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: baseColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 3, 3, 3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color.fromARGB(255, 220, 216, 216),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildUserBanner(String? imageUrl) {
+    final placeholder =
+        "https://via.placeholder.com/400x200.png?text=No+Image"; // fallback
+
+    return Container(
+      width: double.infinity,
+      height: 320,
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              (imageUrl != null && imageUrl.isNotEmpty)
+                  ? imageUrl
+                  : placeholder,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: Colors.grey[600],
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String obfuscateEmail(String email) {
+    if (email.endsWith('@lamduan.mfu.ac.th')) {
+      final domain = '@lamduan.mfu.ac.th';
+      if (email.length > domain.length + 2) {
+        final prefix = email.substring(0, 2);
+        return '$prefix********$domain';
+      }
+    } else if (email.endsWith('@mfu.ac.th')) {
+      final domain = '@mfu.ac.th';
+      return '**********$domain';
+    } else {
+      final domain = '@gmail.com';
+      return '**********$domain';
+    }
+
+    return email; // กรณีอื่น ๆ
+  }
+
   @override
   Widget build(BuildContext context) {
     // กรอง threads ตาม search query
@@ -871,650 +1060,793 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F4EF), // สีพื้นหลังอ่อนๆ
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(255, 237, 224, 199).withOpacity(1),
-              Color.fromARGB(255, 254, 245, 215).withOpacity(0.7), // เริ่มต้น
-              Color.fromARGB(255, 238, 238, 238),
-            ], // สิ้นสุด],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            SliverAppBar(
-              toolbarHeight: 80,
-              backgroundColor: const Color(0xFFCEBFA3),
-              pinned: false,
-              floating: true,
-              snap: true,
-              elevation: 6,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(20),
+      body: _selectedUser != null
+          ? Container(
+              color: Color.fromARGB(
+                255,
+                116,
+                115,
+                113,
+              ).withOpacity(1), // ความเข้มของดำ
+              child: Center(
+                child: Text(
+                  "",
+                  style: TextStyle(
+                    color: const Color.fromARGB(255, 127, 45, 45),
+                    fontSize: 18,
+                  ),
                 ),
               ),
-              title: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+            )
+          : Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.fromARGB(255, 233, 225, 210),
+                    Color(0xFFF7F4EF),
+                    Color(0xFFF7F4EF),
+                  ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Food Threads',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            offset: const Offset(0, 2),
-                            blurRadius: 4,
-                            color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromARGB(
+                      255,
+                      48,
+                      47,
+                      47,
+                    ).withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: Offset(0, -6),
+                  ),
+                ],
+              ),
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverAppBar(
+                    toolbarHeight: 80,
+                    pinned: false,
+                    floating: true,
+                    snap: true,
+                    elevation: 6,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        bottom: Radius.circular(20),
+                      ),
+                    ),
+                    flexibleSpace: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            const Color(0xFFCEBFA3),
+                            const Color(0xFFCEBFA3),
+                          ],
+                        ),
+                      ),
+                    ),
+                    title: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Food Threads',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 28,
+                              color: const Color.fromARGB(255, 35, 34, 34),
+                              shadows: [
+                                Shadow(
+                                  offset: Offset(0, 2),
+                                  blurRadius: 4,
+                                  color: Colors.black.withOpacity(0.3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () async {
+                              final shouldRefresh = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProfilePageAdmin(),
+                                ),
+                              );
+                              if (shouldRefresh == true) {
+                                fetchProfilePicture(userId!);
+                                _loadUserID();
+                              }
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
+                              ),
+                              child: profileImageUrl == null
+                                  ? CircleAvatar(
+                                      backgroundColor: Colors.grey[300],
+                                      child: Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 40,
+                                      ),
+                                      radius: 27,
+                                    )
+                                  : CircleAvatar(
+                                      backgroundImage: NetworkImage(
+                                        profileImageUrl!,
+                                      ),
+                                      radius: 27,
+                                      backgroundColor: Colors.grey[300],
+                                    ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () async {
-                        final shouldRefresh = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfilePageAdmin(),
-                          ),
-                        );
+                  ),
 
-                        if (shouldRefresh == true) {
-                          fetchProfilePicture(userId!);
-                        }
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: profileImageUrl == null
-                            ? CircleAvatar(
-                                backgroundColor: Colors.grey[300],
-                                child: Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
-                                radius: 27,
-                              )
-                            : CircleAvatar(
-                                backgroundImage: NetworkImage(profileImageUrl!),
-                                radius: 27,
-                                backgroundColor: Colors.grey[300],
-                              ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(height: 15),
-                    Row(
-                      children: [
-                        // Search TextField
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.5),
-                                  blurRadius: 1,
-                                  offset: const Offset(1, 1),
-                                ),
-                              ],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText:
-                                    'Search threads ID or urthor Name ... ',
-                                hintStyle: TextStyle(
-                                  fontSize: 11.5,
-                                  color: Colors.black,
-                                ),
-                                prefixIcon: const Icon(Icons.search),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  _searchQuery = value.toLowerCase();
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                        // Three-dot menu button
-                        SizedBox(width: 10),
-                        PopupMenuButton<String>(
-                          icon: Icon(
-                            Icons.more_vert,
-                            color: const Color.fromARGB(255, 0, 0, 0),
-                          ),
-                          itemBuilder: (BuildContext context) => [
-                            PopupMenuItem(
-                              value: 'verify_threads',
-                              child: Container(
-                                padding: EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade50,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.verified_outlined,
-                                        size: 18,
-                                        color: Colors.blue.shade700,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Verify Threads',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          if (_pendingThreadsCount > -1)
-                                            Text(
-                                              '$_pendingThreadsCount pending',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (_pendingThreadsCount > 0)
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFFF4757),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            '$_pendingThreadsCount',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'verify_threads_replied',
-                              child: Container(
-                                padding: EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.shade50,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.reply_all_rounded,
-                                        size: 18,
-                                        color: Colors.green.shade700,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Verify Threads Replied',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 13.5,
-                                            ),
-                                          ),
-                                          if (_pendingRepliedThreadsCount > -1)
-                                            Text(
-                                              '$_pendingRepliedThreadsCount pending',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (_pendingRepliedThreadsCount > 0)
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFFF4757),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            '$_pendingRepliedThreadsCount',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // เพิ่มเมนู My History
-                            PopupMenuItem(
-                              value: 'my_history',
-                              child: Container(
-                                padding: EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: Colors.purple.shade50,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.history_rounded,
-                                        size: 18,
-                                        color: Colors.purple.shade700,
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'My History',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          Text(
-                                            'See You History Here',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                          onSelected: (String value) async {
-                            Widget page;
-
-                            if (value == 'verify_threads') {
-                              page = PendingThreadsPage();
-                            } else if (value == 'verify_threads_replied') {
-                              page = PendingThreadsRepliedPage();
-                            } else if (value == 'my_history') {
-                              page = MyHistoryPage(); // หน้าใหม่สำหรับประวัติ
-                            } else {
-                              return;
-                            }
-
-                            final shouldRefresh = await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => page),
-                            );
-
-                            if (shouldRefresh == true) {
-                              fetchThreads();
-                              fetchPendingThreadsCount();
-                              fetchPendingRepliedThreadsCount();
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final thread = filteredThreads[index];
-                final likedByUser = thread['is_liked'] == 1;
-
-                return InkWell(
-                  onTap: () async {
-                    final shouldRefresh = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ThreadRepliesAdminPage(
-                          thread: thread,
-                          likedByUser: likedByUser,
-                        ),
-                      ),
-                    );
-
-                    if (shouldRefresh == true) {
-                      await fetchThreads(); // ฟังก์ชันโหลด thread ใหม่
-                    }
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    child: Stack(
-                      children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color.fromARGB(
-                                  255,
-                                  0,
-                                  0,
-                                  0,
-                                ).withOpacity(0.20), // สีเงาและความโปร่งใส
-                                spreadRadius: 3, // ขนาดเงา
-                                blurRadius: 5, // ความฟุ้งของเงา
-                                offset: const Offset(0, 4), // ตำแหน่งเงา (x, y)
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(height: 15),
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFFCEBFA3),
-                                        width: 2,
+                              // Search TextField
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.5),
+                                        blurRadius: 1,
+                                        offset: const Offset(1, 1),
                                       ),
-                                    ),
-                                    child: ClipOval(
-                                      child: Image.network(
-                                        thread['picture_url'],
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Container(
-                                                  color: Colors.grey[200],
-                                                ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              thread['username'],
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-
-                                            Icon(
-                                              Icons.verified,
-                                              size: 16,
-                                              color: Colors.blue,
-                                            ),
-                                            Spacer(),
-
-                                            Text(
-                                              timeAgo(thread['created_at']),
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[600],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 4),
-                                        Text(
-                                          obfuscateEmail(thread['email'] ?? ''),
-                                          style: TextStyle(
-                                            fontSize: 12.3,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 9),
-
-                              SizedBox(height: 5),
-
-                              // ข้อความของ thread
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  thread['message'],
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Divider บางๆ
-                              Divider(
-                                color: Colors.grey.shade300,
-                                thickness: 0.7,
-                              ),
-                              const SizedBox(height: 6),
-
-                              // ปุ่ม Like / Comment / Report
-                              Row(
-                                children: [
-                                  // Report
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.report,
-                                      color: Colors.grey[600],
-                                    ),
-                                    onPressed: () => _showRejectDialog2(thread),
-                                  ),
-                                  const Spacer(),
-
-                                  // Like button
-                                  InkWell(
-                                    onTap: () {
-                                      toggleLike(
-                                        thread['Thread_ID'],
-                                        likedByUser,
-                                      );
-                                    },
+                                    ],
                                     borderRadius: BorderRadius.circular(20),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
+                                  ),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          'Search threads ID or urthor Name ... ',
+                                      hintStyle: TextStyle(
+                                        fontSize: 11.5,
+                                        color: Colors.black,
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: likedByUser
-                                            ? Colors.red.shade50
-                                            : Colors.grey.shade100,
+                                      prefixIcon: const Icon(Icons.search),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 10,
+                                          ),
+                                      border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: likedByUser
-                                              ? Colors.red.shade200
-                                              : Colors.grey.shade300,
-                                        ),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _searchQuery = value.toLowerCase();
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                              // Three-dot menu button
+                              SizedBox(width: 10),
+                              PopupMenuButton<String>(
+                                icon: Icon(
+                                  Icons.more_vert,
+                                  color: const Color.fromARGB(255, 0, 0, 0),
+                                ),
+                                itemBuilder: (BuildContext context) => [
+                                  PopupMenuItem(
+                                    value: 'verify_threads',
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 8,
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(
-                                            Icons.favorite,
-                                            size: 18,
-                                            color: likedByUser
-                                                ? Colors.red
-                                                : Colors.grey[600],
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.shade50,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.verified_outlined,
+                                              size: 18,
+                                              color: Colors.blue.shade700,
+                                            ),
                                           ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            '${thread['total_likes']}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              color: likedByUser
-                                                  ? Colors.red.shade700
-                                                  : Colors.grey[700],
-                                              fontSize: 14,
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Verify Threads',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                                if (_pendingThreadsCount > -1)
+                                                  Text(
+                                                    '$_pendingThreadsCount pending',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (_pendingThreadsCount > 0)
+                                            Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: Color(0xFFFF4757),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '$_pendingThreadsCount',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'verify_threads_replied',
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade50,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.reply_all_rounded,
+                                              size: 18,
+                                              color: Colors.green.shade700,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Verify Threads Replied',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 13.5,
+                                                  ),
+                                                ),
+                                                if (_pendingRepliedThreadsCount >
+                                                    -1)
+                                                  Text(
+                                                    '$_pendingRepliedThreadsCount pending',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (_pendingRepliedThreadsCount > 0)
+                                            Container(
+                                              width: 24,
+                                              height: 24,
+                                              decoration: BoxDecoration(
+                                                color: Color(0xFFFF4757),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '$_pendingRepliedThreadsCount',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // เพิ่มเมนู My History
+                                  PopupMenuItem(
+                                    value: 'my_history',
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              color: Colors.purple.shade50,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Icons.history_rounded,
+                                              size: 18,
+                                              color: Colors.purple.shade700,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'My History',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'See You History Here',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                ],
+                                onSelected: (String value) async {
+                                  Widget page;
 
-                                  // Comment button
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
+                                  if (value == 'verify_threads') {
+                                    page = PendingThreadsPage();
+                                  } else if (value ==
+                                      'verify_threads_replied') {
+                                    page = PendingThreadsRepliedPage();
+                                  } else if (value == 'my_history') {
+                                    page =
+                                        MyHistoryPage(); // หน้าใหม่สำหรับประวัติ
+                                  } else {
+                                    return;
+                                  }
+
+                                  final shouldRefresh = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => page,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Colors.blue.shade100,
-                                      ),
+                                  );
+
+                                  if (shouldRefresh == true) {
+                                    fetchThreads();
+                                    fetchPendingThreadsCount();
+                                    fetchPendingRepliedThreadsCount();
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final thread = filteredThreads[index];
+                      print(thread);
+                      final likedByUser = thread['is_liked'] == 1;
+
+                      return InkWell(
+                        onTap: () async {
+                          final shouldRefresh = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ThreadRepliesAdminPage(
+                                thread: thread,
+                                likedByUser: likedByUser,
+                              ),
+                            ),
+                          );
+                          if (shouldRefresh == true) {
+                            await fetchThreads();
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      const Color.fromARGB(
+                                        255,
+                                        227,
+                                        238,
+                                        248,
+                                      ), // ฟ้าอ่อน
+                                      const Color.fromARGB(
+                                        255,
+                                        241,
+                                        243,
+                                        245,
+                                      ), // ขาวนวล
+                                      const Color.fromARGB(
+                                        255,
+                                        218,
+                                        227,
+                                        236,
+                                      ), // // ฟ้าอ่อน
+                                    ],
+                                  ),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(24),
+                                    topRight: Radius.circular(24),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, -4),
                                     ),
-                                    child: Row(
+                                  ],
+                                ),
+                                padding: const EdgeInsets.all(14),
+                                child: Column(
+                                  children: [
+                                    Row(
                                       children: [
-                                        const Icon(
-                                          Icons.comment,
-                                          size: 18,
-                                          color: Colors.blue,
+                                        GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              if (_selectedUser != null &&
+                                                  _selectedUser!['User_ID'] ==
+                                                      thread['User_ID']) {
+                                                _selectedUser = null;
+                                              } else {
+                                                _selectedUser = thread;
+                                              }
+                                            });
+                                          },
+                                          child: Container(
+                                            width: 60,
+                                            height: 60,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: const Color(0xFFCEBFA3),
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: ClipOval(
+                                              child: Image.network(
+                                                thread['picture_url'],
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) => Container(
+                                                      color: Colors.grey[200],
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '${thread['total_comments']}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.blue,
-                                            fontSize: 14,
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    thread['username'],
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF2C3E50),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  const Icon(
+                                                    Icons.verified,
+                                                    size: 16,
+                                                    color: Colors.teal,
+                                                  ),
+                                                  const Spacer(),
+                                                  Text(
+                                                    timeAgo(
+                                                      thread['created_at'],
+                                                    ),
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.black54,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                obfuscateEmail(
+                                                  thread['email'] ?? '',
+                                                ),
+                                                style: const TextStyle(
+                                                  fontSize: 12.3,
+                                                  color: Colors.black54,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 9),
+
+                                    // ข้อความของ thread
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        thread['message'],
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+
+                                    Divider(
+                                      color: const Color.fromARGB(
+                                        255,
+                                        185,
+                                        171,
+                                        171,
+                                      ),
+                                      thickness: 0.7,
+                                    ),
+                                    const SizedBox(height: 6),
+
+                                    // ปุ่ม Like / Comment / Report
+                                    Row(
+                                      children: [
+                                        // Report
+                                        Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Colors.redAccent.shade200,
+                                                Colors.deepOrange.shade400,
+                                              ],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.redAccent
+                                                    .withOpacity(0.3),
+                                                blurRadius: 6,
+                                                offset: const Offset(2, 3),
+                                              ),
+                                            ],
+                                          ),
+                                          child: IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            icon: const Icon(
+                                              Icons
+                                                  .report_gmailerrorred_rounded,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                            onPressed: () =>
+                                                _showRejectDialog2(thread),
+                                            tooltip: "Report this thread",
+                                          ),
+                                        ),
+
+                                        const Spacer(),
+
+                                        // Like button
+                                        InkWell(
+                                          onTap: () {
+                                            toggleLike(
+                                              thread['Thread_ID'],
+                                              likedByUser,
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: likedByUser
+                                                  ? Colors.pink.shade50
+                                                  : Colors.grey.shade100,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: likedByUser
+                                                    ? Colors.pink.shade200
+                                                    : Colors.grey.shade300,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.favorite,
+                                                  size: 18,
+                                                  color: likedByUser
+                                                      ? Colors.pink.shade400
+                                                      : Colors.grey[600],
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  '${thread['total_likes']}',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: likedByUser
+                                                        ? Colors.pink.shade600
+                                                        : Colors.grey[700],
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+
+                                        // Comment button
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.indigo.shade50,
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.indigo.shade100,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.comment,
+                                                size: 18,
+                                                color: Colors.indigo,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '${thread['total_comments']}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.indigo,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 20),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Verified Badge
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.teal, Colors.blueAccent],
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                  const SizedBox(width: 20),
-                                ],
+                                  child: const Icon(
+                                    Icons.verified,
+                                    size: 20,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 212, 58, 58),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.verified,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    }, childCount: filteredThreads.length),
                   ),
-                );
-              }, childCount: filteredThreads.length),
+
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
+                ],
+              ),
             ),
-            const SliverPadding(padding: EdgeInsets.only(bottom: 90)),
-          ],
-        ),
-      ),
+
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -1533,7 +1865,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
             type: BottomNavigationBarType.fixed,
             selectedItemColor: const Color(0xFFCEBFA3),
             unselectedItemColor: Colors.grey,
-            backgroundColor: Colors.white,
+            // backgroundColor: Colors.white,
             elevation: 8,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -1554,106 +1886,476 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
         ),
       ),
 
-      bottomSheet: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(
-            context,
-          ).viewInsets.bottom, // กันข้อความโดนคีย์บอร์ดบัง
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Avatar
-              FutureBuilder<String?>(
-                future: fetchUserPictureUrl(userId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Colors.grey.shade300,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
-                    );
-                  } else if (snapshot.hasError || snapshot.data == null) {
-                    return CircleAvatar(
-                      radius: 22,
-                      backgroundColor: Colors.grey.shade300,
-                      child: const Icon(Icons.person, color: Colors.white),
-                    );
-                  } else {
-                    return CircleAvatar(
-                      radius: 22,
-                      backgroundImage: NetworkImage(snapshot.data!),
-                      backgroundColor: Colors.grey.shade300,
-                    );
-                  }
-                },
-              ),
-
-              const SizedBox(width: 12),
-
-              // Text Field
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+      bottomSheet: _selectedUser != null
+          ? GestureDetector(
+              // onVerticalDragUpdate: (details) {
+              //   // ถ้าเลื่อนลงมากกว่า 50 pixels ให้ปิด
+              //   if (details.delta.dy > 10) {
+              //     setState(() {
+              //       _selectedUser = null;
+              //     });
+              //   }
+              // },
+              onTap: () {
+                // ถ้าคลิกนอกเนื้อหาให้ปิด
+                // setState(() {
+                //   _selectedUser = null;
+                // });
+              },
+              child: Container(
+                padding: EdgeInsets.only(),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                      const Color.fromARGB(255, 136, 133, 133), // เทาอ่อนด้านบน
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                    ],
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
                   ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 150),
-                    child: SingleChildScrollView(
-                      reverse: true, // เลื่อนตามบรรทัดล่าสุด
-                      child: TextField(
-                        controller: _textController,
-                        maxLines: null, // ให้ขยายได้หลายบรรทัด
-                        keyboardType: TextInputType.multiline,
-                        decoration: InputDecoration(
-                          hintText: 'Write a new thread...',
-                          hintStyle: TextStyle(color: Colors.grey.shade600),
-                          border: InputBorder.none,
-                          isDense: true,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: Offset(0, -6),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ส่วนหัว
+
+                      // Container สำหรับ Banner และ Avatar ที่ซ้อนกัน
+                      Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Banner
+                          Container(
+                            margin: EdgeInsets.only(
+                              bottom: 40,
+                            ), // ระยะห่างสำหรับ Avatar
+                            child: buildUserBanner(
+                              _selectedUser?['picture_url'],
+                            ),
+                          ),
+
+                          // Avatar (วางซ้อนลงบน Banner)
+                          Positioned(
+                            bottom: 0, // ทำให้ Avatar ยื่นออกมาจาก Banner
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.blue[100],
+                                backgroundImage:
+                                    (_selectedUser!['picture_url'] != null &&
+                                        _selectedUser!['picture_url']
+                                            .isNotEmpty)
+                                    ? NetworkImage(
+                                        _selectedUser!['picture_url'],
+                                      )
+                                    : null,
+                                child:
+                                    (_selectedUser!['picture_url'] == null ||
+                                        _selectedUser!['picture_url'].isEmpty)
+                                    ? Text(
+                                        _selectedUser!['username'][0]
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[800],
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded, size: 40),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    237,
+                                    235,
+                                    235,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedUser = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: 290,
+                            right: -60,
+                            child: Icon(
+                              Icons.lock_outlined,
+                              size: 120,
+                              color: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ).withOpacity(0.1),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -550,
+                            left: 40,
+                            child: Icon(
+                              Icons.group,
+                              size: 340,
+                              color: const Color.fromARGB(
+                                255,
+                                9,
+                                9,
+                                9,
+                              ).withOpacity(0.4),
+                            ),
+                          ),
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedUser = null;
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(
+                                  8,
+                                ), // ทำให้ Icon มีพื้นที่รอบ ๆ
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.redAccent.shade100,
+                                      Colors.red.shade700,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // ชื่อและ email (ลดระยะห่างจาก Avatar)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: 7,
+                          bottom: 16,
+                        ), // ลดจาก 60 เป็น 50
+                        child: Column(
+                          children: [
+                            Text(
+                              _selectedUser!['username'],
+                              style: TextStyle(
+                                fontSize: 22, // เพิ่มขนาดฟอนต์
+                                fontWeight: FontWeight.w800, // ตัวหนากว่าเดิม
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
+                            Text(
+                              obfuscateEmail(_selectedUser!['email']),
+                              style: TextStyle(
+                                fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                color: const Color.fromARGB(255, 222, 220, 220),
+                                fontWeight: FontWeight.w500, // ตัวหนาปานกลาง
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsetsGeometry.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ชิปข้อมูล
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _buildInfoChip(
+                                  Icons.badge_outlined,
+                                  "User ID",
+                                  "${_selectedUser!['User_ID']}",
+                                  color: Colors.blue,
+                                ),
+                                if (_selectedUser!['role'] != null &&
+                                    _selectedUser!['role'].isNotEmpty)
+                                  _buildInfoChip(
+                                    Icons.manage_accounts,
+                                    "Role",
+                                    "${_selectedUser!['role']}",
+                                    color: Colors.teal,
+                                  ),
+                                _buildInfoChip(
+                                  _selectedUser!['status'] == "Active"
+                                      ? Icons.verified_user_outlined
+                                      : Icons.block_outlined,
+                                  "Status",
+                                  _selectedUser!['status'],
+                                  color: _selectedUser!['status'] == "Active"
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                _buildInfoChip(
+                                  Icons.monetization_on_outlined,
+                                  "Coins",
+                                  "${_selectedUser!['coins']}",
+                                  color: Colors.orange,
+                                ),
+                                if (_selectedUser!['total_likes'] != null)
+                                  _buildInfoChip(
+                                    Icons.favorite_outline,
+                                    "Likes",
+                                    "${_selectedUser!['total_likes']}",
+                                    color: Colors.pink,
+                                  ),
+                                if (_selectedUser!['total_reviews'] != null)
+                                  _buildInfoChip(
+                                    Icons.reviews_outlined,
+                                    "Reviews",
+                                    "${_selectedUser!['total_reviews']}",
+                                    color: Colors.blue,
+                                  ),
+                              ],
+                            ),
+
+                            if (_selectedUser!['ban_info'] != null &&
+                                _selectedUser!['ban_info'].isNotEmpty) ...[
+                              SizedBox(height: 16),
+                              Container(
+                                padding: EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.orange[200]!,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange[700],
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Ban Info: ${_selectedUser!['ban_info']}",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.orange[800],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
+                            SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Avatar
+                    // Avatar
+                    GestureDetector(
+                      onTap: () {
+                        if (userId != null) {
+                          _fetchCurrentUserInfo(userId!);
+                        }
+                      },
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundImage: profileImageUrl != null
+                            ? NetworkImage(profileImageUrl!)
+                            : null,
+                        backgroundColor: Colors.grey.shade300,
+                        child: profileImageUrl == null
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // Text Field
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 150),
+                          child: SingleChildScrollView(
+                            reverse: true,
+                            child: TextField(
+                              controller: _textController,
+                              maxLines: null,
+                              keyboardType: TextInputType.multiline,
+                              decoration: InputDecoration(
+                                hintText: 'Write a new thread...',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade600,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+
+                    const SizedBox(width: 12),
+
+                    // Send Button
+                    InkWell(
+                      onTap: isSending ? null : sendThread,
+                      borderRadius: BorderRadius.circular(30),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          gradient: isSending
+                              ? const LinearGradient(
+                                  colors: [Colors.grey, Colors.grey],
+                                )
+                              : const LinearGradient(
+                                  colors: [
+                                    Color(0xFFCEBFA3),
+                                    Color(0xFFB89C7D),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.brown.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: isSending
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Icon(
+                                Icons.send_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ),
 
-              const SizedBox(width: 12),
+      // ... โค้ด bottomSheet ข้างต้น
 
-              // Send Button
-              InkWell(
-                onTap: sendThread,
-                borderRadius: BorderRadius.circular(25),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFCEBFA3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.send, color: Colors.white, size: 24),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      // แทนที่ส่วน bottomSheet ที่ถูกคอมเมนต์ออกด้วยโค้ดนี้
     );
   }
 }
@@ -1667,7 +2369,18 @@ String obfuscateEmail(String email) {
     }
   } else if (email.endsWith('@mfu.ac.th')) {
     final domain = '@mfu.ac.th';
-    return '**********$domain';
+    if (email.length > domain.length + 2) {
+      final prefix = email.substring(0, 2);
+      return '$prefix********$domain';
+    }
+  } else {
+    // สำหรับเมลปกติ
+    final atIndex = email.indexOf('@');
+    if (atIndex > 3) {
+      final prefix = email.substring(0, 3);
+      final domain = email.substring(atIndex);
+      return '$prefix********$domain';
+    }
   }
   return email; // กรณีอื่น ๆ
 }

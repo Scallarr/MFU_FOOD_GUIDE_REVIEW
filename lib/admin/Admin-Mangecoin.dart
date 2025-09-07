@@ -574,7 +574,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
               SizedBox(height: 35),
               TextField(
                 controller: _coinsController,
-                maxLength: 5,
+                maxLength: 7,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Coins Amount',

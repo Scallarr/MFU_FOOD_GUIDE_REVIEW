@@ -188,21 +188,66 @@ app.post('/leaderboard/insert', async (req, res) => {
 
 
 
-app.post('/user',(req,res) =>{
-   const query = 'SELECT * FROM User';
+app.post('/user', checkUserStatus, (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname, 
+      u.username, 
+      u.email, 
+      u.bio, 
+      u.total_likes, 
+      u.total_reviews, 
+      u.coins, 
+      u.role, 
+      u.status,
+      p.picture_url
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+     
+  `;
+
+const countQuery = `
+  SELECT 
+  COUNT(*) AS total_users,
+    SUM(role = 'User') AS user_count,
+    SUM(role = 'Admin') AS admin_count,
+    SUM(role = 'User' AND status = 'Active') AS active_user_count,
+    SUM(role = 'User' AND status = 'Banned') AS banned_user_count,
+    SUM(role = 'Admin' AND status = 'Active') AS active_Admin_count,
+    SUM(role = 'Admin' AND status = 'Banned') AS banned_Admin_count
+    
+  FROM User
+`;
+
+
+  // ดึงข้อมูลผู้ใช้
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Database error fetching users:', err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    // ดึงจำนวน User และ Admin
+    db.query(countQuery, (err2, countResults) => {
+      if (err2) {
+        console.error('Database error counting roles:', err2);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      res.json({
+        success: true,
+        users: results,
+        counts: countResults[0]  // { user_count: x, admin_count: y }
+      });
+    });
+  });
+});
 
 
 
-db.query(query,(err, results)=>{
-  if (err){
-    console.error('Database error checking user:', err)
-    return res.status(500).json({error:"database Error"});
-  }
-  res.json(results);
-})
 
-
-})
 app.post('/user111',(req,res) =>{
    const query = 'SELECT * FROM Thread';
 
@@ -578,7 +623,7 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
   const reviewQuery = `
     SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
            r.rating_service, r.comment, r.total_likes, r.created_at,
-           r.message_status,r.ai_evaluation,
+           r.message_status,r.ai_evaluation,r.User_ID,u.total_likes as User_totallikes ,u.total_reviews,u.coins,u.role,u.status, 
            u.username, u.email, p.picture_url,
            EXISTS (
              SELECT 1 FROM Review_Likes rl
@@ -665,6 +710,26 @@ app.post('/review/:reviewId/like',(req, res) => {
 
           res.status(200).json({ message: 'Review unliked', liked: false });
         });
+
+
+    db.promise().execute(
+  `UPDATE User SET total_reviews = (
+     SELECT COUNT(*) FROM Review WHERE User_ID = ? AND message_status = 'Posted'
+   )
+   WHERE User_ID = ?`,
+  [ownerId, ownerId]
+);
+db.promise().execute(
+  `UPDATE User u
+   SET u.total_likes = (
+     SELECT IFNULL(SUM(r.total_likes), 0)
+     FROM Review r
+     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+   )
+   WHERE u.User_ID = ?`,
+  [ownerId]
+);
+
       } else {
         // ยังไม่เคยกด like
         db.query('INSERT INTO Review_Likes (Review_ID, User_ID) VALUES (?,?)', [reviewId, userId], (e2) => {
@@ -675,6 +740,23 @@ app.post('/review/:reviewId/like',(req, res) => {
 
           // เพิ่ม like ใน User (เจ้าของรีวิว)
           db.query('UPDATE User SET total_likes = total_likes + 1 WHERE User_ID = ?', [ownerId]);
+    db.promise().execute(
+  `UPDATE User SET total_reviews = (
+     SELECT COUNT(*) FROM Review WHERE User_ID = ? AND message_status = 'Posted'
+   )
+   WHERE User_ID = ?`,
+  [ownerId, ownerId]
+);
+db.promise().execute(
+  `UPDATE User u
+   SET u.total_likes = (
+     SELECT IFNULL(SUM(r.total_likes), 0)
+     FROM Review r
+     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+   )
+   WHERE u.User_ID = ?`,
+  [ownerId]
+);
 
           res.status(200).json({ message: 'Review liked', liked: true });
         });
@@ -1691,7 +1773,7 @@ app.get('/admin/search2-users', checkUserStatus, async (req, res) => {
   try {
     const { query: searchQuery } = req.query;
 
-    if (!searchQuery || searchQuery.length < 2) {
+    if (!searchQuery ) {
       return res.status(400).json({ 
         success: false, 
         message: 'Search query must be at least 2 characters long' 
@@ -1704,7 +1786,9 @@ app.get('/admin/search2-users', checkUserStatus, async (req, res) => {
     u.username, 
     u.email, 
     u.coins, 
-    u.status, 
+    u.status,
+    u.total_likes,
+    u.total_reviews, 
     u.role,
     p.picture_url,
     bh.ban_reason,
@@ -2157,8 +2241,8 @@ app.post('/submit_reviews', async (req, res) => {
   }
 
   try {
-    const nowBkk = moment().tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss');
-await connection.query(`SET time_zone = '+07:00';`);
+    const now = moment().tz("Asia/Bangkok").format('YYYY-MM-DD HH:mm:ss');
+
     const rating_overall =
       (Number(rating_hygiene) + Number(rating_flavor) + Number(rating_service)) / 3;
 
@@ -2188,13 +2272,6 @@ await connection.query(`SET time_zone = '+07:00';`);
     const reviewId = insertResult.insertId;
 
     // อัพเดต total_reviews ของ User (นับจำนวนรีวิวทั้งหมดของ user นี้)
-   await db.promise().execute(
-  `UPDATE User SET total_reviews = (
-     SELECT COUNT(*) FROM Review WHERE User_ID = ? AND message_status = 'Posted'
-   )
-   WHERE User_ID = ?`,
-  [User_ID, User_ID]
-);
 
 
     // คำนวณค่าเฉลี่ยใหม่ของร้านอาหาร
@@ -2226,6 +2303,28 @@ await connection.query(`SET time_zone = '+07:00';`);
         Restaurant_ID,
       ]
     );
+
+    db.promise().execute(
+  `UPDATE User SET total_reviews = (
+     SELECT COUNT(*) FROM Review WHERE User_ID = ? AND message_status = 'Posted'
+   )
+   WHERE User_ID = ?`,
+  [User_ID, User_ID]
+);
+db.promise().execute(
+  `UPDATE User u
+   SET u.total_likes = (
+     SELECT IFNULL(SUM(r.total_likes), 0)
+     FROM Review r
+     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+   )
+   WHERE u.User_ID = ?`,
+  [User_ID]
+);
+
+
+
+
 
     // ถ้า AI บอกว่าไม่ปลอดภัย
     if (ai_evaluation !== 'Safe') {
@@ -2261,7 +2360,12 @@ app.get('/all_threads/:userId',checkUserStatus, async (req, res) => {
     T.User_ID,
     U.fullname, 
     U.username,
+    U.role,
+    U.status,
+    U.coins,
     U.email,
+    U.total_likes,
+    U.total_reviews,
     P.picture_url,
     T.Total_likes AS total_likes,
     (
@@ -3016,6 +3120,18 @@ const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS
        WHERE User_ID = ?`,
       [totalPostedReviews, userId]
     );
+    
+ 
+db.promise().execute(
+  `UPDATE User u
+   SET u.total_likes = (
+     SELECT IFNULL(SUM(r.total_likes), 0)
+     FROM Review r
+     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+   )
+   WHERE u.User_ID = ?`,
+  [userId]
+);
 
     // 5. Calculate new averages for the restaurant
     const [avgResult] = await connection.execute(
@@ -3164,6 +3280,17 @@ app.post('/api/reviews/reject', async (req, res) => {
       `UPDATE User SET total_reviews = ? WHERE User_ID = ?`,
       [totalPostedReviews, userId]
     );
+
+    db.promise().execute(
+  `UPDATE User u
+   SET u.total_likes = (
+     SELECT IFNULL(SUM(r.total_likes), 0)
+     FROM Review r
+     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+   )
+   WHERE u.User_ID = ?`,
+  [userId]
+);
 
     // 6. Update restaurant averages
     const [avgResult] = await connection.execute(
@@ -3787,7 +3914,7 @@ app.post('/threads/AdminManual-check/reject', async (req, res) => {
   }
 });
 app.post('/review/AdminManual-check/reject', async (req, res) => {
-  const { rewiewId, adminId, reason } = req.body;
+  const { rewiewId, adminId, reason,restaurantId } = req.body;
   
   try {
    const connection = await db.promise().getConnection();
@@ -3799,6 +3926,69 @@ app.post('/review/AdminManual-check/reject', async (req, res) => {
       'UPDATE Review SET  created_at= ?,  message_status = "Banned" WHERE Review_ID = ?',
       [now,rewiewId]
     );
+
+
+
+    // 6. Update restaurant averages
+    const [avgResult] = await connection.execute(
+      `SELECT 
+        AVG(rating_overall) AS avg_overall,
+        AVG(rating_hygiene) AS avg_hygiene,
+        AVG(rating_flavor) AS avg_flavor,
+        AVG(rating_service) AS avg_service
+       FROM Review 
+       WHERE Restaurant_ID = ? AND message_status = 'Posted'`,
+      [restaurantId]
+    );
+
+    await connection.execute(
+      `UPDATE Restaurant SET
+        rating_overall_avg = ?,
+        rating_hygiene_avg = ?,
+        rating_flavor_avg = ?,
+        rating_service_avg = ?
+       WHERE Restaurant_ID = ?`,
+      [
+        avgResult[0].avg_overall || 0,
+        avgResult[0].avg_hygiene || 0,
+        avgResult[0].avg_flavor || 0,
+        avgResult[0].avg_service || 0,
+        restaurantId
+      ]
+    );
+
+
+     // 4. Count posted reviews
+    const [countResult] = await connection.execute(
+      `SELECT COUNT(*) AS totalPostedReviews 
+       FROM Review 
+       WHERE User_ID = ? AND message_status = 'Posted'`,
+      [adminId]
+    );
+
+    const totalPostedReviews = countResult[0].totalPostedReviews;
+
+    // 5. Update user's total_reviews
+    await connection.execute(
+      `UPDATE User SET total_reviews = ? WHERE User_ID = ?`,
+      [totalPostedReviews, adminId]
+    );
+
+    db.promise().execute(
+  `UPDATE User u
+   SET u.total_likes = (
+     SELECT IFNULL(SUM(r.total_likes), 0)
+     FROM Review r
+     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+   )
+   WHERE u.User_ID = ?`,
+  [adminId]
+);
+
+
+
+
+
     
     // Update or create record in Admin_check_inappropriate_thread table
 

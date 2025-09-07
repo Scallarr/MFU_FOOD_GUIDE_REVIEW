@@ -115,6 +115,12 @@ class _RestaurantDetailPageState extends State<RestaurantDetailPage> {
               isLiked: likedNow,
               email: oldReview.email,
               ai_evaluation: oldReview.ai_evaluation,
+              User_ID: oldReview.User_ID,
+              status: oldReview.status,
+              usertotalLikes: oldReview.usertotalLikes,
+              coins: oldReview.coins,
+              role: oldReview.role,
+              total_reviews: oldReview.total_reviews,
             );
 
             restaurant!.reviews[index] = updatedReview;
