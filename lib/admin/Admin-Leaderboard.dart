@@ -98,7 +98,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/user-profile/$userId'),
+        Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -133,7 +133,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
 
     try {
       final response = await http.put(
-        Uri.parse('http://10.0.3.201:8080/leaderboard/coins/previous-month'),
+        Uri.parse('http://10.214.52.39:8080/leaderboard/coins/previous-month'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -376,7 +376,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
 
-      String url = 'http://10.0.3.201:8080/leaderboard/update';
+      String url = 'http://10.214.52.39:8080/leaderboard/update';
       if (customMonthYear != null) {
         url += '?month_year=$customMonthYear';
       }

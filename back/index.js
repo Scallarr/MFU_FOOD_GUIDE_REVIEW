@@ -483,23 +483,43 @@ app.put('/user/Active/:id', (req, res) => {
 
 app.get('/restaurants',checkUserStatus, (req, res) => {
   const sql = `
-    SELECT 
-      r.Restaurant_ID,
-      r.restaurant_name, 
-      r.location, 
-      r.operating_hours, 
-      r.phone_number, 
-      r.photos, 
-      r.rating_overall_avg, 
-      r.rating_hygiene_avg, 
-      r.rating_flavor_avg, 
-      r.rating_service_avg, 
-      r.category,
-      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID AND message_status = 'Posted') AS posted_reviews_count,
-      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID AND message_status = 'Pending') AS pending_reviews_count,
-      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID AND message_status = 'Banned') AS banned_reviews_count,
-      (SELECT COUNT(*) FROM Review WHERE Restaurant_id = r.Restaurant_ID) AS total_reviews_count
-    FROM Restaurant r
+SELECT 
+  r.Restaurant_ID,
+  r.restaurant_name, 
+  r.location, 
+  r.operating_hours, 
+  r.phone_number, 
+  r.photos, 
+  r.rating_overall_avg, 
+  r.rating_hygiene_avg, 
+  r.rating_flavor_avg, 
+  r.rating_service_avg, 
+  r.category,
+  (SELECT COUNT(*) 
+   FROM Review rev
+   JOIN User u ON rev.User_ID = u.User_ID
+   WHERE rev.Restaurant_ID = r.Restaurant_ID 
+     AND rev.message_status = 'Posted'
+     AND u.status = 'Active') AS posted_reviews_count,
+  (SELECT COUNT(*) 
+   FROM Review rev
+   JOIN User u ON rev.User_ID = u.User_ID
+   WHERE rev.Restaurant_ID = r.Restaurant_ID 
+     AND rev.message_status = 'Pending'
+     AND u.status = 'Active') AS pending_reviews_count,
+  (SELECT COUNT(*) 
+   FROM Review rev
+   JOIN User u ON rev.User_ID = u.User_ID
+   WHERE rev.Restaurant_ID = r.Restaurant_ID 
+     AND rev.message_status = 'Banned'
+     AND u.status = 'Active') AS banned_reviews_count,
+  (SELECT COUNT(*) 
+   FROM Review rev
+   JOIN User u ON rev.User_ID = u.User_ID
+   WHERE rev.Restaurant_ID = r.Restaurant_ID 
+     AND u.status = 'Active') AS total_reviews_count
+FROM Restaurant r
+
   `;
 
   db.query(sql, (err, results) => {
@@ -624,7 +644,7 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
     SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
            r.rating_service, r.comment, r.total_likes, r.created_at,
            r.message_status,r.ai_evaluation,r.User_ID,u.total_likes as User_totallikes ,u.total_reviews,u.coins,u.role,u.status, 
-           u.username, u.email, p.picture_url,
+           u.username, u.email, p.picture_url,u.status,
            EXISTS (
              SELECT 1 FROM Review_Likes rl
              WHERE rl.Review_ID = r.Review_ID AND rl.User_ID = ?
@@ -633,7 +653,7 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
     JOIN User u ON r.User_ID = u.User_ID
     LEFT JOIN user_Profile_Picture p 
       ON r.User_ID = p.User_ID AND p.is_active = 1
-    WHERE r.restaurant_id = ? AND r.message_status = 'Posted'
+    WHERE r.restaurant_id = ? AND r.message_status = 'Posted' AND u.status ='Active'
     ORDER BY r.created_at DESC
   `;
 
@@ -2277,12 +2297,16 @@ app.post('/submit_reviews', async (req, res) => {
     // คำนวณค่าเฉลี่ยใหม่ของร้านอาหาร
     const [avgRows] = await db.promise().execute(
       `SELECT 
-        AVG(rating_hygiene) AS hygiene_avg,
-        AVG(rating_flavor) AS flavor_avg,
-        AVG(rating_service) AS service_avg,
-        AVG(rating_overall) AS overall_avg
-      FROM Review
-      WHERE Restaurant_ID = ?  AND message_status = 'Posted'`,
+  AVG(r.rating_hygiene) AS hygiene_avg,
+  AVG(r.rating_flavor) AS flavor_avg,
+  AVG(r.rating_service) AS service_avg,
+  AVG(r.rating_overall) AS overall_avg
+FROM Review r
+JOIN User u ON r.User_ID = u.User_ID
+WHERE r.Restaurant_ID = ? 
+  AND r.message_status = 'Posted'
+  AND u.status = 'Active'
+`,
       [Restaurant_ID]
     );
 
@@ -2364,7 +2388,7 @@ app.get('/all_threads/:userId',checkUserStatus, async (req, res) => {
     U.status,
     U.coins,
     U.email,
-    U.total_likes,
+    U.total_likes as review_total_likes,
     U.total_reviews,
     P.picture_url,
     T.Total_likes AS total_likes,
@@ -2387,7 +2411,7 @@ JOIN User U
 LEFT JOIN user_Profile_Picture P 
   ON P.User_ID = U.User_ID 
   AND P.is_active = 1
-WHERE T.admin_decision = 'Posted'
+WHERE T.admin_decision = 'Posted' AND U.status ='Active'
 ORDER BY T.created_at DESC
 
     `, [userId]);
@@ -3913,23 +3937,27 @@ app.post('/threads/AdminManual-check/reject', async (req, res) => {
     res.status(500).json({ error: 'Failed to reject thread' });
   }
 });
+
+
+
+
 app.post('/review/AdminManual-check/reject', async (req, res) => {
-  const { rewiewId, adminId, reason,restaurantId } = req.body;
-  
+  const { rewiewId, adminId, reason, restaurantId, reviewuserID } = req.body;
+  console.log(req.body);
+
+  let connection;
   try {
-   const connection = await db.promise().getConnection();
-   const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    connection = await db.promise().getConnection();
+    const now = moment().tz("Asia/Bangkok").toDate(); // เวลาไทย
     await connection.beginTransaction();
-    
-    // Update thread status in Thread table
+
+    // 1. Update review
     await connection.execute(
-      'UPDATE Review SET  created_at= ?,  message_status = "Banned" WHERE Review_ID = ?',
-      [now,rewiewId]
+      'UPDATE Review SET created_at = ?, message_status = "Banned" WHERE Review_ID = ?',
+      [now, rewiewId]
     );
 
-
-
-    // 6. Update restaurant averages
+    // 2. Update restaurant averages
     const [avgResult] = await connection.execute(
       `SELECT 
         AVG(rating_overall) AS avg_overall,
@@ -3957,64 +3985,55 @@ app.post('/review/AdminManual-check/reject', async (req, res) => {
       ]
     );
 
-
-     // 4. Count posted reviews
+    // 3. Count posted reviews of user
     const [countResult] = await connection.execute(
       `SELECT COUNT(*) AS totalPostedReviews 
        FROM Review 
        WHERE User_ID = ? AND message_status = 'Posted'`,
-      [adminId]
+      [reviewuserID]
     );
-
     const totalPostedReviews = countResult[0].totalPostedReviews;
 
-    // 5. Update user's total_reviews
+    // 4. Update user's total_reviews
     await connection.execute(
       `UPDATE User SET total_reviews = ? WHERE User_ID = ?`,
-      [totalPostedReviews, adminId]
+      [totalPostedReviews, reviewuserID]
     );
 
-    db.promise().execute(
-  `UPDATE User u
-   SET u.total_likes = (
-     SELECT IFNULL(SUM(r.total_likes), 0)
-     FROM Review r
-     WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
-   )
-   WHERE u.User_ID = ?`,
-  [adminId]
-);
+    // 5. Update user's total_likes
+    await connection.execute(
+      `UPDATE User u
+       SET u.total_likes = (
+         SELECT IFNULL(SUM(r.total_likes), 0)
+         FROM Review r
+         WHERE r.User_ID = u.User_ID AND r.message_status = 'Posted'
+       )
+       WHERE u.User_ID = ?`,
+      [reviewuserID]
+    );
 
+    // 6. Insert into Admin_check_inappropriate_review
+    await connection.execute(
+      `INSERT INTO Admin_check_inappropriate_review 
+       (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
+       VALUES (?, ?, 'Banned', ?, ?)`,
+      [rewiewId, adminId, now, reason]
+    );
 
-
-
-
-    
-    // Update or create record in Admin_check_inappropriate_thread table
-
-    
- 
-  
-      // Create new record
-      await connection.execute(
-        `INSERT INTO Admin_check_inappropriate_review 
-         (Review_ID, Admin_ID, admin_action_taken, admin_checked_at, reason_for_taken) 
-         VALUES (?, ?, 'Banned', ?, ?)`,
-        [rewiewId, adminId, now,reason]
-      );
-   
-    
+    // ✅ Commit ก่อนส่ง response
     await connection.commit();
     connection.release();
-    
+
     res.json({ success: true, message: 'Banned Review successfully' });
   } catch (error) {
     console.error(error);
-    if (connection) await connection.rollback();
+    if (connection) {
+      await connection.rollback();
+      connection.release();
+    }
     res.status(500).json({ error: 'Failed to Banned Review' });
   }
 });
-
 
 // GET /threads-replied/pending/:threadId
 app.get('/threads-replied/pending/:threadId', async (req, res) => {
@@ -4253,6 +4272,11 @@ app.get('/api/admin_thread_history/:adminId', async (req, res) => {
         u.username as thread_author_username,
         u.fullname as thread_author_fullname,
         u.email as thread_author_email,
+        u.role as thread_author_role,
+        u.coins as thread_author_coins,
+        u.status as thread_author_status,
+        u.total_likes as thread_author_total_likes,  
+        u.total_reviews as thread_author_total_review,  
         upp.picture_url as thread_author_picture,
 
         -- แอดมินผู้แบน

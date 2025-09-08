@@ -15,7 +15,7 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
   List<dynamic> rewardHistory = [];
   bool isLoading = true;
   String error = '';
-  int totalCoins = 0;
+  String totalCoins = '';
 
   @override
   void initState() {
@@ -43,7 +43,7 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/rewards-history/$userId'),
+        Uri.parse('http://10.214.52.39:8080/rewards-history/$userId'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -53,7 +53,10 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
 
         setState(() {
           rewardHistory = data['history'] ?? [];
-          totalCoins = data['total_coins'] ?? 0;
+
+          totalCoins = NumberFormat(
+            '#,###',
+          ).format(data['total_coins'] ?? 'df');
           isLoading = false;
         });
       } else {
@@ -279,21 +282,24 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: Colors.brown,
+              color: Color.fromARGB(255, 89, 88, 88),
             ),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.monetization_on, color: Colors.brown, size: 36),
+              const Icon(
+                Icons.monetization_on,
+                color: Color.fromARGB(255, 0, 0, 0),
+                size: 36,
+              ),
               const SizedBox(width: 10),
               Text(
                 '$totalCoins',
                 style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
-                  color: Colors.brown,
                 ),
               ),
             ],
@@ -301,7 +307,10 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
           const SizedBox(height: 12),
           Text(
             'From ${rewardHistory.length} Activities',
-            style: const TextStyle(fontSize: 14, color: Colors.brown),
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color.fromARGB(255, 102, 101, 101),
+            ),
           ),
         ],
       ),
@@ -312,7 +321,8 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
     return Expanded(
       child: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFFCEBFA3),
+          color: const Color.fromARGB(255, 233, 232, 231),
+
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
@@ -321,9 +331,11 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color.fromARGB(255, 237, 224, 199),
-              Color.fromARGB(255, 254, 245, 215), // เริ่มต้น
-              Color.fromARGB(255, 238, 238, 238), // สิ้นสุด
+              const Color(0xFFF7F4EF),
+
+              const Color(0xFFF7F4EF),
+
+              const Color(0xFFF7F4EF),
             ],
           ),
         ),
@@ -462,6 +474,7 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // backgroundColor: const Color.fromARGB(255, 233, 232, 231),
       appBar: AppBar(
         title: Text(
           'Coin History',
@@ -500,8 +513,8 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF5E5C0), // สีบน
-              Color(0xFFCEBFA3), // สีล่าง
+              const Color.fromARGB(255, 233, 232, 231),
+              const Color.fromARGB(255, 233, 232, 231),
             ],
           ),
         ),

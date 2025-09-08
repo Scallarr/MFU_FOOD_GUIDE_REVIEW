@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class AdminUserManagementPage extends StatefulWidget {
   const AdminUserManagementPage({super.key});
@@ -30,6 +31,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
   Map<String, dynamic>? _selectedUser;
   bool _isLoading = false;
   bool _isInitialLoading = true;
+  int? userId;
   int _totalCoins = 0;
   bool _hasSearched = false;
   List<dynamic> _filteredAllUsers =
@@ -71,9 +73,10 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
+      final storedUserId = prefs.getInt('user_id');
 
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/user'),
+        Uri.parse('http://10.214.52.39:8080/user'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -86,6 +89,8 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
 
         if (data['success'] == true) {
           setState(() {
+            userId = storedUserId;
+
             _allUsers = data['users'] ?? [];
 
             _allUsers2 = data['counts'] ?? {}; // ตรง ๆ// Wrap the map in a list
@@ -189,7 +194,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
       final token = prefs.getString('jwt_token');
 
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/admin/search2-users?query=$query'),
+        Uri.parse('http://10.214.52.39:8080/admin/search2-users?query=$query'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -342,7 +347,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
 
       final response = await http.put(
         Uri.parse(
-          'http://10.0.3.201:8080/admin/users/${_selectedUser!['User_ID']}/ban',
+          'http://10.214.52.39:8080/admin/users/${_selectedUser!['User_ID']}/ban',
         ),
 
         headers: {
@@ -438,7 +443,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
 
       final response = await http.put(
         Uri.parse(
-          'http://10.0.3.201:8080/admin/users/${_selectedUser!['User_ID']}/unban',
+          'http://10.214.52.39:8080/admin/users/${_selectedUser!['User_ID']}/unban',
         ),
         headers: {
           'Authorization': 'Bearer $token',
@@ -563,133 +568,240 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
     );
   }
 
-  // แก้ไขเมธอด _buildUserCard เพื่อให้แสดงข้อมูลเพิ่มเติมเมื่อเลือก
-  Widget _buildUserCard(user) {
-    // แก้ไขปัญหา type conversion สำหรับ coins
-    String coinsText = '0';
-    if (user['coins'] != null) {
-      final coinsValue = user['coins'];
-      if (coinsValue is int) {
-        coinsText = coinsValue.toString();
-      } else if (coinsValue is double) {
-        coinsText = coinsValue.toInt().toString();
-      } else if (coinsValue is String) {
-        coinsText = coinsValue;
-      }
+  String formatCoins(dynamic coins) {
+    if (coins == null) return '0';
+    int value = 0;
+
+    if (coins is int) {
+      value = coins;
+    } else if (coins is double) {
+      value = coins.toInt();
+    } else if (coins is String) {
+      value = int.tryParse(coins) ?? 0;
     }
 
+    // ใช้ NumberFormat เพิ่ม comma
+    return NumberFormat('#,###').format(value);
+  }
+
+  Widget _buildUserCard(user) {
+    String coinsText = formatCoins(user['coins']);
     final isSelected =
         _selectedUser != null && _selectedUser!['User_ID'] == user['User_ID'];
 
-    return Card(
-      elevation: isSelected ? 4 : 2,
-      margin: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isSelected ? _primaryColor.withOpacity(0.1) : Colors.white,
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 22,
-          backgroundColor: _primaryColor,
-          backgroundImage:
-              user['picture_url'] != null && user['picture_url'].isNotEmpty
-              ? NetworkImage(user['picture_url'])
-              : null,
-          child: (user['picture_url'] == null || user['picture_url'].isEmpty)
-              ? Text(
-                  user['username'][0].toUpperCase(),
-                  style: TextStyle(color: Colors.white),
-                )
-              : null,
-        ),
-        title: Text(
-          user['username'],
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: isSelected ? _primaryColor : _textColor,
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: isSelected
+            ? LinearGradient(
+                colors: [_primaryColor.withOpacity(0.15), Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : LinearGradient(colors: [Colors.white, Colors.white]),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isSelected ? 0.12 : 0.05),
+            blurRadius: isSelected ? 16 : 6,
+            offset: Offset(0, isSelected ? 8 : 4),
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 4),
-            Text(
-              user['email'],
-              style: TextStyle(
-                color: (isSelected ? _primaryColor : _textColor).withOpacity(
-                  0.7,
-                ),
-                fontSize: 12,
-              ),
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: user['status'] == 'Active'
-                        ? _successColor.withOpacity(0.2)
-                        : _errorColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    user['status'],
-                    style: TextStyle(
-                      color: user['status'] == 'Active'
-                          ? _successColor
-                          : _errorColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Icon(
-                  Icons.monetization_on,
-                  size: 14,
-                  color: Colors.red.withOpacity(0.8),
-                ),
-                SizedBox(width: 2),
-                Text(
-                  coinsText,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red.withOpacity(0.8),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            if (user['ban_info'] != null && user['ban_info'].isNotEmpty)
-              SizedBox(height: 4),
-            if (user['ban_info'] != null && user['ban_info'].isNotEmpty)
-              Text(
-                user['ban_info'],
-                style: TextStyle(
-                  fontSize: 10,
-                  color: _warningColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-          ],
-        ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.7),
+            blurRadius: 6,
+            offset: Offset(-2, -2),
+            spreadRadius: 1,
+          ),
+        ],
+        border: isSelected
+            ? Border.all(color: _primaryColor.withOpacity(0.9), width: 1.5)
+            : null,
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         onTap: () {
           setState(() {
             if (_selectedUser != null &&
                 _selectedUser!['User_ID'] == user['User_ID']) {
-              _selectedUser =
-                  null; // ถ้ากดเลือก user เดิมอีกครั้ง ให้ยกเลิกการเลือก
+              _selectedUser = null;
             } else {
               _selectedUser = user;
             }
           });
         },
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: isSelected
-              ? _primaryColor
-              : _secondaryTextColor.withOpacity(0.5),
+        child: Row(
+          children: [
+            Column(
+              children: [
+                // Profile picture
+                CircleAvatar(
+                  radius: 35,
+                  backgroundColor: _primaryColor.withOpacity(0.2),
+                  backgroundImage:
+                      (user['picture_url'] != null &&
+                          user['picture_url'].isNotEmpty)
+                      ? NetworkImage(user['picture_url'])
+                      : null,
+                  child:
+                      (user['picture_url'] == null ||
+                          user['picture_url'].isEmpty)
+                      ? Text(
+                          user['username'][0].toUpperCase(),
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+            ),
+            SizedBox(width: 14),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Username
+                  Text(
+                    user['username'],
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: isSelected ? _primaryColor : _textColor,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  // Email
+                  Text(
+                    user['email'],
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _textColor.withOpacity(0.65),
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      // Status badge
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: user['status'] == 'Active'
+                              ? LinearGradient(
+                                  colors: [Colors.greenAccent, _successColor],
+                                )
+                              : LinearGradient(
+                                  colors: [Colors.redAccent, _errorColor],
+                                ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          user['status'],
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      // Coins
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.amber[700]!, Colors.amber[400]!],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.monetization_on,
+                              size: 14,
+                              color: Colors.yellow[900],
+                            ),
+                            SizedBox(width: 2),
+                            Text(
+                              coinsText,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                color: const Color.fromARGB(255, 103, 98, 94),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Ban info
+                  if (user['ban_info'] != null && user['ban_info'].isNotEmpty)
+                    SizedBox(height: 6),
+                  if (user['ban_info'] != null && user['ban_info'].isNotEmpty)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.orangeAccent.withOpacity(0.2),
+                            Colors.orangeAccent.withOpacity(0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        user['ban_info'],
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.orangeAccent[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Arrow
+            AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              child: Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: isSelected
+                    ? _primaryColor
+                    : _secondaryTextColor.withOpacity(0.6),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -706,14 +818,10 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
         height: 190,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              color.withOpacity(0.25),
-              color.withOpacity(0.1),
-              Colors.white.withOpacity(0.8),
-            ],
+            colors: [color.withOpacity(0.75), color.withOpacity(0.1)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: [0.0, 0.5, 1.0],
+            stops: [0.0, 0.5],
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
@@ -920,12 +1028,17 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFFE53935), // Deep red
-                Color(0xFFF44336), // Vibrant red
+                Color.fromARGB(255, 230, 11, 8).withOpacity(0.8), // Deep red
+                Color.fromARGB(
+                  255,
+                  205,
+                  202,
+                  202,
+                ).withOpacity(0.1), // Vibrant red
                 Color(0xFFFF5252), // Light red
               ],
               begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              end: Alignment.bottomCenter,
               stops: [0.0, 0.5, 1.0],
             ),
             borderRadius: BorderRadius.circular(28),
@@ -1032,38 +1145,36 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            color: Colors.black87,
           ),
         ),
         Container(
           margin: EdgeInsets.only(top: 24),
-          padding: EdgeInsets.symmetric(vertical: 48, horizontal: 28),
+          padding: EdgeInsets.symmetric(vertical: 40, horizontal: 30),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color.fromARGB(255, 133, 131, 131), // Deep blue
-                Color.fromARGB(255, 255, 255, 255), // Medium blue
-                Color.fromARGB(255, 147, 146, 146), // Light blue
+                Color.fromARGB(255, 40, 41, 42).withOpacity(0.9),
+                const Color.fromARGB(
+                  255,
+                  215,
+                  211,
+                  211,
+                ).withOpacity(0.8), // สดใสฟ้า
+                Color.fromARGB(255, 90, 90, 90).withOpacity(0.7),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              stops: [0.0, 0.6, 1.0],
             ),
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: const Color.fromARGB(
-                  255,
-                  222,
-                  222,
-                  223,
-                ).withOpacity(0.4),
-                blurRadius: 30,
+                color: Colors.blue.withOpacity(0.2),
+                blurRadius: 25,
                 offset: Offset(0, 12),
-                spreadRadius: 2,
               ),
               BoxShadow(
-                color: Colors.blueAccent.withOpacity(0.2),
+                color: Colors.blueAccent.withOpacity(0.1),
                 blurRadius: 50,
                 offset: Offset(0, 20),
               ),
@@ -1073,7 +1184,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(height: 12),
-              // Luxury search icon
+              // Icon Circle
               Container(
                 padding: EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -1094,7 +1205,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                       offset: Offset(-4, -4),
                     ),
                     BoxShadow(
-                      color: Colors.blue[900]!.withOpacity(0.6),
+                      color: const Color.fromARGB(
+                        255,
+                        8,
+                        8,
+                        8,
+                      )!.withOpacity(0.6),
                       blurRadius: 20,
                       offset: Offset(4, 4),
                     ),
@@ -1103,59 +1219,43 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                 child: Icon(
                   Icons.search_rounded,
                   size: 64,
-                  color: Color(0xFF0D47A1), // Deep blue
+                  color: Color.fromARGB(255, 112, 127, 149),
                 ),
               ),
               SizedBox(height: 28),
-
-              // Luxury title
+              // Title
               Text(
                 'DISCOVER USERS',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
-                  color: const Color.fromARGB(255, 0, 0, 0),
+                  color: Colors.black87,
                   letterSpacing: 1.5,
                   shadows: [
                     Shadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 6,
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 5,
                       offset: Offset(2, 2),
                     ),
                   ],
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 16),
-
-              // Elegant description
-              Text(
-                'Begin your search to explore and manage\nuser accounts efficiently.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: const Color.fromARGB(
-                    255,
-                    77,
-                    75,
-                    75,
-                  ).withOpacity(0.95),
-                  fontWeight: FontWeight.w500,
-                  height: 1.5,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
               SizedBox(height: 28),
-
-              // Premium tips card
+              // Tips card
               Container(
                 padding: EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       Colors.white.withOpacity(0.25),
-                      Colors.white.withOpacity(0.15),
-                      Colors.white.withOpacity(0.1),
+                      const Color.fromARGB(
+                        255,
+                        243,
+                        240,
+                        240,
+                      ).withOpacity(0.15),
+                      const Color.fromARGB(255, 245, 245, 245).withOpacity(0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -1172,7 +1272,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                       offset: Offset(-3, -3),
                     ),
                     BoxShadow(
-                      color: Colors.blue[900]!.withOpacity(0.2),
+                      color: const Color.fromARGB(
+                        255,
+                        235,
+                        235,
+                        235,
+                      )!.withOpacity(0.2),
                       blurRadius: 10,
                       offset: Offset(3, 3),
                     ),
@@ -1181,18 +1286,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Section header
                     Row(
                       children: [
                         Icon(
                           Icons.lightbulb_outline_rounded,
                           size: 18,
-                          color: const Color.fromARGB(
-                            255,
-                            0,
-                            0,
-                            0,
-                          ).withOpacity(0.9),
+                          color: Colors.black87.withOpacity(0.9),
                         ),
                         SizedBox(width: 8),
                         Text(
@@ -1200,7 +1299,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
-                            color: const Color.fromARGB(255, 0, 0, 0),
+                            color: Colors.black87,
                             letterSpacing: 1.3,
                           ),
                         ),
@@ -1438,7 +1537,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                                 _buildStatsCard(
                                   'Total Users',
                                   '$_totalUsersCount',
-                                  _infoColor,
+                                  Colors.blue,
                                   Icons.people_alt_rounded,
                                 ),
                                 SizedBox(width: 16),
@@ -1557,7 +1656,6 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                             ),
                             SizedBox(height: 12),
                             Container(
-                              constraints: BoxConstraints(maxHeight: 400),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
@@ -1570,6 +1668,10 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                                 ],
                               ),
                               child: ListView.builder(
+                                shrinkWrap:
+                                    true, // ให้ ListView ย่อขนาดตามเนื้อหา
+                                physics:
+                                    NeverScrollableScrollPhysics(), // ป้องกัน scroll ภายใน
                                 itemCount: _searchResults.length,
                                 itemBuilder: (context, index) {
                                   final user = _searchResults[index];
@@ -1775,16 +1877,39 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
-                          Text(
-                            _selectedUser!['email'],
-                            style: TextStyle(
-                              fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
-                              color: const Color.fromARGB(255, 233, 227, 227),
-                              fontWeight: FontWeight.w500, // ตัวหนาปานกลาง
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                          SizedBox(height: 6),
+                          _selectedUser!['User_ID'] == userId
+                              ? // เพิ่มระยะห่างเล็กน้อย
+                                Text(
+                                  _selectedUser!['email'],
+                                  style: TextStyle(
+                                    fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                    color: const Color.fromARGB(
+                                      255,
+                                      233,
+                                      227,
+                                      227,
+                                    ),
+                                    fontWeight:
+                                        FontWeight.w500, // ตัวหนาปานกลาง
+                                  ),
+                                  textAlign: TextAlign.center,
+                                )
+                              : Text(
+                                  _selectedUser!['email'],
+                                  style: TextStyle(
+                                    fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                    color: const Color.fromARGB(
+                                      255,
+                                      233,
+                                      227,
+                                      227,
+                                    ),
+                                    fontWeight:
+                                        FontWeight.w500, // ตัวหนาปานกลาง
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                         ],
                       ),
                     ),
@@ -1826,7 +1951,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                               _buildInfoChip(
                                 Icons.monetization_on_outlined,
                                 "Coins",
-                                "${_selectedUser!['coins']}",
+                                "${formatCoins(_selectedUser!['coins'])}",
                                 color: Colors.orange,
                               ),
                               if (_selectedUser!['total_likes'] != null)
@@ -1942,5 +2067,30 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
             )
           : null,
     );
+  }
+
+  String obfuscateEmail(String email) {
+    if (email.endsWith('@lamduan.mfu.ac.th')) {
+      final domain = '@lamduan.mfu.ac.th';
+      if (email.length > domain.length + 2) {
+        final prefix = email.substring(0, 2);
+        return '$prefix********$domain';
+      }
+    } else if (email.endsWith('@mfu.ac.th')) {
+      final domain = '@mfu.ac.th';
+      if (email.length > domain.length + 2) {
+        final prefix = email.substring(0, 2);
+        return '$prefix********$domain';
+      }
+    } else {
+      // สำหรับเมลปกติ
+      final atIndex = email.indexOf('@');
+      if (atIndex > 3) {
+        final prefix = email.substring(0, 3);
+        final domain = email.substring(atIndex);
+        return '$prefix********$domain';
+      }
+    }
+    return email; // กรณีอื่น ๆ
   }
 }

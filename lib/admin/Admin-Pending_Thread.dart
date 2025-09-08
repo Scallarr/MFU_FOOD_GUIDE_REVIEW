@@ -58,7 +58,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/threads/pending'),
+        Uri.parse('http://10.214.52.39:8080/threads/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -780,7 +780,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
   Future<void> _approveThread(int threadId) async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/threads/approve'),
+        Uri.parse('http://10.214.52.39:8080/threads/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,
@@ -814,7 +814,7 @@ class _PendingThreadsPageState extends State<PendingThreadsPage> {
     try {
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/threads/reject'),
+        Uri.parse('http://10.214.52.39:8080/threads/reject'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,

@@ -379,7 +379,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
     try {
       final response = await http.put(
         Uri.parse(
-          'http://10.0.3.201:8080/edit/restaurants/${widget.restaurantId}',
+          'http://10.214.52.39:8080/edit/restaurants/${widget.restaurantId}',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({

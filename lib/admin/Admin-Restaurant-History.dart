@@ -74,7 +74,7 @@ class _RestaurantReviewHistoryPageState
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/api/admin_review_history/$userId'),
+        Uri.parse('http://10.214.52.39:8080/api/admin_review_history/$userId'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -225,7 +225,7 @@ class _RestaurantReviewHistoryPageState
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/api/my_reviews/$userId'),
+        Uri.parse('http://10.214.52.39:8080/api/my_reviews/$userId'),
         headers: {'Authorization': 'Bearer $token'},
       );
 

@@ -60,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/user/login'),
+        Uri.parse('http://10.214.52.39:8080/user/login'),
         // Uri.parse('https://mfu-food-guide-review.onrender.com/user/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
         print('dg' + userPhotoUrl.toString());
         // ดึงข้อมูล user เพิ่มเติมจาก API (เช่น role, bio, etc.)
         final userInfoResponse = await http.get(
-          Uri.parse('http://10.0.3.201:8080/user/info/$userId'),
+          Uri.parse('http://10.214.52.39:8080/user/info/$userId'),
           // headers: {'Authorization': 'Bearer $token'},
         );
 

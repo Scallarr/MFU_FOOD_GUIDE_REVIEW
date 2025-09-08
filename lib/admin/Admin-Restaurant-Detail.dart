@@ -8,6 +8,7 @@ import 'package:myapp/login.dart';
 import 'package:myapp/wtite_review.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:myapp/restaurant_model.dart';
+import 'package:intl/intl.dart';
 import 'package:myapp/admin/Admin-AddMenu.dart';
 
 // import 'package:myapp/admin/Admin-Home.dart';
@@ -64,7 +65,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       final uri = Uri.parse(
-        'http://10.0.3.201:8080/restaurant/${widget.restaurantId}'
+        'http://10.214.52.39:8080/restaurant/${widget.restaurantId}'
         '${userId != null ? '?user_id=$userId' : ''}',
       );
 
@@ -249,7 +250,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
     return Container(
       width: double.infinity,
-      height: 400,
+      height: 430,
       child: ClipRRect(
         borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
         child: Stack(
@@ -306,7 +307,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     if (isProcessing) return;
     isProcessing = true;
 
-    final url = Uri.parse('http://10.0.3.201:8080/review/$reviewId/like');
+    final url = Uri.parse('http://10.214.52.39:8080/review/$reviewId/like');
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
@@ -388,7 +389,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://10.0.3.201:8080/user/info/$userId');
+      final uri = Uri.parse('http://10.214.52.39:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -423,7 +424,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
   Future<void> updateLeaderboard() async {
     try {
-      final url = Uri.parse('http://10.0.3.201:8080/leaderboard/update-auto');
+      final url = Uri.parse('http://10.214.52.39:8080/leaderboard/update-auto');
       // สมมติว่า backend ต้องการเดือนปีใน body (format 'YYYY-MM')
       // คุณอาจจะเก็บเดือนปีที่เหมาะสมไว้ในตัวแปร เช่น currentMonthYear
       final currentMonthYear = DateTime.now();
@@ -1022,7 +1023,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                               _buildInfoChip(
                                 Icons.monetization_on_outlined,
                                 "Coins",
-                                "${_selectedUser!['coins']}  ",
+                                '${formatCoins(_selectedUser!['coins'])} ',
                                 color: Colors.orange,
                               ),
                               if (_selectedUser!['total_likes'] != null)
@@ -1037,7 +1038,12 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                                   Icons.reviews_outlined,
                                   "Reviews",
                                   "${_selectedUser!['total_reviews']}",
-                                  color: Colors.blue,
+                                  color: const Color.fromARGB(
+                                    255,
+                                    183,
+                                    52,
+                                    222,
+                                  ),
                                 ),
                             ],
                           ),
@@ -1856,19 +1862,43 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                                 ),
                               ],
                             ),
-                            IconButton(
-                              padding: EdgeInsets.all(
-                                4,
-                              ), // มีระยะกด แต่ไม่เยอะเกิน
-                              constraints: BoxConstraints(),
-                              icon: Icon(
-                                Icons.report,
-                                size: 25,
-                                color: const Color.fromARGB(255, 56, 52, 52),
+                            Padding(
+                              padding: EdgeInsetsGeometry.all(14),
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.redAccent.shade200,
+                                      Colors.deepOrange.shade400,
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.redAccent.withOpacity(0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(2, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: const Icon(
+                                    Icons.report_gmailerrorred_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () => _showRejectDialog2(
+                                    review.id,
+                                    review.User_ID,
+                                  ),
+                                  tooltip:
+                                      "Report this review", // เพิ่ม tooltip เวลา hover
+                                ),
                               ),
-                              onPressed: () => _showRejectDialog2(review.id),
-                              tooltip:
-                                  "Report this review", // เพิ่ม tooltip เวลา hover
                             ),
                           ],
                         ),
@@ -1962,7 +1992,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Future<void> _deleteMenu(int menuId) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://10.0.3.201:8080/Delete/menus/$menuId'),
+        Uri.parse('http://10.214.52.39:8080/Delete/menus/$menuId'),
       );
       if (response.statusCode == 200) {
         fetchRestaurant();
@@ -1977,7 +2007,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     }
   }
 
-  Future<void> _showRejectDialog2(int reviewID) async {
+  Future<void> _showRejectDialog2(int reviewID, int reviewuserID) async {
+    print("📌 reviewID = $reviewID, User_ID = $reviewuserID"); // Debug log
     final reasonController = TextEditingController();
     return showDialog(
       context: context,
@@ -2092,7 +2123,12 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          _banThread2(reviewID, reason: reasonController.text);
+                          _banThread2(
+                            reviewID,
+                            reviewuserID,
+
+                            reason: reasonController.text,
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _dangerColor.withOpacity(0.8),
@@ -2121,17 +2157,39 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     );
   }
 
+  String formatCoins(dynamic coins) {
+    int value = 0;
+
+    if (coins != null) {
+      if (coins is int) {
+        value = coins;
+      } else if (coins is String) {
+        value = int.tryParse(coins) ?? 0;
+      }
+    }
+
+    return NumberFormat('#,###').format(value);
+  }
+
   // เพิ่มเมธอดสำหรับเรียก API แบน
-  Future<void> _banThread2(int reviewID, {String reason = ''}) async {
+  Future<void> _banThread2(
+    int reviewID,
+    int reviewuserID, {
+
+    String reason = '',
+  }) async {
     try {
       final int review_ID = reviewID;
+
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
+
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/review/AdminManual-check/reject'),
+        Uri.parse('http://10.214.52.39:8080/review/AdminManual-check/reject'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'rewiewId': review_ID,
           'adminId': userId,
+          'reviewuserID': reviewuserID,
           'reason': rejectionReason,
           'restaurantId': widget.restaurantId,
         }),
@@ -2207,6 +2265,15 @@ String obfuscateEmail(String email) {
   } else if (email.endsWith('@mfu.ac.th')) {
     final domain = '@mfu.ac.th';
     return '**********$domain';
+  } else {
+    // กรณีอื่น ๆ
+    final atIndex = email.indexOf('@');
+    if (atIndex != -1) {
+      final prefix = email.substring(0, 4);
+      final domain = email.substring(atIndex);
+      return '$prefix**********$domain';
+    }
   }
-  return email; // กรณีอื่น ๆ
+
+  return email; // ถ้า format ไม่ใช่ email
 }

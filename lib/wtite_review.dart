@@ -380,7 +380,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
 
     // --- ส่งข้อมูลไป Backend หลังจากผู้ใช้กดยืนยัน ---
     try {
-      var url = Uri.parse('http://10.0.3.201:8080/submit_reviews');
+      var url = Uri.parse('http://10.214.52.39:8080/submit_reviews');
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt('user_id');
       var response = await http.post(

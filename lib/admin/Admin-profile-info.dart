@@ -8,6 +8,7 @@ import 'package:myapp/admin/Admin-coin_History.dart';
 import 'package:myapp/admin/Admin-profile-shop.dart';
 import 'package:myapp/admin/Admin-userManagement.dart';
 import 'package:myapp/home.dart';
+import 'package:intl/intl.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,7 +57,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> fetchUserData(int userId) async {
     try {
-      final url = Uri.parse('http://10.0.3.201:8080/user-profile/$userId');
+      final url = Uri.parse('http://10.214.52.39:8080/user-profile/$userId');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -89,7 +90,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<List<Map<String, dynamic>>> fetchProfilePictures(int userId) async {
     final url = Uri.parse(
-      'http://10.0.3.201:8080/user-profile-pictures/$userId',
+      'http://10.214.52.39:8080/user-profile-pictures/$userId',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -102,7 +103,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> setActiveProfilePicture(int userId, int pictureId) async {
     final url = Uri.parse(
-      'http://10.0.3.201:8080/user-profile-pictures/set-active',
+      'http://10.214.52.39:8080/user-profile-pictures/set-active',
     );
     final response = await http.post(
       url,
@@ -124,7 +125,9 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
       return;
     }
 
-    final url = Uri.parse('http://10.0.3.201:8080/user-profile/update/$userId');
+    final url = Uri.parse(
+      'http://10.214.52.39:8080/user-profile/update/$userId',
+    );
 
     final response = await http.put(
       url,
@@ -491,6 +494,29 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
     );
   }
 
+  Widget _buildMenuTile(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+    required Widget page,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.orange[800]),
+      title: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      tileColor: const Color.fromARGB(255, 255, 255, 255),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      onTap: () async {
+        final shouldRefresh = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (context) => page),
+        );
+        if (shouldRefresh == true) loadUserIdAndFetch();
+      },
+    );
+  }
+
   @override
   void dispose() {
     usernameController.dispose();
@@ -534,6 +560,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
     final email = data['email'] ?? '';
     final pictureUrl = data['picture_url'];
     final coins = data['coins'] ?? 0;
+    final formattedCoins = NumberFormat('#,###').format(coins);
     final status = data['status'] ?? 'Active';
     final totalLikes = data['total_likes'] ?? 0;
     final totalReviews = data['total_reviews'] ?? 0;
@@ -654,180 +681,61 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                     ),
                   ),
                   const SizedBox(height: 8),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.monetization_on, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text('$coins coins'),
+                      Text('$formattedCoins'),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          220,
-                          193,
-                          149,
-                        ),
-                        foregroundColor: const Color.fromARGB(255, 94, 85, 85),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            12,
-                          ), // ปรับค่าตรงนี้ให้โค้งตามต้องการ
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 0,
-                        ), // ความสูงของปุ่ม
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfileShopAdminPage(),
-                          ),
-                        ).then((shouldRefresh) {
-                          if (shouldRefresh == true) {
-                            // รีโหลดข้อมูล หรือ setState
-                            loadUserIdAndFetch(); // หรือฟังก์ชันที่ใช้โหลดข้อมูล user
-                          }
-                        });
-                      },
-
-                      child: const Text(
-                        'Profile Shop Management',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    ),
-                  ),
-                  // 在现有的 "Profile Shop Management" 按钮下面添加这个按钮
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange[100],
-                        foregroundColor: Colors.orange[800],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () async {
-                        final shouldRefresh = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                RewardHistoryPage(), // อย่าลง const ถ้าต้อง return ค่า
-                          ),
-                        );
-
-                        if (shouldRefresh == true) {
-                          // รีโหลดข้อมูล หรือ setState
-                          loadUserIdAndFetch(); // ฟังก์ชันโหลดข้อมูล user
-                        }
-                      },
-
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.history, size: 20),
-                          SizedBox(width: 8),
-                          Text('View Coin History'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          228,
-                          215,
-                          195,
-                        ),
-                        foregroundColor: Colors.orange[800],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () async {
-                        final shouldRefresh = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AdminUserManagementPage(), // อย่าลง const ถ้าต้อง return ค่า
-                          ),
-                        );
-
-                        if (shouldRefresh == true) {
-                          // รีโหลดข้อมูล หรือ setState
-                          loadUserIdAndFetch(); // ฟังก์ชันโหลดข้อมูล user
-                        }
-                      },
-
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.history, size: 20),
-                          SizedBox(width: 8),
-                          Text('User Management'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red[100],
-                        foregroundColor: Colors.red[800],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      onPressed: () async {
-                        final shouldRefresh = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AdminCoinManagementPage(), // อย่าลง const ถ้าต้อง return ค่า
-                          ),
-                        );
-
-                        if (shouldRefresh == true) {
-                          // รีโหลดข้อมูล หรือ setState
-                          loadUserIdAndFetch(); // ฟังก์ชันโหลดข้อมูล user
-                        }
-                      },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.admin_panel_settings, size: 20),
-                          SizedBox(width: 8),
-                          Text('Admin Coin Management'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatCard(Icons.thumb_up, 'Likes', totalLikes),
-                      const SizedBox(width: 16),
+                      _buildStatCard(
+                        Icons.thumb_up,
+                        'Likes',
+                        totalLikes,
+                        const Color.fromARGB(255, 152, 127, 127),
+                      ),
                       _buildStatCard(
                         Icons.rate_review,
                         'Reviews',
                         totalReviews,
+                        const Color.fromARGB(255, 86, 109, 147),
+                      ),
+                    ],
+                  ),
+
+                  ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.store_mall_directory,
+                        text: 'Profile Shop Management',
+                        page: ProfileShopAdminPage(),
+                      ),
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.history,
+                        text: 'View Coin History',
+                        page: RewardHistoryPage(),
+                      ),
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.people,
+                        text: 'User Management',
+                        page: AdminUserManagementPage(),
+                      ),
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.monetization_on,
+                        text: 'Admin Coin Management',
+                        page: AdminCoinManagementPage(),
                       ),
                     ],
                   ),
@@ -930,31 +838,71 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
   }
 }
 
-Widget _buildStatCard(IconData icon, String label, int value) {
+Widget _buildStatCard(IconData icon, String label, int value, Color color) {
+  // ฟอร์แมตตัวเลขมี comma
+  final formattedValue = NumberFormat('#,###').format(value);
+
   return Expanded(
-    child: Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 10,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: icon == Icons.thumb_up ? Colors.red : Colors.blue,
-              size: 32,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$value',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Colors.black54)),
-          ],
+    child: Container(
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.5), color.withOpacity(0.3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color.fromARGB(255, 28, 28, 28).withOpacity(0.05),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.4),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 32,
+              color: const Color.fromARGB(255, 0, 0, 0),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            formattedValue,
+            style: const TextStyle(
+              fontSize: 28,
+
+              color: Color.fromARGB(255, 255, 255, 255),
+              shadows: [],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color.fromARGB(255, 255, 255, 255),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     ),
   );

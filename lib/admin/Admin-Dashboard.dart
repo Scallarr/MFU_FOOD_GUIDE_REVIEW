@@ -63,7 +63,7 @@ class _DashboardPageAdminState extends State<DashboardAdmin> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/user-profile/$userId'),
+        Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -83,7 +83,7 @@ class _DashboardPageAdminState extends State<DashboardAdmin> {
   Future<void> fetchRestaurants() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/restaurants'),
+        Uri.parse('http://10.214.52.39:8080/restaurants'),
       );
 
       if (response.statusCode == 200) {

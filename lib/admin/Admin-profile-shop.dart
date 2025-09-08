@@ -5,6 +5,7 @@ import 'package:myapp/admin/Admin-Editprofile-picture.dart';
 import 'package:myapp/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class ProfileShopAdminPage extends StatefulWidget {
   const ProfileShopAdminPage({Key? key}) : super(key: key);
@@ -18,6 +19,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
   bool isLoading = true;
   String errorMsg = "";
   int currentCoins = 1250;
+  String currentCoins2 = '';
   int? userId;
 
   @override
@@ -46,7 +48,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     final userId = prefs.getInt('user_id');
     final token = prefs.getString('jwt_token');
     print(userId);
-    final url = Uri.parse('http://10.0.3.201:8080/profile-exchange/$userId');
+    final url = Uri.parse('http://10.214.52.39:8080/profile-exchange/$userId');
 
     try {
       final response = await http.get(
@@ -57,7 +59,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
         final List<dynamic> data = json.decode(response.body);
 
         if (data.isNotEmpty) {
-          int userCoinsFromApi = data[0]['user_coins'] ?? 0;
+          print(data);
 
           // เรียงลำดับโดยให้โปรไฟล์ที่ยังไม่ซื้อแสดงก่อน
           data.sort((a, b) {
@@ -70,7 +72,9 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
           });
 
           setState(() {
-            currentCoins = userCoinsFromApi;
+            int userCoinsFromApi = data[0]['user_coins'] ?? 0;
+            currentCoins2 = NumberFormat('#,###').format(userCoinsFromApi);
+
             profiles = data
                 .map(
                   (item) => {
@@ -222,7 +226,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
 
     if (confirmed != true) return;
 
-    final url = Uri.parse('http://10.0.3.201:8080/delete_profile/$profileId');
+    final url = Uri.parse('http://10.214.52.39:8080/delete_profile/$profileId');
 
     try {
       final response = await http.delete(url);
@@ -254,7 +258,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     }
 
     final url = Uri.parse(
-      'http://10.0.3.201:8080/purchase_profile',
+      'http://10.214.52.39:8080/purchase_profile',
     ); // เปลี่ยน URL
 
     final body = jsonEncode({
@@ -635,7 +639,9 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
 
   Future<void> _deleteProfile(int profileId) async {
     try {
-      final url = Uri.parse('http://10.0.3.201:8080/delete_profile/$profileId');
+      final url = Uri.parse(
+        'http://10.214.52.39:8080/delete_profile/$profileId',
+      );
 
       final response = await http.delete(url);
 
@@ -713,17 +719,24 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
                 child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(30),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.black),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.amber[100],
+                        borderRadius: BorderRadius.circular(24),
+                        gradient: LinearGradient(
+                          colors: [
+                            Color.fromARGB(255, 115, 115, 115),
+                            Color.fromARGB(255, 255, 255, 255), // เริ่มต้น
+                            Color.fromARGB(255, 175, 175, 175),
+                          ], // สิ้นสุด
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.2),
-                            spreadRadius: 2,
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
                           ),
                         ],
                       ),
@@ -737,7 +750,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
                               const Icon(Icons.monetization_on, size: 36),
                               const SizedBox(width: 8),
                               Text(
-                                currentCoins.toString(),
+                                currentCoins2.toString(),
                                 style: const TextStyle(
                                   fontSize: 36,
                                   fontWeight: FontWeight.bold,

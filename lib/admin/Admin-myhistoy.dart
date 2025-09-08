@@ -18,6 +18,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   List<dynamic> _myThreads = [];
   List<dynamic> _myReplies = [];
   bool _isLoading = true;
+  Map<String, dynamic>? _selectedUser;
 
   // Colors
   final Color _primaryColor = Color(0xFF4285F4);
@@ -76,7 +77,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchThreadApprovalHistory() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/api/admin_thread_history/$userId'),
+        Uri.parse('http://10.214.52.39:8080/api/admin_thread_history/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -94,7 +95,9 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     final Admin = prefs.getInt('user_id');
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/api/my_admin_thread_replies/$Admin'),
+        Uri.parse(
+          'http://10.214.52.39:8080/api/my_admin_thread_replies/$Admin',
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -157,10 +160,152 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     }
   }
 
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    final baseColor = color ?? Colors.blue;
+
+    return Container(
+      width: 120, // ให้ขนาดเท่ากัน
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withOpacity(0.95),
+            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: baseColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 3, 3, 3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color.fromARGB(255, 220, 216, 216),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildUserBanner(String? imageUrl) {
+    final placeholder =
+        "https://via.placeholder.com/400x200.png?text=No+Image"; // fallback
+
+    return Container(
+      width: double.infinity,
+      height: 320,
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              (imageUrl != null && imageUrl.isNotEmpty)
+                  ? imageUrl
+                  : placeholder,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: Colors.grey[600],
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String obfuscateEmail(String email) {
+    if (email.endsWith('@lamduan.mfu.ac.th')) {
+      final domain = '@lamduan.mfu.ac.th';
+      if (email.length > domain.length + 2) {
+        final prefix = email.substring(0, 2);
+        return '$prefix********$domain';
+      }
+    } else if (email.endsWith('@mfu.ac.th')) {
+      final domain = '@mfu.ac.th';
+      return '**********$domain';
+    } else {
+      final domain = '@gmail.com';
+      return '**********$domain';
+    }
+
+    return email; // กรณีอื่น ๆ
+  }
+
   Future<void> _fetchMyThreads() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/api/my_threads/$userId'),
+        Uri.parse('http://10.214.52.39:8080/api/my_threads/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -213,7 +358,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchMyReplies() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/api/my_thread_replies/$userId'),
+        Uri.parse('http://10.214.52.39:8080/api/my_thread_replies/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -300,6 +445,380 @@ class _MyHistoryPageState extends State<MyHistoryPage>
                 _buildMyReplies(),
               ],
             ),
+      bottomSheet: _selectedUser != null
+          ? GestureDetector(
+              // onVerticalDragUpdate: (details) {
+              //   // ถ้าเลื่อนลงมากกว่า 50 pixels ให้ปิด
+              //   if (details.delta.dy > 10) {
+              //     setState(() {
+              //       _selectedUser = null;
+              //     });
+              //   }
+              // },
+              onTap: () {
+                // ถ้าคลิกนอกเนื้อหาให้ปิด
+                // setState(() {
+                //   _selectedUser = null;
+                // });
+              },
+              child: Container(
+                padding: EdgeInsets.only(),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                      const Color.fromARGB(255, 136, 133, 133), // เทาอ่อนด้านบน
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                    ],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: Offset(0, -6),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ส่วนหัว
+
+                      // Container สำหรับ Banner และ Avatar ที่ซ้อนกัน
+                      Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Banner
+                          Container(
+                            margin: EdgeInsets.only(
+                              bottom: 40,
+                            ), // ระยะห่างสำหรับ Avatar
+                            child: buildUserBanner(
+                              _selectedUser?['thread_author_picture'],
+                            ),
+                          ),
+
+                          // Avatar (วางซ้อนลงบน Banner)
+                          Positioned(
+                            bottom: 0, // ทำให้ Avatar ยื่นออกมาจาก Banner
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.blue[100],
+                                backgroundImage:
+                                    (_selectedUser!['thread_author_picture'] !=
+                                            null &&
+                                        _selectedUser!['thread_author_picture']
+                                            .isNotEmpty)
+                                    ? NetworkImage(
+                                        _selectedUser!['thread_author_picture'],
+                                      )
+                                    : null,
+                                child:
+                                    (_selectedUser!['thread_author_picture'] ==
+                                            null ||
+                                        _selectedUser!['thread_author_picture']
+                                            .isEmpty)
+                                    ? Text(
+                                        _selectedUser!['thread_author_username'][0]
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[800],
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded, size: 40),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    237,
+                                    235,
+                                    235,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedUser = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: 290,
+                            right: -60,
+                            child: Icon(
+                              Icons.lock_outlined,
+                              size: 120,
+                              color: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ).withOpacity(0.1),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -550,
+                            left: 40,
+                            child: Icon(
+                              Icons.group,
+                              size: 340,
+                              color: const Color.fromARGB(
+                                255,
+                                9,
+                                9,
+                                9,
+                              ).withOpacity(0.4),
+                            ),
+                          ),
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedUser = null;
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(
+                                  8,
+                                ), // ทำให้ Icon มีพื้นที่รอบ ๆ
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.redAccent.shade100,
+                                      Colors.red.shade700,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // ชื่อและ email (ลดระยะห่างจาก Avatar)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: 7,
+                          bottom: 16,
+                        ), // ลดจาก 60 เป็น 50
+                        child: Column(
+                          children: [
+                            Text(
+                              _selectedUser!['thread_author_username'],
+                              style: TextStyle(
+                                fontSize: 22, // เพิ่มขนาดฟอนต์
+                                fontWeight: FontWeight.w800, // ตัวหนากว่าเดิม
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
+                            (_selectedUser!['thread_author_id'] == userId)
+                                ? Text(
+                                    (_selectedUser!['thread_author_email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : Text(
+                                    obfuscateEmail(
+                                      _selectedUser!['thread_author_email'],
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsetsGeometry.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ชิปข้อมูล
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _buildInfoChip(
+                                  Icons.badge_outlined,
+                                  "User ID",
+                                  "${_selectedUser!['thread_author_id']}",
+                                  color: Colors.blue,
+                                ),
+                                if (_selectedUser!['thread_author_role'] !=
+                                        null &&
+                                    _selectedUser!['thread_author_role']
+                                        .isNotEmpty)
+                                  _buildInfoChip(
+                                    Icons.manage_accounts,
+                                    "Role",
+                                    "${_selectedUser!['thread_author_role']}",
+                                    color: Colors.teal,
+                                  ),
+                                _buildInfoChip(
+                                  _selectedUser!['thread_author_username'] ==
+                                          "Active"
+                                      ? Icons.verified_user_outlined
+                                      : Icons.block_outlined,
+                                  "Status",
+                                  _selectedUser!['thread_author_status'],
+                                  color:
+                                      _selectedUser!['thread_author_status'] ==
+                                          "Active"
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                _buildInfoChip(
+                                  Icons.monetization_on_outlined,
+                                  "Coins",
+                                  "${_selectedUser!['thread_author_coins']}",
+                                  color: Colors.orange,
+                                ),
+                                if (_selectedUser!['thread_author_total_likes'] !=
+                                    null)
+                                  _buildInfoChip(
+                                    Icons.favorite_outline,
+                                    "Likes",
+                                    "${_selectedUser!['thread_author_total_likes']}",
+                                    color: Colors.pink,
+                                  ),
+                                if (_selectedUser!['thread_author_total_review'] !=
+                                    null)
+                                  _buildInfoChip(
+                                    Icons.reviews_outlined,
+                                    "Reviews",
+                                    "${_selectedUser!['thread_author_total_review']}",
+                                    color: const Color.fromARGB(
+                                      255,
+                                      183,
+                                      52,
+                                      222,
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            // if (_selectedUser!['ban_info'] != null &&
+                            //     _selectedUser!['ban_info'].isNotEmpty) ...[
+                            //   SizedBox(height: 16),
+                            //   Container(
+                            //     padding: EdgeInsets.all(16),
+                            //     decoration: BoxDecoration(
+                            //       color: Colors.orange[50],
+                            //       borderRadius: BorderRadius.circular(12),
+                            //       border: Border.all(
+                            //         color: Colors.orange[200]!,
+                            //       ),
+                            //     ),
+                            //     child: Row(
+                            //       children: [
+                            //         Icon(
+                            //           Icons.warning_amber_rounded,
+                            //           color: Colors.orange[700],
+                            //         ),
+                            //         SizedBox(width: 12),
+                            //         Expanded(
+                            //           child: Text(
+                            //             "Ban Info: ${_selectedUser!['ban_info']}",
+                            //             style: TextStyle(
+                            //               fontSize: 14,
+                            //               color: Colors.orange[800],
+                            //               fontWeight: FontWeight.w500,
+                            //             ),
+                            //           ),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ],
+                            SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -441,362 +960,376 @@ class _MyHistoryPageState extends State<MyHistoryPage>
         statusIcon = Icons.access_time;
     }
 
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Container(
-          margin: EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 15,
-                offset: Offset(0, 5),
-              ),
-            ],
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            offset: Offset(0, 5),
           ),
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
-            ),
-            color: _cardColor,
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+        ),
+        color: _cardColor,
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      // Author Avatar
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _primaryColor.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                        child: ClipOval(
-                          child: item['thread_author_picture'] != null
-                              ? Image.network(
-                                  item['thread_author_picture'],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: _primaryColor.withOpacity(0.1),
-                                      child: Icon(
-                                        Icons.person,
-                                        color: _primaryColor,
-                                        size: 20,
-                                      ),
-                                    );
-                                  },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return Center(
-                                          child: CircularProgressIndicator(
-                                            value:
-                                                loadingProgress
-                                                        .expectedTotalBytes !=
-                                                    null
-                                                ? loadingProgress
-                                                          .cumulativeBytesLoaded /
-                                                      loadingProgress
-                                                          .expectedTotalBytes!
-                                                : null,
-                                            strokeWidth: 2,
-                                            color: _primaryColor,
-                                          ),
-                                        );
-                                      },
-                                )
-                              : Container(
-                                  color: _primaryColor.withOpacity(0.1),
-                                  child: Icon(
-                                    Icons.person,
-                                    color: _primaryColor,
-                                    size: 20,
-                                  ),
-                                ),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Author: ${item['thread_author_username'] ?? 'Unknown User'}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _textColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              _formatDate(item['admin_checked_at']),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: _secondaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ), // Header with status and date
-                      Row(
-                        children: [
-                          // Enhanced status chip with icon
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: statusColor.withOpacity(0.4),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(statusIcon, size: 16, color: statusColor),
-                                SizedBox(width: 6),
-                                Text(
-                                  statusText,
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 10),
-                  Divider(
-                    color: const Color.fromARGB(255, 226, 225, 225),
-                    thickness: 1,
-                  ),
-
-                  SizedBox(height: 10),
-                  // Thread message with improved background and border
+                  // Author Avatar
                   Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(16),
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      item['thread_message'] ?? 'No message',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: _textColor,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-
-                  // Author information
-                  SizedBox(height: 16),
-
-                  // Enhanced status details container
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: containerColor,
-                      borderRadius: BorderRadius.circular(16),
+                      shape: BoxShape.circle,
                       border: Border.all(
-                        color: statusColor.withOpacity(0.3),
-                        width: 1.5,
+                        color: _primaryColor.withOpacity(0.3),
+                        width: 2,
                       ),
                     ),
+                    child: GestureDetector(
+                      onTap: () {
+                        try {
+                          if (item['thread_author_id'] == null) {
+                            print('User ID is null');
+                            return;
+                          }
+
+                          setState(() {
+                            if (_selectedUser != null &&
+                                _selectedUser!['User_ID'] ==
+                                    item['thread_author_id']) {
+                              _selectedUser = null;
+                            } else {
+                              _selectedUser = item;
+                              print('Bottom sheet should show now');
+                              print(_selectedUser);
+                            }
+                          });
+                        } catch (e) {
+                          print('Error showing bottom sheet: $e');
+                        }
+                      },
+                      child: ClipOval(
+                        child: item['thread_author_picture'] != null
+                            ? Image.network(
+                                item['thread_author_picture'],
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: _primaryColor.withOpacity(0.1),
+                                    child: Icon(
+                                      Icons.person,
+                                      color: _primaryColor,
+                                      size: 20,
+                                    ),
+                                  );
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                          strokeWidth: 2,
+                                          color: _primaryColor,
+                                        ),
+                                      );
+                                    },
+                              )
+                            : Container(
+                                color: _primaryColor.withOpacity(0.1),
+                                child: Icon(
+                                  Icons.person,
+                                  color: _primaryColor,
+                                  size: 20,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Text(
+                          'Author: ${item['thread_author_username'] ?? 'Unknown User'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _textColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          _formatDate(item['admin_checked_at']),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _secondaryTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ), // Header with status and date
+                  Row(
+                    children: [
+                      // Enhanced status chip with icon
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: statusColor.withOpacity(0.4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    statusIcon,
-                                    size: 18,
-                                    color: statusColor,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Approval Details',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: statusColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                isExpanded
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
+                            Icon(statusIcon, size: 16, color: statusColor),
+                            SizedBox(width: 6),
+                            Text(
+                              statusText,
+                              style: TextStyle(
                                 color: statusColor,
-                                size: 22,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  isExpanded = !isExpanded;
-                                });
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(),
                             ),
                           ],
                         ),
-
-                        if (isExpanded) ...[
-                          SizedBox(height: 12),
-                          Divider(
-                            color: statusColor.withOpacity(0.2),
-                            height: 1,
-                          ),
-                          SizedBox(height: 12),
-
-                          // Action details
-                          if (action == 'Banned') ...[
-                            // Admin information
-                            _buildEnhancedInfoRow(
-                              'Thread ID',
-                              'ID ${item['Thread_ID']}',
-                              Icons.forum,
-                              _dangerColor,
-                            ),
-                            _buildEnhancedInfoRow(
-                              'Author by',
-                              item['thread_author_username'] ?? 'Unknown Admin',
-                              Icons.admin_panel_settings,
-                              _dangerColor,
-                            ),
-                            if (item['admin_username'] != null)
-                              _buildEnhancedInfoRow(
-                                'Admin Action',
-                                item['admin_username'],
-                                Icons.person,
-                                _dangerColor,
-                              ),
-                            if (item['reason_for_taken'] != null)
-                              _buildEnhancedInfoRow(
-                                'Reason for Banned',
-                                item['reason_for_taken'],
-                                Icons.info_outline,
-                                _dangerColor,
-                              ), // Timestamp
-                            if (item['admin_checked_at'] != null)
-                              _buildEnhancedInfoRow(
-                                'Reviewed at',
-                                _formatDate(item['admin_checked_at']),
-                                Icons.calendar_today,
-                                _dangerColor,
-                              ),
-                          ] else if (action == 'Safe') ...[
-                            // Admin information
-                            _buildEnhancedInfoRow(
-                              'Thread ID',
-                              'ID ${item['Thread_ID']}',
-                              Icons.forum,
-                              _successColor,
-                            ),
-                            _buildEnhancedInfoRow(
-                              'Author by',
-                              item['thread_author_username'] ?? 'Unknown Admin',
-                              Icons.admin_panel_settings,
-                              _successColor,
-                            ),
-                            if (item['admin_username'] != null)
-                              _buildEnhancedInfoRow(
-                                'Admin Action',
-                                item['admin_username'],
-                                Icons.person,
-                                _successColor,
-                              ),
-                            _buildEnhancedInfoRow(
-                              'Reason for Approved',
-                              item['reason_for_taken'] ??
-                                  'Not Found Inappropriate Language',
-                              Icons.info_outline,
-                              _successColor,
-                            ), // Timestamp
-                            if (item['admin_checked_at'] != null)
-                              _buildEnhancedInfoRow(
-                                'Reviewed at',
-                                _formatDate(item['admin_checked_at']),
-                                Icons.calendar_today,
-                                _successColor,
-                              ),
-                          ],
-
-                          // ใช้ใน widget
-                          _buildEnhancedInfoRow(
-                            'Current Threads Status',
-                            (item['admin_decision'] == 'Safe')
-                                ? 'Posted'
-                                : item['admin_decision'],
-                            getThreadStatusIcon(item['admin_decision']),
-                            item['admin_decision'] == 'Posted'
-                                ? _successColor
-                                : _dangerColor,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      _buildMetricChipWithIcon(
-                        Icons.favorite_outline,
-                        '${item['Total_likes'] ?? 20}',
-                        _getBackgroundColor(item['admin_action_taken']),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
+
+              SizedBox(height: 10),
+              Divider(
+                color: const Color.fromARGB(255, 226, 225, 225),
+                thickness: 1,
+              ),
+
+              SizedBox(height: 10),
+              // Thread message with improved background and border
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Color(0xFFE8EAED), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  item['thread_message'] ?? 'No message',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: _textColor,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // Author information
+              SizedBox(height: 16),
+
+              // Enhanced status details container
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: containerColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: statusColor.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                statusIcon,
+                                size: 18,
+                                color: statusColor,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Text(
+                              'Approval Details',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            isExpanded ? Icons.expand_less : Icons.expand_more,
+                            color: statusColor,
+                            size: 22,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isExpanded = !isExpanded;
+                            });
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                        ),
+                      ],
+                    ),
+
+                    if (isExpanded) ...[
+                      SizedBox(height: 12),
+                      Divider(color: statusColor.withOpacity(0.2), height: 1),
+                      SizedBox(height: 12),
+
+                      // Action details
+                      if (action == 'Banned') ...[
+                        // Admin information
+                        _buildEnhancedInfoRow(
+                          'Thread ID',
+                          'ID ${item['Thread_ID']}',
+                          Icons.forum,
+                          _dangerColor,
+                        ),
+                        _buildEnhancedInfoRow(
+                          'Author by',
+                          item['thread_author_username'] ?? 'Unknown Admin',
+                          Icons.admin_panel_settings,
+                          _dangerColor,
+                        ),
+                        if (item['admin_username'] != null)
+                          _buildEnhancedInfoRow(
+                            'Admin Action',
+                            item['admin_username'],
+                            Icons.person,
+                            _dangerColor,
+                          ),
+                        if (item['reason_for_taken'] != null)
+                          _buildEnhancedInfoRow(
+                            'Reason for Banned',
+                            item['reason_for_taken'],
+                            Icons.info_outline,
+                            _dangerColor,
+                          ), // Timestamp
+                        if (item['admin_checked_at'] != null)
+                          _buildEnhancedInfoRow(
+                            'Reviewed at',
+                            _formatDate(item['admin_checked_at']),
+                            Icons.calendar_today,
+                            _dangerColor,
+                          ),
+                      ] else if (action == 'Safe') ...[
+                        // Admin information
+                        _buildEnhancedInfoRow(
+                          'Thread ID',
+                          'ID ${item['Thread_ID']}',
+                          Icons.forum,
+                          _successColor,
+                        ),
+                        _buildEnhancedInfoRow(
+                          'Author by',
+                          item['thread_author_username'] ?? 'Unknown Admin',
+                          Icons.admin_panel_settings,
+                          _successColor,
+                        ),
+                        if (item['admin_username'] != null)
+                          _buildEnhancedInfoRow(
+                            'Admin Action',
+                            item['admin_username'],
+                            Icons.person,
+                            _successColor,
+                          ),
+                        _buildEnhancedInfoRow(
+                          'Reason for Approved',
+                          item['reason_for_taken'] ??
+                              'Not Found Inappropriate Language',
+                          Icons.info_outline,
+                          _successColor,
+                        ), // Timestamp
+                        if (item['admin_checked_at'] != null)
+                          _buildEnhancedInfoRow(
+                            'Reviewed at',
+                            _formatDate(item['admin_checked_at']),
+                            Icons.calendar_today,
+                            _successColor,
+                          ),
+                      ],
+
+                      // ใช้ใน widget
+                      _buildEnhancedInfoRow(
+                        'Current Threads Status',
+                        (item['admin_decision'] == 'Safe')
+                            ? 'Posted'
+                            : item['admin_decision'],
+                        getThreadStatusIcon(item['admin_decision']),
+                        item['admin_decision'] == 'Posted'
+                            ? _successColor
+                            : _dangerColor,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _buildMetricChipWithIcon(
+                    Icons.favorite_outline,
+                    '${item['Total_likes'] ?? 20}',
+                    _getBackgroundColor(item['admin_action_taken']),
+                  ),
+                ],
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 

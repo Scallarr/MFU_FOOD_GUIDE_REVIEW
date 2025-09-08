@@ -10,6 +10,7 @@ import 'package:myapp/admin/Admin-Pending_Thread.dart';
 import 'package:myapp/admin/Admin-Thread-Reply.dart';
 import 'package:myapp/admin/Admin-myhistoy.dart';
 import 'package:myapp/admin/Admin-pendingThreadsReplied.dart';
+import 'package:intl/intl.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
@@ -59,7 +60,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchPendingThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/threads/pending'),
+        Uri.parse('http://10.214.52.39:8080/threads/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -84,7 +85,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchPendingRepliedThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/threads-replied/pending'),
+        Uri.parse('http://10.214.52.39:8080/threads-replied/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -138,7 +139,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/user-profile/$userId'),
+        Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -310,7 +311,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/threads/reject'),
+        Uri.parse('http://10.214.52.39:8080/threads/reject'),
         headers: {'Content-Type': 'application/json'},
         // headers: {'Authorization': 'Bearer $token'},
         body: json.encode({
@@ -339,7 +340,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://10.0.3.201:8080/user/info/$userId');
+      final uri = Uri.parse('http://10.214.52.39:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -359,11 +360,15 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
             'total_likes': userData['total_likes'] ?? 0,
             'total_reviews': userData['total_reviews'] ?? 0,
             'coins': userData['coins'] ?? 0,
+            'formattedCoins': NumberFormat(
+              '#,###',
+            ).format(int.tryParse(userData['coins'].toString()) ?? 0),
             'status': userData['status'] ?? '',
             'picture_url': userData['picture_url'] ?? '',
             'role': userData['role'] ?? '',
           };
         });
+        print(' Udfdfdfpgfgplfgpfplg $_selectedUser');
       } else {
         print('Failed to fetch user info. Status code: ${response.statusCode}');
       }
@@ -527,7 +532,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/threads/AdminManual-check/reject'),
+        Uri.parse('http://10.214.52.39:8080/threads/AdminManual-check/reject'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'threadId': threadId,
@@ -556,13 +561,24 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     final token = prefs.getString('jwt_token');
     if (userId == null) return;
     final response = await http.get(
-      Uri.parse('http://10.0.3.201:8080/all_threads/$userId'),
+      Uri.parse('http://10.214.52.39:8080/all_threads/$userId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
       setState(() {
         threads = json.decode(response.body);
+        for (var thread in threads) {
+          final rawCoins = thread['coins'] ?? 0;
+
+          // แปลงเป็น int เผื่อเป็น string
+          final coins = rawCoins is int
+              ? rawCoins
+              : int.tryParse(rawCoins.toString()) ?? 0;
+
+          // เพิ่ม key ใหม่ formattedCoins
+          thread['formattedCoins'] = NumberFormat('#,###').format(coins);
+        }
       });
       print('f');
       print(threads);
@@ -655,7 +671,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
     final response = await http.post(
-      Uri.parse('http://10.0.3.201:8080/like_thread'),
+      Uri.parse('http://10.214.52.39:8080/like_thread'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'User_ID': userId,
@@ -676,7 +692,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.3.201:8080/user_profile_picture/$userId'),
+        Uri.parse('http://10.214.52.39:8080/user_profile_picture/$userId'),
       );
       setState(() => isSending = true);
       if (response.statusCode == 200) {
@@ -698,7 +714,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     try {
       setState(() => isSending = true);
       final response = await http.post(
-        Uri.parse('http://10.0.3.201:8080/create_thread'),
+        Uri.parse('http://10.214.52.39:8080/create_thread'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'User_ID': userId, 'message': message}),
       );
@@ -1084,8 +1100,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color.fromARGB(255, 233, 225, 210),
-                    Color(0xFFF7F4EF),
+                    Color.fromARGB(255, 244, 242, 238),
+                    Color.fromARGB(255, 255, 255, 255),
                     Color(0xFFF7F4EF),
                   ],
                 ),
@@ -1490,8 +1506,12 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                   SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final thread = filteredThreads[index];
-                      print(thread);
+
                       final likedByUser = thread['is_liked'] == 1;
+                      final coins = thread['coins'] ?? 0;
+                      final formattedCoins = NumberFormat(
+                        '#,###',
+                      ).format(coins);
 
                       return InkWell(
                         onTap: () async {
@@ -2108,15 +2128,37 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                               textAlign: TextAlign.center,
                             ),
                             SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
-                            Text(
-                              obfuscateEmail(_selectedUser!['email']),
-                              style: TextStyle(
-                                fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
-                                color: const Color.fromARGB(255, 222, 220, 220),
-                                fontWeight: FontWeight.w500, // ตัวหนาปานกลาง
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            (_selectedUser!['User_ID'] == userId)
+                                ? Text(
+                                    (_selectedUser!['email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : Text(
+                                    obfuscateEmail(_selectedUser!['email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                           ],
                         ),
                       ),
@@ -2158,14 +2200,15 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                 _buildInfoChip(
                                   Icons.monetization_on_outlined,
                                   "Coins",
-                                  "${_selectedUser!['coins']}",
+                                  "${_selectedUser!['formattedCoins']}",
                                   color: Colors.orange,
                                 ),
-                                if (_selectedUser!['total_likes'] != null)
+                                if (_selectedUser!['review_total_likes'] !=
+                                    null)
                                   _buildInfoChip(
                                     Icons.favorite_outline,
                                     "Likes",
-                                    "${_selectedUser!['total_likes']}",
+                                    "${_selectedUser!['review_total_likes']}",
                                     color: Colors.pink,
                                   ),
                                 if (_selectedUser!['total_reviews'] != null)
@@ -2173,7 +2216,12 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                     Icons.reviews_outlined,
                                     "Reviews",
                                     "${_selectedUser!['total_reviews']}",
-                                    color: Colors.blue,
+                                    color: const Color.fromARGB(
+                                      255,
+                                      183,
+                                      52,
+                                      222,
+                                    ),
                                   ),
                               ],
                             ),
