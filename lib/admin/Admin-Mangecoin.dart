@@ -60,7 +60,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
       });
 
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/admin/search-users?query=$query'),
+        Uri.parse('http://172.22.173.39:8080/admin/search-users?query=$query'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -79,7 +79,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://10.214.52.39:8080/user/info/$userId');
+      final uri = Uri.parse('http://172.22.173.39:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -117,21 +117,20 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
   }
 
   Future<void> _manageCoins() async {
-    if (_selectedUser == null) {
+    final selectedUser = _selectedUser;
+    final coinsText = _coinsController.text;
+    final reasonText = _reasonController.text;
+
+    if (selectedUser == null) {
       _showError('Please select a user');
       return;
     }
 
-    final coinsAmount = int.tryParse(_coinsController.text);
+    final coinsAmount = int.tryParse(coinsText ?? '');
     if (coinsAmount == null || coinsAmount <= 0) {
       _showError('Please enter a valid coins amount');
       return;
     }
-
-    // if (_reasonController.text.isEmpty) {
-    //   _showError('Please enter a reason');
-    //   return;
-    // }
 
     setState(() {
       _isLoading = true;
@@ -139,31 +138,32 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      final token = prefs.getString('jwt_token') ?? '';
+
+      if (token.isEmpty) {
+        _showError('Token not found');
+        return;
+      }
 
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/admin/manage-coins'),
+        Uri.parse('http://172.22.173.39:8080/admin/manage-coins'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: json.encode({
-          'targetUserId': _selectedUser!['User_ID'],
+          'targetUserId': selectedUser['User_ID'] ?? 0,
           'actionType': _actionType,
           'coinsAmount': coinsAmount,
-          'reason': _reasonController.text.isNotEmpty
-              ? _reasonController.text
-              : '-',
+          'reason': reasonText.isNotEmpty ? reasonText : '-',
         }),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
         _showSuccess(
           'Coins ${_actionType == 'ADD' ? 'added' : 'subtracted'} successfully',
         );
 
-        // Reset form
         _coinsController.clear();
         _reasonController.clear();
         setState(() {
@@ -280,7 +280,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
 
     return Container(
       width: double.infinity,
-      height: 340,
+      height: 420,
       child: ClipRRect(
         borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
         child: Stack(
@@ -920,9 +920,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : _showAnimatedConfirmationDialog,
+                  onPressed: _isLoading ? null : _showCoinConfirmationDialog,
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _actionType == 'ADD'
@@ -1284,7 +1282,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
     );
   }
 
-  Future<void> _showAnimatedConfirmationDialog() async {
+  Future<void> _showCoinConfirmationDialog() async {
     if (_selectedUser == null) {
       _showError('Please select a user');
       return;
@@ -1297,111 +1295,104 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
     }
 
     final actionText = _actionType == 'ADD' ? 'Add' : 'Subtract';
-    final actionColor = _actionType == 'ADD' ? _successColor : _errorColor;
+    final actionColor = _actionType == 'ADD' ? Colors.green : Colors.red;
+    final username = _selectedUser?['username'] ?? 'user';
 
-    final result = await showGeneralDialog<bool>(
+    bool? confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: "Confirmation",
-      transitionDuration: Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) {
-        return SizedBox.shrink(); // actual UI built in transitionBuilder
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        final curvedValue = Curves.easeOut.transform(anim1.value) - 1.0;
-        return Transform(
-          transform: Matrix4.translationValues(0, curvedValue * -50, 0)
-            ..scale(anim1.value),
-          child: Opacity(
-            opacity: anim1.value,
-            child: Center(
-              child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 24),
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [actionColor.withOpacity(0.8), Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 12,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 10,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _actionType == 'ADD' ? Icons.add_circle : Icons.remove_circle,
+                  size: 60,
+                  color: actionColor,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 20),
+                Text(
+                  '$actionText Coins',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: actionColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Are you sure you want to $actionText $coinsAmount coins to $username?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Row(
                   children: [
-                    Icon(
-                      _actionType == 'ADD'
-                          ? Icons.add_circle
-                          : Icons.remove_circle,
-                      size: 48,
-                      color: actionColor,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      '$actionText ${_coinsController.text} coins to ${_selectedUser!['username']}?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: _textColor,
-                        decoration:
-                            TextDecoration.none, // ลบ underline/highlight
-                        backgroundColor:
-                            Colors.transparent, // ลบ background highlight
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade700,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(fontSize: 16, color: Colors.white),
+                        ),
                       ),
                     ),
-
-                    SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey.shade300,
-                              foregroundColor: Colors.black87,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () => Navigator.pop(context, false),
-                            child: Text('Cancel'),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: actionColor.withOpacity(0.85),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: Text(
+                          'Confirm',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: actionColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () => Navigator.pop(context, true),
-                            child: Text('Confirm'),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         );
       },
     );
 
-    if (result == true) {
-      _manageCoins(); // เรียกใช้งานฟังก์ชันจัดการเหรียญจริง
-    }
+    if (confirmed != true) return;
+
+    // เรียกฟังก์ชันจัดการ coins หลังผู้ใช้ยืนยัน
+    await _manageCoins();
   }
+
+  // if (result == true) {
+  //   _manageCoins(); // เรียกใช้งานฟังก์ชันจัดการเหรียญจริง
+  // }
 }

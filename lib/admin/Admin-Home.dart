@@ -188,7 +188,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -215,7 +215,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
       }
 
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/restaurants'),
+        Uri.parse('http://172.22.173.39:8080/restaurants'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -600,8 +600,17 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
           ),
         );
       },
-    ).then((_) {
+    ).whenComplete(() async {
+      // ✅ ตรงนี้จะถูกเรียกเสมอ หลัง dialog หาย (ไม่ว่าจะปิดยังไง)
       timer?.cancel();
+      await _googleSignIn.signOut();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+        (route) => false,
+      );
     });
   }
 
@@ -800,7 +809,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
 
     try {
       final response = await http.delete(
-        Uri.parse('http://10.214.52.39:8080/Delete/restaurants/$restaurantId'),
+        Uri.parse('http://172.22.173.39:8080/Delete/restaurants/$restaurantId'),
         headers: {'Content-Type': 'application/json'},
       );
 

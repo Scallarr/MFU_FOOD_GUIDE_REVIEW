@@ -312,7 +312,7 @@ class _ThreadsPageState extends State<ThreadsPage> {
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPage()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageUser()),
         );
         break;
       case 2:
@@ -322,10 +322,6 @@ class _ThreadsPageState extends State<ThreadsPage> {
         );
         break;
       case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LeaderboardPage()),
-        );
         break;
     }
   }
@@ -381,7 +377,9 @@ class _ThreadsPageState extends State<ThreadsPage> {
                     onTap: () async {
                       final shouldRefresh = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                        MaterialPageRoute(
+                          builder: (context) => ProfilePageUser(),
+                        ),
                       );
 
                       if (shouldRefresh == true) {

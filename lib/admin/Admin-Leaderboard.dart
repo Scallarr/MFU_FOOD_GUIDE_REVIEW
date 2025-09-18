@@ -30,6 +30,8 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   String? profileImageUrl;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  Map<String, dynamic>? _selectedUser;
+  bool _hasCheckedReward = false;
 
   // ตัวเลือกเดือน
   final List<String> _months = [
@@ -52,6 +54,18 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     super.initState();
     fetchLeaderboard();
     loadUserIdAndFetchProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkRewardAfterBuild();
+    });
+  }
+
+  void _checkRewardAfterBuild() async {
+    // Small delay to ensure UI is built
+    await Future.delayed(Duration(milliseconds: 500));
+    if (!_hasCheckedReward) {
+      await checkPreviousMonthReward(context);
+      _hasCheckedReward = true;
+    }
   }
 
   void _onItemTapped(int index) {
@@ -98,7 +112,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -114,63 +128,132 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     }
   }
 
+  // Update the checkPreviousMonthReward method
   Future<void> checkPreviousMonthReward(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
+    if (_hasCheckedReward) return;
 
-    // ตรวจสอบว่าเคยแสดงรางวัลเดือนนี้แล้วหรือยัง
+    final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final currentMonthKey = 'reward_shown_${now.year}-${now.month}';
-    prefs.remove(currentMonthKey);
-    final rewardShown = prefs.getBool(currentMonthKey) ?? false;
-    print(rewardShown);
-    if (rewardShown) {
-      print('Already shown reward for current month');
-      return;
-    }
+    // final rewardShown = prefs.getBool(currentMonthKey) ?? false;
+
+    // if (rewardShown) {
+    //   print('Already shown reward for current month');
+    //   return;
+    // }
 
     final token = prefs.getString('jwt_token');
     if (token == null) return;
 
     try {
       final response = await http.put(
-        Uri.parse('http://10.214.52.39:8080/leaderboard/coins/previous-month'),
+        Uri.parse('http://172.22.173.39:8080/leaderboard/coins/previous-month'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('Previous month reward response: $data');
 
         if (data['success'] == true && data['hasData'] == true) {
           _showMonthlyRewardAlert(
             context,
             data['month_name'],
+            data['month_year'],
             data['rank'],
             data['coins_awarded'],
             data['total_likes'],
             data['total_reviews'],
+            // data['totalreviews'],
+            // data['totallikes'],
+            // data['username'],
+            // data['email'],
+            // data['profile_image'],
+            // data['role'],
+            // data['status'],
+            // data[''],
           );
-
-          // บันทึกว่าได้แสดงรางวัลเดือนนี้แล้ว
           await prefs.setBool(currentMonthKey, true);
         } else if (data['message'] != null) {
-          // แสดงข้อความว่าไม่มีข้อมูล
           _showAlert2(context, data['message']);
-
-          // บันทึกว่าได้ตรวจสอบแล้ว (แม้ไม่มีข้อมูล)
           await prefs.setBool(currentMonthKey, true);
         }
-      } else {
-        print('Failed to check previous month reward: ${response.statusCode}');
       }
     } catch (e) {
       print('Error checking previous month reward: $e');
     }
   }
 
+  // Add error handling to fetchLeaderboard
+  Future<void> fetchLeaderboard({String? customMonthYear}) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+
+      if (token == null) {
+        _showAlert(context, 'Session expired');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      String url = 'http://172.22.173.39:8080/leaderboard/update';
+      if (customMonthYear != null) {
+        url += '?month_year=$customMonthYear';
+      }
+
+      final response = await http
+          .get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'})
+          .timeout(Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          topUsers = data['topUsers'] ?? [];
+          topRestaurants = data['topRestaurants'] ?? [];
+          monthYear = data['month_year'] ?? '';
+
+          _isLoading = false;
+        });
+      } else {
+        _handleErrorResponse(response);
+      }
+    } catch (e) {
+      print('Error fetching leaderboard: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showAlert(context, 'Network error: ${e.toString()}');
+    }
+  }
+
+  void _handleErrorResponse(http.Response response) {
+    switch (response.statusCode) {
+      case 401:
+        _showAlert(context, 'Session expired');
+        break;
+      case 403:
+        _showAlert(context, 'Your account has been banned.');
+        break;
+      default:
+        _showAlert(
+          context,
+          'Failed to load leaderboard: ${response.statusCode}',
+        );
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
   void _showMonthlyRewardAlert(
     BuildContext context,
     String previousMonthName,
+    int month_year,
     int rank,
     int coinsAwarded,
     int totalLikes,
@@ -222,13 +305,19 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
               ),
 
               const SizedBox(height: 24),
-
+              _buildRewardItem(
+                'year',
+                '$month_year',
+                Icons.calendar_month,
+                const Color.fromARGB(255, 0, 0, 0),
+              ),
+              const SizedBox(height: 14),
               // Ranking Info
               _buildRewardItem(
                 'month',
                 '$previousMonthName',
                 Icons.calendar_month,
-                Colors.blueAccent,
+                const Color.fromARGB(255, 0, 0, 0),
               ),
 
               const SizedBox(height: 14),
@@ -367,60 +456,6 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     );
   }
 
-  Future<void> fetchLeaderboard({String? customMonthYear}) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-
-      String url = 'http://10.214.52.39:8080/leaderboard/update';
-      if (customMonthYear != null) {
-        url += '?month_year=$customMonthYear';
-      }
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          topUsers = data['topUsers'] ?? [];
-          topRestaurants = data['topRestaurants'] ?? [];
-          monthYear = data['month_year'] ?? '';
-          _isLoading = false;
-        });
-
-        // เรียกตรวจสอบรางวัลจากเดือนที่แล้ว (แสดงครั้งแรกของเดือน)
-        await checkPreviousMonthReward(context);
-      } else if (response.statusCode == 401) {
-        _showAlert(context, 'Session expired');
-        setState(() {
-          _isLoading = false;
-        });
-      } else if (response.statusCode == 403) {
-        _showAlert(context, 'Your account has been banned.');
-        setState(() {
-          _isLoading = false;
-        });
-      } else {
-        print('Failed to load leaderboard');
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error fetching leaderboard: $e');
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   void _showAlert(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -552,28 +587,50 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
               clipBehavior: Clip.none,
               children: [
                 // Avatar ขนาดใหญ่เต็มกรอบซ้ายสุด
-                Container(
-                  width: 90,
-                  height: 90,
-                  margin: const EdgeInsets.only(left: 16, right: 18),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.brown.shade700, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.brown.shade400.withOpacity(0.3),
-                        offset: const Offset(0, 3),
-                        blurRadius: 5,
+                GestureDetector(
+                  onTap: () {
+                    print(user);
+                    setState(() {
+                      if (_selectedUser != null &&
+                          _selectedUser!['User_ID'] == user['User_ID']) {
+                        _selectedUser = null;
+                      } else {
+                        _selectedUser = {
+                          ...user, // เอาข้อมูล user เดิมมาใส่ก่อน
+                          'coins': user['coins'] ?? 0,
+                          'formattedCoins': NumberFormat(
+                            '#,###',
+                          ).format(int.tryParse(user['coins'].toString()) ?? 0),
+                        };
+                      }
+                    });
+                  },
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    margin: const EdgeInsets.only(left: 16, right: 18),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.brown.shade700,
+                        width: 2,
                       ),
-                    ],
-                    image: DecorationImage(
-                      image:
-                          user['profile_image'] != null &&
-                              user['profile_image'].isNotEmpty
-                          ? NetworkImage(user['profile_image'])
-                          : const AssetImage('assets/default_user.png')
-                                as ImageProvider,
-                      fit: BoxFit.cover,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.brown.shade400.withOpacity(0.3),
+                          offset: const Offset(0, 3),
+                          blurRadius: 5,
+                        ),
+                      ],
+                      image: DecorationImage(
+                        image:
+                            user['profile_image'] != null &&
+                                user['profile_image'].isNotEmpty
+                            ? NetworkImage(user['profile_image'])
+                            : const AssetImage('assets/default_user.png')
+                                  as ImageProvider,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
@@ -984,100 +1041,622 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          // Header with date selector
-          _buildHeader(context),
+      body: _selectedUser != null
+          ? Container(
+              color: Color.fromARGB(
+                255,
+                116,
+                115,
+                113,
+              ).withOpacity(1), // ความเข้มของดำ
+              child: Center(
+                child: Text(
+                  "",
+                  style: TextStyle(
+                    color: const Color.fromARGB(255, 127, 45, 45),
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            )
+          : Column(
+              children: [
+                // Header with date selector
+                _buildHeader(context),
 
-          // Content
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: () => fetchLeaderboard(),
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverList(
-                          delegate: SliverChildListDelegate([
-                            const SizedBox(height: 20),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    '🏆 Monthly Like Leaders ',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
+                // Content
+                Expanded(
+                  child: _isLoading
+                      ? Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: () => fetchLeaderboard(),
+                          child: CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              SliverList(
+                                delegate: SliverChildListDelegate([
+                                  const SizedBox(height: 20),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          '🏆 Monthly Like Leaders ',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (monthYear.isNotEmpty)
+                                          Text(
+                                            '($monthYear)',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontStyle: FontStyle.italic,
+                                              color: Color.fromARGB(
+                                                255,
+                                                80,
+                                                77,
+                                                77,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                  if (monthYear.isNotEmpty)
-                                    Text(
-                                      '($monthYear)',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontStyle: FontStyle.italic,
-                                        color: Color.fromARGB(255, 80, 77, 77),
-                                      ),
+                                  const SizedBox(height: 8),
+                                  ...topUsers.asMap().entries.map(
+                                    (entry) =>
+                                        buildUserCard(entry.value, entry.key),
+                                  ),
+                                  const Divider(thickness: 2, height: 32),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 20,
                                     ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.restaurant_menu,
+                                              size: 32,
+                                              color: Colors.brown.shade700,
+                                            ),
+                                            Text(
+                                              ' Best Restaurants ',
+                                              style: TextStyle(
+                                                fontSize: 19,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (monthYear.isNotEmpty)
+                                          Text(
+                                            '($monthYear)',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontStyle: FontStyle.italic,
+                                              color: Color.fromARGB(
+                                                255,
+                                                80,
+                                                77,
+                                                77,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...topRestaurants.asMap().entries.map(
+                                    (entry) => buildRestaurantCard(
+                                      entry.value,
+                                      entry.key,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 30),
+                                ]),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+              ],
+            ),
+      bottomSheet: _selectedUser != null
+          ? GestureDetector(
+              // onVerticalDragUpdate: (details) {
+              //   // ถ้าเลื่อนลงมากกว่า 50 pixels ให้ปิด
+              //   if (details.delta.dy > 10) {
+              //     setState(() {
+              //       _selectedUser = null;
+              //     });
+              //   }
+              // },
+              onTap: () {
+                // ถ้าคลิกนอกเนื้อหาให้ปิด
+                // setState(() {
+                //   _selectedUser = null;
+                // });
+              },
+              child: Container(
+                padding: EdgeInsets.only(),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                      const Color.fromARGB(255, 136, 133, 133), // เทาอ่อนด้านบน
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                    ],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: Offset(0, -6),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ส่วนหัว
+
+                      // Container สำหรับ Banner และ Avatar ที่ซ้อนกัน
+                      Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Banner
+                          Container(
+                            margin: EdgeInsets.only(
+                              bottom: 40,
+                            ), // ระยะห่างสำหรับ Avatar
+                            child: buildUserBanner(
+                              _selectedUser?['profile_image'],
+                            ),
+                          ),
+
+                          // Avatar (วางซ้อนลงบน Banner)
+                          Positioned(
+                            bottom: 0, // ทำให้ Avatar ยื่นออกมาจาก Banner
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
                                 ],
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            ...topUsers.asMap().entries.map(
-                              (entry) => buildUserCard(entry.value, entry.key),
-                            ),
-                            const Divider(thickness: 2, height: 32),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.restaurant_menu,
-                                        size: 32,
-                                        color: Colors.brown.shade700,
-                                      ),
-                                      Text(
-                                        ' Best Restaurants ',
+                              child: CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.blue[100],
+                                backgroundImage:
+                                    (_selectedUser!['profile_image'] != null &&
+                                        _selectedUser!['profile_image']
+                                            .isNotEmpty)
+                                    ? NetworkImage(
+                                        _selectedUser!['profile_image'],
+                                      )
+                                    : null,
+                                child:
+                                    (_selectedUser!['profile_image'] == null ||
+                                        _selectedUser!['profile_image'].isEmpty)
+                                    ? Text(
+                                        _selectedUser!['username'][0]
+                                            .toUpperCase(),
                                         style: TextStyle(
-                                          fontSize: 19,
+                                          fontSize: 28,
                                           fontWeight: FontWeight.bold,
+                                          color: Colors.blue[800],
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded, size: 40),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    237,
+                                    235,
+                                    235,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedUser = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: 290,
+                            right: -60,
+                            child: Icon(
+                              Icons.lock_outlined,
+                              size: 120,
+                              color: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ).withOpacity(0.1),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -550,
+                            left: 40,
+                            child: Icon(
+                              Icons.group,
+                              size: 340,
+                              color: const Color.fromARGB(
+                                255,
+                                9,
+                                9,
+                                9,
+                              ).withOpacity(0.4),
+                            ),
+                          ),
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedUser = null;
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(
+                                  8,
+                                ), // ทำให้ Icon มีพื้นที่รอบ ๆ
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.redAccent.shade100,
+                                      Colors.red.shade700,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // ชื่อและ email (ลดระยะห่างจาก Avatar)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: 7,
+                          bottom: 16,
+                        ), // ลดจาก 60 เป็น 50
+                        child: Column(
+                          children: [
+                            Text(
+                              _selectedUser!['username'],
+                              style: TextStyle(
+                                fontSize: 22, // เพิ่มขนาดฟอนต์
+                                fontWeight: FontWeight.w800, // ตัวหนากว่าเดิม
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
+                            (_selectedUser!['User_ID'] == userId)
+                                ? Text(
+                                    (_selectedUser!['email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : Text(
+                                    obfuscateEmail(_selectedUser!['email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsetsGeometry.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ชิปข้อมูล
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _buildInfoChip(
+                                  Icons.badge_outlined,
+                                  "User ID",
+                                  "${_selectedUser!['User_ID']}",
+                                  color: Colors.blue,
+                                ),
+                                if (_selectedUser!['role'] != null &&
+                                    _selectedUser!['role'].isNotEmpty)
+                                  _buildInfoChip(
+                                    Icons.manage_accounts,
+                                    "Role",
+                                    "${_selectedUser!['role']}",
+                                    color: Colors.teal,
+                                  ),
+                                _buildInfoChip(
+                                  _selectedUser!['status'] == "Active"
+                                      ? Icons.verified_user_outlined
+                                      : Icons.block_outlined,
+                                  "Status",
+                                  _selectedUser!['status'],
+                                  color: _selectedUser!['status'] == "Active"
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                _buildInfoChip(
+                                  Icons.monetization_on_outlined,
+                                  "Coins",
+                                  "${_selectedUser!['formattedCoins']}",
+                                  color: Colors.orange,
+                                ),
+                                if (_selectedUser!['totallikes'] != null)
+                                  _buildInfoChip(
+                                    Icons.favorite_outline,
+                                    "Likes",
+                                    "${_selectedUser!['totallikes']}",
+                                    color: Colors.pink,
+                                  ),
+                                if (_selectedUser!['total_reviews'] != null)
+                                  _buildInfoChip(
+                                    Icons.reviews_outlined,
+                                    "Reviews",
+                                    "${_selectedUser!['total_reviews']}",
+                                    color: const Color.fromARGB(
+                                      255,
+                                      183,
+                                      52,
+                                      222,
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            if (_selectedUser!['ban_info'] != null &&
+                                _selectedUser!['ban_info'].isNotEmpty) ...[
+                              SizedBox(height: 16),
+                              Container(
+                                padding: EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.orange[200]!,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange[700],
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Ban Info: ${_selectedUser!['ban_info']}",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.orange[800],
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  if (monthYear.isNotEmpty)
-                                    Text(
-                                      '($monthYear)',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontStyle: FontStyle.italic,
-                                        color: Color.fromARGB(255, 80, 77, 77),
-                                      ),
                                     ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            ...topRestaurants.asMap().entries.map(
-                              (entry) =>
-                                  buildRestaurantCard(entry.value, entry.key),
-                            ),
-                            const SizedBox(height: 30),
-                          ]),
+                            ],
+
+                            SizedBox(height: 20),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    final baseColor = color ?? Colors.blue;
+
+    return Container(
+      width: 120, // ให้ขนาดเท่ากัน
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withOpacity(0.95),
+            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: baseColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 4),
           ),
         ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 3, 3, 3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color.fromARGB(255, 220, 216, 216),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildUserBanner(String? imageUrl) {
+    final placeholder =
+        "https://via.placeholder.com/400x200.png?text=No+Image"; // fallback
+
+    return Container(
+      width: double.infinity,
+      height: 400,
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              (imageUrl != null && imageUrl.isNotEmpty)
+                  ? imageUrl
+                  : placeholder,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: Colors.grey[600],
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

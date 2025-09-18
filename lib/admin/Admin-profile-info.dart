@@ -57,7 +57,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> fetchUserData(int userId) async {
     try {
-      final url = Uri.parse('http://10.214.52.39:8080/user-profile/$userId');
+      final url = Uri.parse('http://172.22.173.39:8080/user-profile/$userId');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -90,7 +90,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<List<Map<String, dynamic>>> fetchProfilePictures(int userId) async {
     final url = Uri.parse(
-      'http://10.214.52.39:8080/user-profile-pictures/$userId',
+      'http://172.22.173.39:8080/user-profile-pictures/$userId',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -103,7 +103,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> setActiveProfilePicture(int userId, int pictureId) async {
     final url = Uri.parse(
-      'http://10.214.52.39:8080/user-profile-pictures/set-active',
+      'http://172.22.173.39:8080/user-profile-pictures/set-active',
     );
     final response = await http.post(
       url,
@@ -117,6 +117,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
 
   Future<void> updateProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
     final userId = prefs.getInt('user_id');
     if (userId == null) {
       ScaffoldMessenger.of(
@@ -126,12 +127,15 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
     }
 
     final url = Uri.parse(
-      'http://10.214.52.39:8080/user-profile/update/$userId',
+      'http://172.22.173.39:8080/user-profile/update/$userId',
     );
 
     final response = await http.put(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
       body: json.encode({
         'username': usernameController.text.trim(),
         'bio': bioController.text.trim(),

@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<String> fetchCohere(String message) async {
   final apiKey = 'jg9xhX0cMSv6eZxA9VWLYed39ADtKjenJuWyIYgs';
   final url = Uri.parse('https://api.cohere.com/v1/chat');
-  final payload = {'model': 'command-r-plus', 'message': message};
+  final payload = {'model': 'command-a-03-2025', 'message': message};
 
   try {
     final res = await http.post(
@@ -42,7 +42,7 @@ Future<String> fetchCohere(String message) async {
 Future<String?> fetchProfilePicture(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
+      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {

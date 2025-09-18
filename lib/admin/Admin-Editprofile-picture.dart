@@ -403,7 +403,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final response = await http.put(
         Uri.parse(
-          'http://10.214.52.39:8080/api/profiles/${widget.profile['id']}',
+          'http://172.22.173.39:8080/api/profiles/${widget.profile['id']}',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({

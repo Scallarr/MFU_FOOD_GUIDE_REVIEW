@@ -66,7 +66,7 @@ class _PendingRepliesAdminPageState extends State<PendingRepliesAdminPage> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://10.214.52.39:8080/threads-replied/pending/${widget.threadId}',
+          'http://172.22.173.39:8080/threads-replied/pending/${widget.threadId}',
         ),
       );
 
@@ -794,7 +794,7 @@ class _PendingRepliesAdminPageState extends State<PendingRepliesAdminPage> {
   Future<void> _approveThread(int threadId) async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/threads-replied/approve'),
+        Uri.parse('http://172.22.173.39:8080/threads-replied/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,
@@ -830,7 +830,7 @@ class _PendingRepliesAdminPageState extends State<PendingRepliesAdminPage> {
     try {
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/threads-replied/reject'),
+        Uri.parse('http://172.22.173.39:8080/threads-replied/reject'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'threadId': threadId,

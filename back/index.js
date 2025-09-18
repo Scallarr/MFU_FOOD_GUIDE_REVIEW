@@ -15,12 +15,21 @@
   const SECRET_KEY = 'MFU-FOOD-GUIDE-AND-REVIEW'; // 🔐 เปลี่ยนให้ปลอดภัย
 
   // ✅ เชื่อมต่อ MySQL
+  // const db = mysql.createPool({
+  //   connectionLimit:10,
+  //   host: 'byjsmg8vfii8dqlflpwy-mysql.services.clever-cloud.com',
+  //   user: 'u6lkh5gfkkvbxdij',
+  //   password: 'lunYpL9EDowPHBA02vkE',
+  //   database: 'byjsmg8vfii8dqlflpwy',
+  //   timezone: '+07:00',
+  // });
+  // ✅ เชื่อมต่อ MySQL
   const db = mysql.createPool({
     connectionLimit:10,
-    host: 'byjsmg8vfii8dqlflpwy-mysql.services.clever-cloud.com',
-    user: 'u6lkh5gfkkvbxdij',
-    password: 'lunYpL9EDowPHBA02vkE',
-    database: 'byjsmg8vfii8dqlflpwy',
+    host: 'localhost',
+    user: 'root',
+    password: 'root',
+    database: 'mfuFoodGuideAndreview2',
     timezone: '+07:00',
   });
 
@@ -397,7 +406,7 @@ function generateUniqueUsername(baseUsername) {
   return `${baseUsername}${Math.floor(Math.random() * 1000)}`;
 }
   // ✅ Get User Info Route (GET)
-  app.get('/user/info/:id', (req, res) => {
+  app.get('/user/info/:id', checkUserStatus,(req, res) => {
     const userId = req.params.id;
 
     const query = `
@@ -481,54 +490,90 @@ app.put('/user/Active/:id', (req, res) => {
 
 
 
-app.get('/restaurants',checkUserStatus, (req, res) => {
-  const sql = `
-SELECT 
-  r.Restaurant_ID,
-  r.restaurant_name, 
-  r.location, 
-  r.operating_hours, 
-  r.phone_number, 
-  r.photos, 
-  r.rating_overall_avg, 
-  r.rating_hygiene_avg, 
-  r.rating_flavor_avg, 
-  r.rating_service_avg, 
-  r.category,
-  (SELECT COUNT(*) 
-   FROM Review rev
-   JOIN User u ON rev.User_ID = u.User_ID
-   WHERE rev.Restaurant_ID = r.Restaurant_ID 
-     AND rev.message_status = 'Posted'
-     AND u.status = 'Active') AS posted_reviews_count,
-  (SELECT COUNT(*) 
-   FROM Review rev
-   JOIN User u ON rev.User_ID = u.User_ID
-   WHERE rev.Restaurant_ID = r.Restaurant_ID 
-     AND rev.message_status = 'Pending'
-     AND u.status = 'Active') AS pending_reviews_count,
-  (SELECT COUNT(*) 
-   FROM Review rev
-   JOIN User u ON rev.User_ID = u.User_ID
-   WHERE rev.Restaurant_ID = r.Restaurant_ID 
-     AND rev.message_status = 'Banned'
-     AND u.status = 'Active') AS banned_reviews_count,
-  (SELECT COUNT(*) 
-   FROM Review rev
-   JOIN User u ON rev.User_ID = u.User_ID
-   WHERE rev.Restaurant_ID = r.Restaurant_ID 
-     AND u.status = 'Active') AS total_reviews_count
-FROM Restaurant r
+app.get('/restaurants', checkUserStatus, async (req, res) => {
+  try {
+    // ดึงร้านทั้งหมดมาก่อน
+    const [restaurants] = await db.promise().query(`SELECT Restaurant_ID FROM Restaurant`);
 
-  `;
+    for (const restaurant of restaurants) {
+      const restaurantId = restaurant.Restaurant_ID;
 
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error('Error fetching restaurants:', err);
-      return res.status(500).json({ error: 'Database query error' });
+      // คำนวณค่าเฉลี่ยใหม่จาก Review (เฉพาะ Posted + User Active)
+      const [avgRows] = await db.promise().execute(
+        `SELECT 
+          AVG(r.rating_hygiene) AS hygiene_avg,
+          AVG(r.rating_flavor) AS flavor_avg,
+          AVG(r.rating_service) AS service_avg,
+          AVG(r.rating_overall) AS overall_avg
+        FROM Review r
+        JOIN User u ON r.User_ID = u.User_ID
+        WHERE r.Restaurant_ID = ? 
+          AND r.message_status = 'Posted'
+          AND u.status = 'Active'`,
+        [restaurantId]
+      );
+
+      const avg = avgRows[0] || {};
+
+      // อัพเดตกลับเข้า Restaurant
+      await db.promise().execute(
+        `UPDATE Restaurant SET 
+          rating_overall_avg = ?,
+          rating_hygiene_avg = ?,
+          rating_flavor_avg = ?,
+          rating_service_avg = ?
+        WHERE Restaurant_ID = ?`,
+        [
+          Number(avg.overall_avg || 0).toFixed(2),
+          Number(avg.hygiene_avg || 0).toFixed(2),
+          Number(avg.flavor_avg || 0).toFixed(2),
+          Number(avg.service_avg || 0).toFixed(2),
+          restaurantId,
+        ]
+      );
     }
-    
-    // แปลงผลลัพธ์ให้เหมาะสม
+
+    // ดึงข้อมูลร้านพร้อม count มาแสดง
+    const [results] = await db.promise().query(`
+      SELECT 
+        r.Restaurant_ID,
+        r.restaurant_name, 
+        r.location, 
+        r.operating_hours, 
+        r.phone_number, 
+        r.photos, 
+        r.rating_overall_avg, 
+        r.rating_hygiene_avg, 
+        r.rating_flavor_avg, 
+        r.rating_service_avg, 
+        r.category,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND rev.message_status = 'Posted'
+           AND u.status = 'Active') AS posted_reviews_count,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND rev.message_status = 'Pending'
+           AND u.status = 'Active') AS pending_reviews_count,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND rev.message_status = 'Banned'
+           AND u.status = 'Active') AS banned_reviews_count,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND u.status = 'Active') AS total_reviews_count
+      FROM Restaurant r
+    `);
+
+    // จัด format ให้แน่ใจว่าเป็นตัวเลข
     const formattedResults = results.map(restaurant => ({
       ...restaurant,
       posted_reviews_count: parseInt(restaurant.posted_reviews_count) || 0,
@@ -538,9 +583,14 @@ FROM Restaurant r
     }));
 
     res.json(formattedResults);
-    console.log('Restaurants with review counts:', formattedResults);
-  });
+    console.log('Restaurants with updated averages + review counts:', formattedResults);
+
+  } catch (err) {
+    console.error('Error fetching restaurants:', err);
+    res.status(500).json({ error: 'Database query error' });
+  }
 });
+
 
 
 
@@ -1124,6 +1174,11 @@ app.get('/leaderboard/update', checkUserStatus, async (req, res) => {
         u.User_ID,
         u.email,
         u.username,
+        u.status,
+        u.role,
+        u.coins,
+        u.total_likes as totallikes,
+        u.total_reviews as totalreviews,
         COALESCE(rm.total_reviews, 0) AS total_reviews,
         COALESCE(lm.total_likes, 0) AS total_likes,
         ROW_NUMBER() OVER (ORDER BY COALESCE(lm.total_likes,0) DESC) AS \`rank\`,
@@ -1142,11 +1197,11 @@ app.get('/leaderboard/update', checkUserStatus, async (req, res) => {
 
     let rank = 1;
     for (const u of topUsers) {
-      const coins = rank === 1 ? 100 : rank === 2 ? 60 : 40; // จะ fix เป็น 100 ก็ได้
+      const coins = rank === 1 ? 2000 : rank === 2 ? 1000 :  rank === 3 ? 500 : 0; // จะ fix เป็น 100 ก็ได้
       await conn.query(`
         INSERT INTO Leaderboard_user_total_like
-          (\`rank\`, User_ID, month_year, total_likes, total_reviews, coins_awarded, notified)
-        VALUES (?, ?, ?, ?, ?, ?, 0)
+          (\`rank\`, User_ID, month_year, total_likes, total_reviews, coins_awarded)
+        VALUES (?, ?, ?, ?, ?, ?)
       `, [rank, u.User_ID, monthYear, u.total_likes || 0, u.total_reviews || 0, coins]);
       rank++;
     }
@@ -1206,9 +1261,8 @@ app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) =
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
 
-    // หาเดือนก่อนหน้า
+    // Calculate previous month
     let previousMonth = currentMonth - 1;
-    // let previousMonth = currentMonth ;
     let previousYear = currentYear;
     
     if (previousMonth < 0) {
@@ -1219,31 +1273,32 @@ app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) =
     const previousMonthYear = `${previousYear}-${String(previousMonth + 1).padStart(2, '0')}`;
     
     const thaiMonths = [
-      'January', 'Febuary', 'March', 'April', 'May', 'June',
+      'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const previousMonthName = thaiMonths[previousMonth];
 
-    // ✅ ดึงข้อมูลจาก Reward_History แทน
-    const [rewardRows] = await db.promise().query(
-      `SELECT rh.rank, rh.coins_awarded, rh.awarded_at,
+    // Check for unseen rewards first
+    const [unseenRewards] = await db.promise().query(
+      `SELECT rh.Reward_ID, rh.rank, rh.coins_awarded, rh.awarded_at,
               l.total_likes, l.total_reviews
        FROM Reward_History rh
        LEFT JOIN Leaderboard_user_total_like l 
          ON rh.User_ID = l.User_ID AND rh.month_year = l.month_year
-       WHERE rh.User_ID = ? AND rh.month_year = ?`,
+       WHERE rh.User_ID = ? AND rh.month_year = ? AND rh.isseen = 0`,
       [userId, previousMonthYear]
     );
 
-    if (rewardRows.length === 0) {
-      return res.json({ 
-        success: false,
-        hasData: false,
-        message: `ไม่มีข้อมูลรางวัลสำหรับเดือน${previousMonthName}`,
-      });
-    }
 
-    const rewardData = rewardRows[0];
+
+    const rewardData = unseenRewards[0];
+    console.log( 'Information'+ rewardData);
+
+    // Mark reward as seen
+    await db.promise().query(
+      `UPDATE Reward_History SET isseen = 1 WHERE Reward_ID = ?`,
+      [rewardData.Reward_ID]
+    );
 
     return res.json({
       success: true,
@@ -1252,7 +1307,7 @@ app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) =
       rank: rewardData.rank,
       total_likes: rewardData.total_likes || 0,
       total_reviews: rewardData.total_reviews || 0,
-      month_year: previousMonthYear,
+      month_year: previousYear,
       month_name: previousMonthName,
       awarded_at: rewardData.awarded_at,
       message: `ผลการจัดอันดับเดือน${previousMonthName}`
@@ -1263,7 +1318,6 @@ app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) =
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 
 // // GET coins reward from previous month
 // app.put('/leaderboard/coins/previous-month', checkUserStatus, async (req, res) => {
@@ -1362,7 +1416,7 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
     const currentDay = currentDate.getDate();
     
     // ตรวจสอบว่าเป็นวันที่ 6 ของเดือนหรือไม่
-    if (currentDay !== 6) {
+    if (currentDay !== 12) {
       return res.json({ 
         success: false, 
         message: 'สามารถแจก coins ได้เฉพาะวันที่ 1 ของเดือนเท่านั้น' 
@@ -1483,7 +1537,7 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
 
 
 // รันทุกวันเวลา 1:0 (เที่ยงคืน 1 นาที)
-cron.schedule('22 2 * * *', async () => {
+cron.schedule('20 00 * * *', async () => {
   try {
     console.log('Running automatic coin award at 10:40 AM Thailand time...');
     
@@ -3158,16 +3212,21 @@ db.promise().execute(
 );
 
     // 5. Calculate new averages for the restaurant
-    const [avgResult] = await connection.execute(
-      `SELECT 
-        AVG(rating_overall) AS avg_overall,
-        AVG(rating_hygiene) AS avg_hygiene,
-        AVG(rating_flavor) AS avg_flavor,
-        AVG(rating_service) AS avg_service
-       FROM Review 
-       WHERE Restaurant_ID = ? AND message_status = 'Posted'`,
-      [restaurantId]
-    );
+ // 2. Update restaurant averages
+const [avgResult] = await connection.execute(
+  `SELECT 
+      AVG(r.rating_overall) AS avg_overall,
+      AVG(r.rating_hygiene) AS avg_hygiene,
+      AVG(r.rating_flavor) AS avg_flavor,
+      AVG(r.rating_service) AS avg_service
+   FROM Review r
+   JOIN User u ON r.User_ID = u.User_ID
+   WHERE r.Restaurant_ID = ? 
+     AND r.message_status = 'Posted'
+     AND u.status = 'Active'`,
+  [restaurantId]
+);
+
 
     // 6. Update restaurant averages
     await connection.execute(
@@ -3317,16 +3376,21 @@ app.post('/api/reviews/reject', async (req, res) => {
 );
 
     // 6. Update restaurant averages
-    const [avgResult] = await connection.execute(
-      `SELECT 
-        AVG(rating_overall) AS avg_overall,
-        AVG(rating_hygiene) AS avg_hygiene,
-        AVG(rating_flavor) AS avg_flavor,
-        AVG(rating_service) AS avg_service
-       FROM Review 
-       WHERE Restaurant_ID = ? AND message_status = 'Posted'`,
-      [restaurantId]
-    );
+   // 2. Update restaurant averages
+const [avgResult] = await connection.execute(
+  `SELECT 
+      AVG(r.rating_overall) AS avg_overall,
+      AVG(r.rating_hygiene) AS avg_hygiene,
+      AVG(r.rating_flavor) AS avg_flavor,
+      AVG(r.rating_service) AS avg_service
+   FROM Review r
+   JOIN User u ON r.User_ID = u.User_ID
+   WHERE r.Restaurant_ID = ? 
+     AND r.message_status = 'Posted'
+     AND u.status = 'Active'`,
+  [restaurantId]
+);
+
 
     await connection.execute(
       `UPDATE Restaurant SET
@@ -3957,17 +4021,21 @@ app.post('/review/AdminManual-check/reject', async (req, res) => {
       [now, rewiewId]
     );
 
-    // 2. Update restaurant averages
-    const [avgResult] = await connection.execute(
-      `SELECT 
-        AVG(rating_overall) AS avg_overall,
-        AVG(rating_hygiene) AS avg_hygiene,
-        AVG(rating_flavor) AS avg_flavor,
-        AVG(rating_service) AS avg_service
-       FROM Review 
-       WHERE Restaurant_ID = ? AND message_status = 'Posted'`,
-      [restaurantId]
-    );
+// 2. Update restaurant averages
+const [avgResult] = await connection.execute(
+  `SELECT 
+      AVG(r.rating_overall) AS avg_overall,
+      AVG(r.rating_hygiene) AS avg_hygiene,
+      AVG(r.rating_flavor) AS avg_flavor,
+      AVG(r.rating_service) AS avg_service
+   FROM Review r
+   JOIN User u ON r.User_ID = u.User_ID
+   WHERE r.Restaurant_ID = ? 
+     AND r.message_status = 'Posted'
+     AND u.status = 'Active'`,
+  [restaurantId]
+);
+
 
     await connection.execute(
       `UPDATE Restaurant SET
@@ -4784,8 +4852,8 @@ async function checkAndAutoUnban() {
 }
 
 // กำหนด schedule ด้วย node-cron
-// ตรวจสอบทุกชั่วโมงที่ 0 นาที (เช่น 1:00, 2:00, 3:00, ...)
-cron.schedule('0 * * * *', async () => {
+// ตรวจสอบทุก30 วิ)
+cron.schedule('*/60 * * * * *', async () => {
   console.log('เริ่มการตรวจสอบปลดแบนอัตโนมัติตาม schedule...');
   await checkAndAutoUnban();
 }, {
@@ -4804,9 +4872,340 @@ cron.schedule('0 * * * *', async () => {
 //   await checkAndAutoUnban();
 // });
 
-// เริ่มการตรวจสอบทันทีเมื่อเซิร์ฟเวอร์เริ่มทำงาน
-console.log('Initial auto-unban check on server start...');
-checkAndAutoUnban();
+// // เริ่มการตรวจสอบทันทีเมื่อเซิร์ฟเวอร์เริ่มทำงาน
+// console.log('Initial auto-unban check on server start...');
+// checkAndAutoUnban();
+
+
+
+// Get All Users with active profile picture
+app.get('/Usermanagement/users', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url,
+      bh.ban_reason,
+    bh.ban_duration_days,
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00') AS expected_unban_date,
+    CONVERT_TZ(bh.unban_date, '+00:00', '+07:00') AS unban_date,
+    CASE 
+      WHEN u.status = 'Banned' AND bh.expected_unban_date IS NULL 
+        THEN 'Permanent Ban'
+      WHEN u.status = 'Banned' AND bh.expected_unban_date > NOW() 
+        THEN CONCAT(
+  'Temporary Ban (',
+  DATEDIFF(
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00'),
+    CONVERT_TZ(NOW(), '+00:00', '+07:00')
+  ),
+  ' days left)'
+)
+      WHEN u.status = 'Banned' 
+        THEN 'Ban Expired (pending unban)'
+      ELSE ''
+    END as ban_info
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+      LEFT JOIN Ban_History bh 
+     ON u.User_ID = bh.user_id AND bh.unban_date IS NULL
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+// Get All Users with active profile picture
+app.get('/Usermanagement/users/Userrole', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url,
+            bh.ban_reason,
+    bh.ban_duration_days,
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00') AS expected_unban_date,
+    CONVERT_TZ(bh.unban_date, '+00:00', '+07:00') AS unban_date,
+    CASE 
+      WHEN u.status = 'Banned' AND bh.expected_unban_date IS NULL 
+        THEN 'Permanent Ban'
+      WHEN u.status = 'Banned' AND bh.expected_unban_date > NOW() 
+        THEN CONCAT(
+  'Temporary Ban (',
+  DATEDIFF(
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00'),
+    CONVERT_TZ(NOW(), '+00:00', '+07:00')
+  ),
+  ' days left)'
+)
+      WHEN u.status = 'Banned' 
+        THEN 'Ban Expired (pending unban)'
+      ELSE ''
+    END as ban_info
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+        LEFT JOIN Ban_History bh 
+     ON u.User_ID = bh.user_id AND bh.unban_date IS NULL
+      where u.role='User'
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+// Get Amin Users with active profile picture
+app.get('/Usermanagement/users/Adminrole', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url,
+         bh.ban_reason,
+    bh.ban_duration_days,
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00') AS expected_unban_date,
+    CONVERT_TZ(bh.unban_date, '+00:00', '+07:00') AS unban_date,
+    CASE 
+      WHEN u.status = 'Banned' AND bh.expected_unban_date IS NULL 
+        THEN 'Permanent Ban'
+      WHEN u.status = 'Banned' AND bh.expected_unban_date > NOW() 
+        THEN CONCAT(
+  'Temporary Ban (',
+  DATEDIFF(
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00'),
+    CONVERT_TZ(NOW(), '+00:00', '+07:00')
+  ),
+  ' days left)'
+)
+      WHEN u.status = 'Banned' 
+        THEN 'Ban Expired (pending unban)'
+      ELSE ''
+    END as ban_info
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+       LEFT JOIN Ban_History bh 
+     ON u.User_ID = bh.user_id AND bh.unban_date IS NULL
+      where u.role='Admin'
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+// Get Amin Users with active profile picture
+app.get('/Usermanagement/users/Active-User', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+      where u.role='User' and u.status= 'Active'
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+
+
+
+// Get Amin Users with active profile picture
+app.get('/Usermanagement/users/Active-Admin', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+      where u.role='Admin' and u.status= 'Active'
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+
+
+
+
+
+// Get Amin Users with active profile picture
+app.get('/Usermanagement/users/Ban-User', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url,
+       bh.ban_duration_days,
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00') AS expected_unban_date,
+    CONVERT_TZ(bh.unban_date, '+00:00', '+07:00') AS unban_date,
+    CASE 
+      WHEN u.status = 'Banned' AND bh.expected_unban_date IS NULL 
+        THEN 'Permanent Ban'
+      WHEN u.status = 'Banned' AND bh.expected_unban_date > NOW() 
+        THEN CONCAT(
+  'Temporary Ban (',
+  DATEDIFF(
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00'),
+    CONVERT_TZ(NOW(), '+00:00', '+07:00')
+  ),
+  ' days left)'
+)
+      WHEN u.status = 'Banned' 
+        THEN 'Ban Expired (pending unban)'
+      ELSE ''
+    END as ban_info
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+       LEFT JOIN Ban_History bh 
+     ON u.User_ID = bh.user_id AND bh.unban_date IS NULL
+      where u.role='User' and u.status= 'Banned'
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
+
+
+
+// Get Amin Users with active profile picture
+app.get('/Usermanagement/users/Ban-Admin', (req, res) => {
+  const query = `
+    SELECT 
+      u.User_ID,
+      u.fullname,
+      u.username,
+      u.email,
+      u.bio,
+      u.total_likes,
+      u.total_reviews,
+      u.coins,
+      u.role,
+      u.status,
+      p.picture_url,
+       bh.ban_duration_days,
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00') AS expected_unban_date,
+    CONVERT_TZ(bh.unban_date, '+00:00', '+07:00') AS unban_date,
+    CASE 
+      WHEN u.status = 'Banned' AND bh.expected_unban_date IS NULL 
+        THEN 'Permanent Ban'
+      WHEN u.status = 'Banned' AND bh.expected_unban_date > NOW() 
+        THEN CONCAT(
+  'Temporary Ban (',
+  DATEDIFF(
+    CONVERT_TZ(bh.expected_unban_date, '+00:00', '+07:00'),
+    CONVERT_TZ(NOW(), '+00:00', '+07:00')
+  ),
+  ' days left)'
+)
+      WHEN u.status = 'Banned' 
+        THEN 'Ban Expired (pending unban)'
+      ELSE ''
+    END as ban_info
+    FROM User u
+    LEFT JOIN user_Profile_Picture p 
+      ON u.User_ID = p.User_ID AND p.is_active = 1
+       LEFT JOIN Ban_History bh 
+     ON u.User_ID = bh.user_id AND bh.unban_date IS NULL
+      where u.role='Admin' and u.status= 'Banned'
+    ORDER BY u.User_ID ASC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ DB Error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
+});
 
 
 

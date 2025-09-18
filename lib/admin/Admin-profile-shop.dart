@@ -48,7 +48,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     final userId = prefs.getInt('user_id');
     final token = prefs.getString('jwt_token');
     print(userId);
-    final url = Uri.parse('http://10.214.52.39:8080/profile-exchange/$userId');
+    final url = Uri.parse('http://172.22.173.39:8080/profile-exchange/$userId');
 
     try {
       final response = await http.get(
@@ -226,7 +226,9 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
 
     if (confirmed != true) return;
 
-    final url = Uri.parse('http://10.214.52.39:8080/delete_profile/$profileId');
+    final url = Uri.parse(
+      'http://172.22.173.39:8080/delete_profile/$profileId',
+    );
 
     try {
       final response = await http.delete(url);
@@ -258,7 +260,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     }
 
     final url = Uri.parse(
-      'http://10.214.52.39:8080/purchase_profile',
+      'http://172.22.173.39:8080/purchase_profile',
     ); // เปลี่ยน URL
 
     final body = jsonEncode({
@@ -312,131 +314,123 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Padding(
-                    padding: EdgeInsetsGeometry.only(top: 0, right: 15),
-                    child:
-                        // ส่วนแสดงข้อมูลโปรไฟล์
-                        Text(
-                          profile['name'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
+            child: Column(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(top: 0, right: 15),
+                      child:
+                          // ส่วนแสดงข้อมูลโปรไฟล์
+                          Text(
+                            profile['name'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  CircleAvatar(
-                    radius: 70,
-                    backgroundImage: NetworkImage(profile['image'] ?? ''),
-                    backgroundColor: Colors.grey[200],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "${profile['coins'] ?? 0} Coins",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.deepOrange,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: Icon(
-                        isPurchased ? Icons.check_circle : Icons.shopping_cart,
-                        size: 20,
+                    const SizedBox(height: 12),
+                    CircleAvatar(
+                      radius: 70,
+                      backgroundImage: NetworkImage(profile['image'] ?? ''),
+                      backgroundColor: Colors.grey[200],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "${profile['coins'] ?? 0} Coins",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.deepOrange,
                       ),
-                      label: Text(
-                        isPurchased ? "Purchased" : "Buy",
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      onPressed: isPurchased
-                          ? null
-                          : () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    backgroundColor: Colors
-                                        .transparent, // ทำให้ AlertDialog โปร่งเพื่อใช้ gradient
-                                    contentPadding: EdgeInsets.zero,
-                                    content: Container(
-                                      decoration: BoxDecoration(
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: Icon(
+                          isPurchased
+                              ? Icons.check_circle
+                              : Icons.shopping_cart,
+                          size: 20,
+                        ),
+                        label: Text(
+                          isPurchased ? "Purchased" : "Buy",
+                          style: TextStyle(fontSize: 14),
+                        ),
+                        onPressed: isPurchased
+                            ? null
+                            : () {
+                                showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.red.withOpacity(0.9),
-                                            Colors.white,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black26,
-                                            blurRadius: 12,
-                                            offset: Offset(0, 6),
-                                          ),
-                                        ],
                                       ),
-                                      padding: EdgeInsets.all(20),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.shopping_cart,
-                                                color: const Color.fromARGB(
-                                                  255,
-                                                  9,
-                                                  9,
-                                                  9,
-                                                ),
-                                              ),
-                                              SizedBox(width: 10),
-                                              Text(
-                                                "Confirm Purchase",
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
+                                      backgroundColor: Colors
+                                          .transparent, // ทำให้ AlertDialog โปร่งเพื่อใช้ gradient
+                                      contentPadding: EdgeInsets.zero,
+                                      content: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              Colors.red.withOpacity(0.9),
+                                              Colors.white,
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black26,
+                                              blurRadius: 12,
+                                              offset: Offset(0, 6),
+                                            ),
+                                          ],
+                                        ),
+                                        padding: EdgeInsets.all(20),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.shopping_cart,
                                                   color: const Color.fromARGB(
                                                     255,
-                                                    1,
-                                                    1,
-                                                    1,
+                                                    9,
+                                                    9,
+                                                    9,
                                                   ),
-                                                  fontSize: 18,
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                          SizedBox(height: 16),
-                                          Icon(
-                                            Icons.warning,
-                                            size: 90,
-                                            color: const Color.fromARGB(
-                                              255,
-                                              0,
-                                              0,
-                                              0,
+                                                SizedBox(width: 10),
+                                                Text(
+                                                  "Confirm Purchase",
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: const Color.fromARGB(
+                                                      255,
+                                                      1,
+                                                      1,
+                                                      1,
+                                                    ),
+                                                    fontSize: 18,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          SizedBox(height: 16),
-                                          Text(
-                                            "Do you want to buy this profile for ${profile['coins']} coins?",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize: 16,
+                                            SizedBox(height: 16),
+                                            Icon(
+                                              Icons.warning,
+                                              size: 90,
                                               color: const Color.fromARGB(
                                                 255,
                                                 0,
@@ -444,102 +438,119 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
                                                 0,
                                               ),
                                             ),
-                                          ),
-                                          SizedBox(height: 24),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              Flexible(
-                                                child: ElevatedButton.icon(
-                                                  onPressed: () => Navigator.of(
-                                                    context,
-                                                  ).pop(),
-                                                  icon: Icon(Icons.close),
-                                                  label: Text("Cancel"),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        Colors.white70,
-                                                    foregroundColor:
-                                                        Colors.black87,
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 12,
-                                                          horizontal: 12,
-                                                        ),
-                                                  ),
+                                            SizedBox(height: 16),
+                                            Text(
+                                              "Do you want to buy this profile for ${profile['coins']} coins?",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                color: const Color.fromARGB(
+                                                  255,
+                                                  0,
+                                                  0,
+                                                  0,
                                                 ),
                                               ),
-                                              SizedBox(width: 12),
-                                              Flexible(
-                                                child: ElevatedButton.icon(
-                                                  onPressed: () {
-                                                    Navigator.of(context).pop();
-                                                    buyProfile(
-                                                      profile['id'],
-                                                      profile['coins'],
-                                                      profile['image'],
-                                                    );
-                                                  },
-                                                  icon: Icon(
-                                                    Icons.check_circle,
-                                                  ),
-                                                  label: Text("Confirm"),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        Colors.redAccent,
-                                                    foregroundColor:
-                                                        Colors.white,
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
+                                            ),
+                                            SizedBox(height: 24),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: [
+                                                Flexible(
+                                                  child: ElevatedButton.icon(
+                                                    onPressed: () =>
+                                                        Navigator.of(
+                                                          context,
+                                                        ).pop(),
+                                                    icon: Icon(Icons.close),
+                                                    label: Text("Cancel"),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor:
+                                                          Colors.white70,
+                                                      foregroundColor:
+                                                          Colors.black87,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                            vertical: 12,
+                                                            horizontal: 12,
                                                           ),
                                                     ),
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 12,
-                                                          horizontal: 12,
-                                                        ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                                SizedBox(width: 12),
+                                                Flexible(
+                                                  child: ElevatedButton.icon(
+                                                    onPressed: () {
+                                                      Navigator.of(
+                                                        context,
+                                                      ).pop();
+                                                      buyProfile(
+                                                        profile['id'],
+                                                        profile['coins'],
+                                                        profile['image'],
+                                                      );
+                                                    },
+                                                    icon: Icon(
+                                                      Icons.check_circle,
+                                                    ),
+                                                    label: Text("Confirm"),
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor:
+                                                          Colors.redAccent,
+                                                      foregroundColor:
+                                                          Colors.white,
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                            vertical: 12,
+                                                            horizontal: 12,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: isPurchased
-                            ? Colors.grey
-                            : const Color.fromARGB(
-                                255,
-                                229,
-                                76,
-                                29,
-                              ).withOpacity(0.8),
-                        foregroundColor: isPurchased
-                            ? Colors.grey
-                            : const Color.fromARGB(255, 249, 249, 249),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                                    );
+                                  },
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: isPurchased
+                              ? Colors.grey
+                              : const Color.fromARGB(
+                                  255,
+                                  229,
+                                  76,
+                                  29,
+                                ).withOpacity(0.8),
+                          foregroundColor: isPurchased
+                              ? Colors.grey
+                              : const Color.fromARGB(255, 249, 249, 249),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
           // เปลี่ยนจาก IconButton เป็น PopupMenuButton
@@ -640,7 +651,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
   Future<void> _deleteProfile(int profileId) async {
     try {
       final url = Uri.parse(
-        'http://10.214.52.39:8080/delete_profile/$profileId',
+        'http://172.22.173.39:8080/delete_profile/$profileId',
       );
 
       final response = await http.delete(url);
@@ -677,6 +688,20 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
         backgroundColor: const Color(0xFFF7F4EF),
         appBar: AppBar(title: const Text("Profile Shop")),
         body: Center(child: Text(errorMsg)),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color.fromARGB(255, 235, 188, 117),
+          child: Icon(Icons.add, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddProfilePage()),
+            ).then((shouldRefresh) {
+              if (shouldRefresh == true) {
+                loadUserAndFetchProfiles();
+              }
+            });
+          },
+        ),
       );
     }
 

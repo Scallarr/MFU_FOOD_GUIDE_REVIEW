@@ -60,7 +60,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchPendingThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/threads/pending'),
+        Uri.parse('http://172.22.173.39:8080/threads/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -85,7 +85,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchPendingRepliedThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/threads-replied/pending'),
+        Uri.parse('http://172.22.173.39:8080/threads-replied/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -139,7 +139,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/user-profile/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -311,7 +311,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/threads/reject'),
+        Uri.parse('http://172.22.173.39:8080/threads/reject'),
         headers: {'Content-Type': 'application/json'},
         // headers: {'Authorization': 'Bearer $token'},
         body: json.encode({
@@ -340,7 +340,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://10.214.52.39:8080/user/info/$userId');
+      final uri = Uri.parse('http://172.22.173.39:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -357,7 +357,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
             'User_ID': userId,
             'username': userData['username'] ?? '',
             'email': userData['email'] ?? '',
-            'total_likes': userData['total_likes'] ?? 0,
+            'review_total_likes': userData['total_likes'] ?? 0,
             'total_reviews': userData['total_reviews'] ?? 0,
             'coins': userData['coins'] ?? 0,
             'formattedCoins': NumberFormat(
@@ -532,7 +532,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/threads/AdminManual-check/reject'),
+        Uri.parse('http://172.22.173.39:8080/threads/AdminManual-check/reject'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'threadId': threadId,
@@ -561,7 +561,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     final token = prefs.getString('jwt_token');
     if (userId == null) return;
     final response = await http.get(
-      Uri.parse('http://10.214.52.39:8080/all_threads/$userId'),
+      Uri.parse('http://172.22.173.39:8080/all_threads/$userId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -671,7 +671,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
     final response = await http.post(
-      Uri.parse('http://10.214.52.39:8080/like_thread'),
+      Uri.parse('http://172.22.173.39:8080/like_thread'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'User_ID': userId,
@@ -692,7 +692,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/user_profile_picture/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user_profile_picture/$userId'),
       );
       setState(() => isSending = true);
       if (response.statusCode == 200) {
@@ -714,7 +714,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
     try {
       setState(() => isSending = true);
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/create_thread'),
+        Uri.parse('http://172.22.173.39:8080/create_thread'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'User_ID': userId, 'message': message}),
       );
@@ -995,7 +995,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
     return Container(
       width: double.infinity,
-      height: 320,
+      height: 370,
       child: ClipRRect(
         borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
         child: Stack(
@@ -1526,6 +1526,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                           );
                           if (shouldRefresh == true) {
                             await fetchThreads();
+                            fetchPendingRepliedThreadsCount();
                           }
                         },
                         child: Container(
@@ -2313,36 +2314,14 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
                     const SizedBox(width: 12),
 
-                    // Text Field
                     Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 150),
-                          child: SingleChildScrollView(
-                            reverse: true,
-                            child: TextField(
-                              controller: _textController,
-                              maxLines: null,
-                              keyboardType: TextInputType.multiline,
-                              decoration: InputDecoration(
-                                hintText: 'Write a new thread...',
-                                hintStyle: TextStyle(
-                                  color: Colors.grey.shade600,
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                            ),
-                          ),
+                      child: TextField(
+                        controller: _textController,
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        decoration: InputDecoration(
+                          hintText: 'Write a new thread...',
+                          border: InputBorder.none,
                         ),
                       ),
                     ),

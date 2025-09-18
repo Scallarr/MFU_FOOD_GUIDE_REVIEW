@@ -43,7 +43,7 @@ class _RewardHistoryPageState extends State<RewardHistoryPage> {
       }
 
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/rewards-history/$userId'),
+        Uri.parse('http://172.22.173.39:8080/rewards-history/$userId'),
         headers: {'Authorization': 'Bearer $token'},
       );
 

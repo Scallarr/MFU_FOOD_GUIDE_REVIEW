@@ -351,7 +351,7 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/Add/restaurants'),
+        Uri.parse('http://172.22.173.39:8080/Add/restaurants'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'restaurant_name': _nameController.text,

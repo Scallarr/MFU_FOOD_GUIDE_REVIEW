@@ -133,7 +133,7 @@ class _EditMenuPageState extends State<EditMenuPage> {
 
     try {
       final response = await http.put(
-        Uri.parse('http://10.214.52.39:8080/Edit/Menu/${widget.menuId}'),
+        Uri.parse('http://172.22.173.39:8080/Edit/Menu/${widget.menuId}'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'restaurantId': widget.restaurantId,

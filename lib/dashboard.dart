@@ -59,9 +59,7 @@ class _DashboardPageState extends State<Dashboard> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
-        ),
+        Uri.parse('http://10.0.1.67:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -81,7 +79,7 @@ class _DashboardPageState extends State<Dashboard> {
   Future<void> fetchRestaurants() async {
     try {
       final response = await http.get(
-        Uri.parse('https://mfu-food-guide-review.onrender.com/restaurants'),
+        Uri.parse('http://10.0.1.67:8080/restaurants'),
       );
 
       if (response.statusCode == 200) {
@@ -169,7 +167,9 @@ class _DashboardPageState extends State<Dashboard> {
                     onTap: () async {
                       final shouldRefresh = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => ProfilePage()),
+                        MaterialPageRoute(
+                          builder: (context) => ProfilePageUser(),
+                        ),
                       );
 
                       if (shouldRefresh == true) {
@@ -463,7 +463,7 @@ class _DashboardPageState extends State<Dashboard> {
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPage()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageUser()),
         );
         break;
       case 2:

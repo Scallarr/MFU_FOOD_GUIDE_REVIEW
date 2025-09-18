@@ -118,7 +118,7 @@ class _AddmenuState extends State<Addmenu> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/Add/menus'),
+        Uri.parse('http://172.22.173.39:8080/Add/menus'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'restaurantId': widget.restaurantId,

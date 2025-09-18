@@ -74,7 +74,7 @@ class _RestaurantallPendingrewiewPageState
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       final response = await http.get(
-        Uri.parse('http://10.214.52.39:8080/Pending_review-all-restaurants'),
+        Uri.parse('http://172.22.173.39:8080/Pending_review-all-restaurants'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -1224,7 +1224,7 @@ class _RestaurantallPendingrewiewPageState
   Future<void> _approveReview(int reviewId) async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/api/reviews/approve'),
+        Uri.parse('http://172.22.173.39:8080/api/reviews/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'reviewId': reviewId, 'adminId': userId}),
       );
@@ -1249,7 +1249,7 @@ class _RestaurantallPendingrewiewPageState
   Future<void> _rejectReview(int reviewId, {String reason = ''}) async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/api/reviews/reject'),
+        Uri.parse('http://172.22.173.39:8080/api/reviews/reject'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'reviewId': reviewId,

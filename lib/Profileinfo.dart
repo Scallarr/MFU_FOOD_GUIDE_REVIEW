@@ -2,21 +2,28 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/Profileshop.dart';
+import 'package:myapp/admin/Admin-Home.dart';
+import 'package:myapp/admin/Admin-Mangecoin.dart';
+import 'package:myapp/admin/Admin-coin_History.dart';
+import 'package:myapp/admin/Admin-profile-shop.dart';
+import 'package:myapp/admin/Admin-userManagement.dart';
 import 'package:myapp/home.dart';
+import 'package:intl/intl.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
+import 'package:myapp/userMangement.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
 
-class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+class ProfilePageUser extends StatefulWidget {
+  const ProfilePageUser({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<ProfilePageUser> createState() => _ProfilePageAdminState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageAdminState extends State<ProfilePageUser> {
   Map<String, dynamic>? userData;
   bool isLoading = true;
   String error = '';
@@ -51,9 +58,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> fetchUserData(int userId) async {
     try {
-      final url = Uri.parse(
-        'https://mfu-food-guide-review.onrender.com/user-profile/$userId',
-      );
+      final url = Uri.parse('http://172.22.173.39:8080/user-profile/$userId');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -86,7 +91,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<List<Map<String, dynamic>>> fetchProfilePictures(int userId) async {
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user-profile-pictures/$userId',
+      'http://172.22.173.39:8080/user-profile-pictures/$userId',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -99,7 +104,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> setActiveProfilePicture(int userId, int pictureId) async {
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user-profile-pictures/set-active',
+      'http://172.22.173.39:8080/user-profile-pictures/set-active',
     );
     final response = await http.post(
       url,
@@ -113,6 +118,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> updateProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
     final userId = prefs.getInt('user_id');
     if (userId == null) {
       ScaffoldMessenger.of(
@@ -122,12 +128,15 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     final url = Uri.parse(
-      'https://mfu-food-guide-review.onrender.com/user-profile/update/$userId',
+      'http://172.22.173.39:8080/user-profile/update/$userId',
     );
 
     final response = await http.put(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
       body: json.encode({
         'username': usernameController.text.trim(),
         'bio': bioController.text.trim(),
@@ -490,6 +499,29 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildMenuTile(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+    required Widget page,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.orange[800]),
+      title: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      tileColor: const Color.fromARGB(255, 255, 255, 255),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      onTap: () async {
+        final shouldRefresh = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (context) => page),
+        );
+        if (shouldRefresh == true) loadUserIdAndFetch();
+      },
+    );
+  }
+
   @override
   void dispose() {
     usernameController.dispose();
@@ -533,7 +565,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final email = data['email'] ?? '';
     final pictureUrl = data['picture_url'];
     final coins = data['coins'] ?? 0;
+    final formattedCoins = NumberFormat('#,###').format(coins);
     final status = data['status'] ?? 'Active';
+    final role = data['role'] ?? 'user';
     final totalLikes = data['total_likes'] ?? 0;
     final totalReviews = data['total_reviews'] ?? 0;
 
@@ -653,77 +687,59 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.monetization_on, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text('$coins coins'),
+                      Text('$formattedCoins'),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          220,
-                          193,
-                          149,
-                        ),
-                        foregroundColor: const Color.fromARGB(255, 94, 85, 85),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            12,
-                          ), // ปรับค่าตรงนี้ให้โค้งตามต้องการ
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 0,
-                        ), // ความสูงของปุ่ม
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProfileShopUserPage(),
-                          ),
-                        ).then((shouldRefresh) {
-                          if (shouldRefresh == true) {
-                            // รีโหลดข้อมูล หรือ setState
-                            loadUserIdAndFetch(); // หรือฟังก์ชันที่ใช้โหลดข้อมูล user
-                          }
-                        });
-                      },
-
-                      child: const Text(
-                        'Profile Shop',
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatCard(Icons.thumb_up, 'Likes', totalLikes),
-                      const SizedBox(width: 16),
+                      _buildStatCard(
+                        Icons.thumb_up,
+                        'Likes',
+                        totalLikes,
+                        const Color.fromARGB(255, 152, 127, 127),
+                      ),
                       _buildStatCard(
                         Icons.rate_review,
                         'Reviews',
                         totalReviews,
+                        const Color.fromARGB(255, 86, 109, 147),
+                      ),
+                    ],
+                  ),
+
+                  ListView(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.store_mall_directory,
+                        text: 'Profile Shop ',
+                        page: ProfileShopUserPage(),
+                      ),
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.history,
+                        text: 'Reward Coin History',
+                        page: RewardHistoryPage(),
+                      ),
+                      _buildMenuTile(
+                        context,
+                        icon: Icons.people,
+                        text: 'User overview',
+                        page: UserManagementPage(),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  buildReadonlyField(Icons.person, 'First Name', firstName),
-                  buildReadonlyField(
-                    Icons.person_outline,
-                    'Last Name',
-                    lastName,
-                  ),
-                  buildReadonlyField(Icons.email, 'Email', email),
-                  buildReadonlyField(Icons.verified_user, 'Status', status),
                   buildEditableField(
                     Icons.account_circle,
                     'Username',
@@ -748,31 +764,47 @@ class _ProfilePageState extends State<ProfilePage> {
                       });
                     },
                   ),
-                  buildEditableField(
-                    Icons.info_outline,
-                    'Bio',
-                    bioController,
-                    isEditingBio,
-                    () async {
-                      if (isEditingBio) {
-                        await updateProfile();
-                        setState(() {
-                          isEditingBio = false;
-                        });
-                      } else {
-                        setState(() {
-                          isEditingBio = true;
-                        });
-                      }
-                    },
-                    () {
-                      setState(() {
-                        isEditingBio = false;
-                        bioController.text = userData?['bio'] ?? '';
-                      });
-                    },
+                  buildReadonlyField(Icons.person, 'First Name', firstName),
+                  buildReadonlyField(
+                    Icons.person_outline,
+                    'Last Name',
+                    lastName,
+                  ),
+                  buildReadonlyField(Icons.email, 'Email', email),
+                  buildReadonlyField(
+                    role == 'Admin'
+                        ? Icons.workspace_premium
+                        : Icons.workspace_premium,
+                    role == 'Admin' ? 'Role' : 'Role',
+                    role,
                   ),
 
+                  buildReadonlyField(Icons.verified_user, 'Status', status),
+
+                  // buildEditableField(
+                  //   Icons.info_outline,
+                  //   'Bio',
+                  //   bioController,
+                  //   isEditingBio,
+                  //   () async {
+                  //     if (isEditingBio) {
+                  //       await updateProfile();
+                  //       setState(() {
+                  //         isEditingBio = false;
+                  //       });
+                  //     } else {
+                  //       setState(() {
+                  //         isEditingBio = true;
+                  //       });
+                  //     }
+                  //   },
+                  //   () {
+                  //     setState(() {
+                  //       isEditingBio = false;
+                  //       bioController.text = userData?['bio'] ?? '';
+                  //     });
+                  //   },
+                  // ),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -804,6 +836,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -814,31 +847,71 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-Widget _buildStatCard(IconData icon, String label, int value) {
+Widget _buildStatCard(IconData icon, String label, int value, Color color) {
+  // ฟอร์แมตตัวเลขมี comma
+  final formattedValue = NumberFormat('#,###').format(value);
+
   return Expanded(
-    child: Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 10,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: icon == Icons.thumb_up ? Colors.red : Colors.blue,
-              size: 32,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '$value',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Colors.black54)),
-          ],
+    child: Container(
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.5), color.withOpacity(0.3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color.fromARGB(255, 28, 28, 28).withOpacity(0.05),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.4),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 32,
+              color: const Color.fromARGB(255, 0, 0, 0),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            formattedValue,
+            style: const TextStyle(
+              fontSize: 28,
+
+              color: Color.fromARGB(255, 255, 255, 255),
+              shadows: [],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Color.fromARGB(255, 255, 255, 255),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
       ),
     ),
   );

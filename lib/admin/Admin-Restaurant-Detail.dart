@@ -65,7 +65,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
       final uri = Uri.parse(
-        'http://10.214.52.39:8080/restaurant/${widget.restaurantId}'
+        'http://172.22.173.39:8080/restaurant/${widget.restaurantId}'
         '${userId != null ? '?user_id=$userId' : ''}',
       );
 
@@ -183,8 +183,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     final baseColor = color ?? Colors.blue;
 
     return Container(
-      width: 120, // ให้ขนาดเท่ากัน
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      width: 100, // ให้ขนาดเท่ากัน
+      padding: EdgeInsets.symmetric(horizontal: 0, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -215,7 +215,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
             ),
             child: Icon(
               icon,
-              size: 22,
+              size: 18,
               color: const Color.fromARGB(255, 255, 255, 255),
             ),
           ),
@@ -223,7 +223,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
               color: const Color.fromARGB(255, 255, 255, 255),
             ),
@@ -307,7 +307,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     if (isProcessing) return;
     isProcessing = true;
 
-    final url = Uri.parse('http://10.214.52.39:8080/review/$reviewId/like');
+    final url = Uri.parse('http://172.22.173.39:8080/review/$reviewId/like');
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
 
@@ -389,7 +389,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://10.214.52.39:8080/user/info/$userId');
+      final uri = Uri.parse('http://172.22.173.39:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -424,7 +424,9 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
   Future<void> updateLeaderboard() async {
     try {
-      final url = Uri.parse('http://10.214.52.39:8080/leaderboard/update-auto');
+      final url = Uri.parse(
+        'http://172.22.173.39:8080/leaderboard/update-auto',
+      );
       // สมมติว่า backend ต้องการเดือนปีใน body (format 'YYYY-MM')
       // คุณอาจจะเก็บเดือนปีที่เหมาะสมไว้ในตัวแปร เช่น currentMonthYear
       final currentMonthYear = DateTime.now();
@@ -1992,7 +1994,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Future<void> _deleteMenu(int menuId) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://10.214.52.39:8080/Delete/menus/$menuId'),
+        Uri.parse('http://172.22.173.39:8080/Delete/menus/$menuId'),
       );
       if (response.statusCode == 200) {
         fetchRestaurant();
@@ -2184,7 +2186,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
 
       final response = await http.post(
-        Uri.parse('http://10.214.52.39:8080/review/AdminManual-check/reject'),
+        Uri.parse('http://172.22.173.39:8080/review/AdminManual-check/reject'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'rewiewId': review_ID,
