@@ -557,7 +557,10 @@ class _PendingReviewsPageState extends State<PendingReviewsPage> {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+              side: BorderSide(
+                color: const Color.fromARGB(255, 64, 62, 62).withOpacity(0.3),
+                width: 2,
+              ),
             ),
             color: _cardColor,
             child: Padding(

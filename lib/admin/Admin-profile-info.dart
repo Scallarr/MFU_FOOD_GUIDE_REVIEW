@@ -141,7 +141,6 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
         'bio': bioController.text.trim(),
       }),
     );
-
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully')),
@@ -151,6 +150,118 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
         isEditingUsername = false;
         isEditingBio = false;
       });
+    } else if (response.statusCode == 400) {
+      final data = json.decode(response.body);
+      final errorMsg = data['error'] ?? 'Username already exists';
+      final oldUsername = data['oldUsername'] ?? usernameController.text;
+
+      // คืนค่ากลับไปเป็น username เก่า
+      setState(() {
+        usernameController.text = oldUsername;
+        isEditingUsername = false;
+      });
+
+      // แสดง Dialog แบบสวย ๆ
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+            elevation: 10,
+            backgroundColor: Colors.white,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromARGB(66, 94, 81, 81),
+                    blurRadius: 15,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade600,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.redAccent.withOpacity(0.5),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.white,
+                      size: 56,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Update Fail!',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    errorMsg,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.black,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 6,
+                        shadowColor: const Color.fromARGB(
+                          255,
+                          0,
+                          0,
+                          0,
+                        ).withOpacity(0.6),
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
     } else {
       ScaffoldMessenger.of(
         context,
@@ -299,60 +410,128 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
               GestureDetector(
                 onTap: () async {
                   if (isEditing) {
+                    final oldValue = controller.text;
                     final confirm = await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Confirm Save'),
-                        content: const Text('Do you want to save changes?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color.fromARGB(
-                                255,
-                                255,
-                                255,
-                                255,
+                      builder: (context) => Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                        backgroundColor: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 20,
+                                spreadRadius: 2,
                               ),
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                0,
-                                0,
-                                0,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('Cancel'),
+                            ],
                           ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                220,
-                                4,
-                                4,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TweenAnimationBuilder(
+                                duration: Duration(milliseconds: 300),
+                                tween: Tween<double>(begin: 0, end: 1),
+                                builder: (context, double value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: Container(
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 40,
+                                        color: Colors.red.withOpacity(1),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Confirm Save',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Do you want to save changes?',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 16),
                               ),
-                            ),
-                            child: const Text(
-                              'Save',
-                              style: TextStyle(color: Colors.white),
-                            ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () {
+                                        controller.text = oldValue;
+                                        Navigator.of(context).pop(false);
+                                      },
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: Colors.black
+                                            .withOpacity(0.7),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red.withOpacity(
+                                          0.7,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Save',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     );
                     if (confirm == true) {
@@ -383,55 +562,123 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Discard Changes?'),
-                        content: const Text(
-                          'Are you sure you want to cancel and discard your changes?',
+                      builder: (context) => Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color.fromARGB(
-                                255,
-                                245,
-                                248,
-                                251,
+                        elevation: 0,
+                        backgroundColor: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 20,
+                                spreadRadius: 2,
                               ),
-                              backgroundColor: const Color.fromARGB(
-                                255,
-                                0,
-                                0,
-                                0,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text('Keep Editing'),
+                            ],
                           ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TweenAnimationBuilder(
+                                duration: Duration(milliseconds: 300),
+                                tween: Tween<double>(begin: 0, end: 1),
+                                builder: (context, double value, child) {
+                                  return Transform.scale(
+                                    scale: value,
+                                    child: Container(
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 40,
+                                        color: Colors.red.withOpacity(1),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Discard Changes?',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            child: const Text(
-                              'Discard',
-                              style: TextStyle(color: Colors.white),
-                            ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Are you sure you want to cancel and discard your changes?',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: Colors.black
+                                            .withOpacity(0.7),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Keep Editing',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red.withOpacity(
+                                          0.7,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Discard',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     );
 
@@ -455,7 +702,6 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
             maxLength: 13,
             controller: controller,
             readOnly: !isEditing,
-            // เพิ่ม inputFormatters เพื่อป้องกันการพิมพ์เว้นวรรค
             inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
             decoration: InputDecoration(
               filled: isEditing,
@@ -464,6 +710,8 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                 borderRadius: BorderRadius.circular(8),
               ),
               isDense: true,
+              // แสดง counter เฉพาะตอนแก้ไข
+              counterText: isEditing ? null : '',
             ),
           ),
         ],
@@ -566,6 +814,7 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
     final coins = data['coins'] ?? 0;
     final formattedCoins = NumberFormat('#,###').format(coins);
     final status = data['status'] ?? 'Active';
+    final role = data['role'] ?? 'User';
     final totalLikes = data['total_likes'] ?? 0;
     final totalReviews = data['total_reviews'] ?? 0;
 
@@ -744,14 +993,6 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  buildReadonlyField(Icons.person, 'First Name', firstName),
-                  buildReadonlyField(
-                    Icons.person_outline,
-                    'Last Name',
-                    lastName,
-                  ),
-                  buildReadonlyField(Icons.email, 'Email', email),
-                  buildReadonlyField(Icons.verified_user, 'Status', status),
                   buildEditableField(
                     Icons.account_circle,
                     'Username',
@@ -776,56 +1017,204 @@ class _ProfilePageAdminState extends State<ProfilePageAdmin> {
                       });
                     },
                   ),
-                  buildEditableField(
-                    Icons.info_outline,
-                    'Bio',
-                    bioController,
-                    isEditingBio,
-                    () async {
-                      if (isEditingBio) {
-                        await updateProfile();
-                        setState(() {
-                          isEditingBio = false;
-                        });
-                      } else {
-                        setState(() {
-                          isEditingBio = true;
-                        });
-                      }
-                    },
-                    () {
-                      setState(() {
-                        isEditingBio = false;
-                        bioController.text = userData?['bio'] ?? '';
-                      });
-                    },
+                  const SizedBox(height: 14),
+                  buildReadonlyField(Icons.person, 'First Name', firstName),
+                  const SizedBox(height: 14),
+                  buildReadonlyField(
+                    Icons.person_outline,
+                    'Last Name',
+                    lastName,
                   ),
+                  const SizedBox(height: 14),
+                  buildReadonlyField(Icons.email, 'Email', email),
+                  const SizedBox(height: 14),
+                  buildReadonlyField(Icons.admin_panel_settings, 'Role', role),
+                  const SizedBox(height: 14),
+                  buildReadonlyField(Icons.verified_user, 'Status', status),
 
-                  const SizedBox(height: 16),
+                  // buildEditableField(
+                  //   Icons.info_outline,
+                  //   'Bio',
+                  //   bioController,
+                  //   isEditingBio,
+                  //   () async {
+                  //     if (isEditingBio) {
+                  //       await updateProfile();
+                  //       setState(() {
+                  //         isEditingBio = false;
+                  //       });
+                  //     } else {
+                  //       setState(() {
+                  //         isEditingBio = true;
+                  //       });
+                  //     }
+                  //   },
+                  //   () {
+                  //     setState(() {
+                  //       isEditingBio = false;
+                  //       bioController.text = userData?['bio'] ?? '';
+                  //     });
+                  //   },
+                  // ),
+                  const SizedBox(height: 10),
+
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            12,
-                          ), // ปรับค่าตรงนี้ให้โค้งตามต้องการ
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 0,
-                        ), // ความสูงของปุ่ม
-                      ),
+                    child: TextButton(
                       onPressed: () async {
-                        await _googleSignIn.signOut();
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear();
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => LoginScreen()),
-                          (route) => false,
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => Dialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 0,
+                            backgroundColor: Colors.transparent,
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 20,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TweenAnimationBuilder(
+                                    duration: Duration(milliseconds: 300),
+                                    tween: Tween<double>(begin: 0, end: 1),
+                                    builder: (context, double value, child) {
+                                      return Transform.scale(
+                                        scale: value,
+                                        child: Container(
+                                          padding: EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.logout,
+                                            size: 40,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Log Out?',
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Are you sure you want to log out from your account?',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(false),
+                                          style: OutlinedButton.styleFrom(
+                                            backgroundColor: Colors.black
+                                                .withOpacity(0.7),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Cancel',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.of(context).pop(true),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red
+                                                .withOpacity(0.7),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 14,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Log Out',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         );
+
+                        if (confirm == true) {
+                          await _googleSignIn.signOut();
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.clear();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => LoginScreen()),
+                            (route) => false,
+                          );
+                        }
                       },
+
+                      style: TextButton.styleFrom(
+                        backgroundColor: Color.fromARGB(255, 75, 73, 73),
+                        foregroundColor: const Color.fromARGB(
+                          255,
+                          255,
+                          255,
+                          255,
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: const Color.fromARGB(
+                              255,
+                              177,
+                              145,
+                              131,
+                            ), // ← สีเส้นขอบที่ต้องการ
+                            width: 1.5, // ← ความหนาของเส้นขอบ
+                          ),
+                        ),
+                      ),
                       child: const Text(
                         'Log Out',
                         style: TextStyle(color: Colors.white),

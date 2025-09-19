@@ -4,12 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
-class ActiveUserPage extends StatefulWidget {
+class userActiveAdminPage extends StatefulWidget {
   @override
   _AllUsersPageState createState() => _AllUsersPageState();
 }
 
-class _AllUsersPageState extends State<ActiveUserPage> {
+class _AllUsersPageState extends State<userActiveAdminPage> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _filteredUsers = [];
   Map<String, dynamic>? _selectedUser;
@@ -62,11 +62,8 @@ class _AllUsersPageState extends State<ActiveUserPage> {
     _filteredUsers = _users.where((user) {
       final username = user['username']?.toString().toLowerCase() ?? '';
       final userId = user['User_ID']?.toString().toLowerCase() ?? '';
-      final Email = user['email']?.toString().toLowerCase() ?? '';
 
-      return username.contains(query) ||
-          userId.contains(query) ||
-          Email.contains(query);
+      return username.contains(query) || userId.contains(query);
     }).toList();
   }
 
@@ -76,7 +73,9 @@ class _AllUsersPageState extends State<ActiveUserPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/Usermanagement/users/Active-User'),
+        Uri.parse(
+          'http://172.22.173.39:8080/Usermanagement/users/Active-Admin',
+        ),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as List;
@@ -167,10 +166,10 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
-                          SizedBox(width: 15),
+                          SizedBox(width: 13),
                           Center(
                             child: Text(
-                              'Active User list',
+                              'Active Admin list',
 
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -832,57 +831,57 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                     ],
                     SizedBox(height: 20),
                     // ปุ่มดำเนินการ
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : _showStatusConfirmationDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectedUser!['status'] == 'Active'
-                              ? Colors.red[500]
-                              : Colors.green[500],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 2,
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_isLoading)
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            else
-                              Icon(
-                                _selectedUser!['status'] == 'Active'
-                                    ? Icons.block
-                                    : Icons.check_circle,
-                                size: 20,
-                              ),
-                            SizedBox(width: 8),
-                            Text(
-                              _selectedUser!['status'] == 'Active'
-                                  ? "Ban User"
-                                  : "Unban User",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   height: 52,
+                    //   child: ElevatedButton(
+                    //     onPressed: _isLoading
+                    //         ? null
+                    //         : _showStatusConfirmationDialog,
+                    //     style: ElevatedButton.styleFrom(
+                    //       backgroundColor: _selectedUser!['status'] == 'Active'
+                    //           ? Colors.red[500]
+                    //           : Colors.green[500],
+                    //       foregroundColor: Colors.white,
+                    //       shape: RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(14),
+                    //       ),
+                    //       elevation: 2,
+                    //       padding: EdgeInsets.symmetric(horizontal: 20),
+                    //     ),
+                    //     child: Row(
+                    //       mainAxisAlignment: MainAxisAlignment.center,
+                    //       children: [
+                    //         if (_isLoading)
+                    //           SizedBox(
+                    //             width: 20,
+                    //             height: 20,
+                    //             child: CircularProgressIndicator(
+                    //               color: Colors.white,
+                    //               strokeWidth: 2,
+                    //             ),
+                    //           )
+                    //         else
+                    //           Icon(
+                    //             _selectedUser!['status'] == 'Active'
+                    //                 ? Icons.block
+                    //                 : Icons.check_circle,
+                    //             size: 20,
+                    //           ),
+                    //         SizedBox(width: 8),
+                    //         Text(
+                    //           _selectedUser!['status'] == 'Active'
+                    //               ? "Ban User"
+                    //               : "Unban User",
+                    //           style: TextStyle(
+                    //             fontSize: 16,
+                    //             fontWeight: FontWeight.w600,
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),

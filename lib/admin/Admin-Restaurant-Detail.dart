@@ -27,6 +27,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
   Restaurant? restaurant;
   bool isLoading = true;
   bool isExpanded = false;
+
   Map<String, dynamic>? _selectedUser;
   bool isReviewExpanded = false;
   final Color _primaryColor = Color(0xFF4285F4);
@@ -60,13 +61,20 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     });
   }
 
+  bool isThai = true;
   Future<void> fetchRestaurant() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse(
-        'http://172.22.173.39:8080/restaurant/${widget.restaurantId}'
-        '${userId != null ? '?user_id=$userId' : ''}',
+      final queryParams = {
+        if (userId != null) 'user_id': userId.toString(),
+        'lang': isThai ? 'th' : 'en', // ✅ เพิ่มภาษาที่เลือก
+      };
+
+      final uri = Uri.http(
+        '172.22.173.39:8080', // host + port
+        '/restaurant/${widget.restaurantId}', // path
+        queryParams, // query string
       );
 
       final response = await http.get(
@@ -183,7 +191,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
     final baseColor = color ?? Colors.blue;
 
     return Container(
-      width: 100, // ให้ขนาดเท่ากัน
+      width: 120, // ให้ขนาดเท่ากัน
       padding: EdgeInsets.symmetric(horizontal: 0, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -215,7 +223,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
             ),
             child: Icon(
               icon,
-              size: 18,
+              size: 22,
               color: const Color.fromARGB(255, 255, 255, 255),
             ),
           ),
@@ -223,7 +231,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
           Text(
             value,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: const Color.fromARGB(255, 255, 255, 255),
             ),
@@ -250,7 +258,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
 
     return Container(
       width: double.infinity,
-      height: 430,
+      height: 470,
       child: ClipRRect(
         borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
         child: Stack(
@@ -1250,7 +1258,33 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                   ),
                 ],
               ),
-            ), // Verify Button with Notification Badge
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ToggleButtons(
+                borderRadius: BorderRadius.circular(10),
+                selectedColor: Colors.white,
+                fillColor: Colors.brown.shade900,
+                color: const Color.fromARGB(255, 0, 0, 0),
+                constraints: BoxConstraints(minHeight: 32, minWidth: 40),
+                isSelected: [isThai, !isThai],
+                onPressed: (index) {
+                  setState(() {
+                    isThai = index == 0;
+                  });
+                  fetchRestaurant();
+                },
+                children: [
+                  Text("TH", style: TextStyle(fontSize: 12)),
+                  Text("EN", style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+
+            // Verify Button with Notification Badge
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -1353,7 +1387,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailAdminPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            menu.nameTH,
+                            menu.menu_name,
                             style: TextStyle(fontSize: 15, color: Colors.black),
                           ),
                           SizedBox(height: 6),

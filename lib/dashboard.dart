@@ -472,7 +472,7 @@ class _DashboardPageState extends State<Dashboard> {
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsPage()),
+          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
         );
         break;
     }

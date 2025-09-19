@@ -4,12 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
-class ActiveUserPage extends StatefulWidget {
+class userActiveUserPage extends StatefulWidget {
   @override
   _AllUsersPageState createState() => _AllUsersPageState();
 }
 
-class _AllUsersPageState extends State<ActiveUserPage> {
+class _AllUsersPageState extends State<userActiveUserPage> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _filteredUsers = [];
   Map<String, dynamic>? _selectedUser;
@@ -830,59 +830,59 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                         ),
                       ),
                     ],
-                    SizedBox(height: 20),
-                    // ปุ่มดำเนินการ
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : _showStatusConfirmationDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectedUser!['status'] == 'Active'
-                              ? Colors.red[500]
-                              : Colors.green[500],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 2,
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_isLoading)
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            else
-                              Icon(
-                                _selectedUser!['status'] == 'Active'
-                                    ? Icons.block
-                                    : Icons.check_circle,
-                                size: 20,
-                              ),
-                            SizedBox(width: 8),
-                            Text(
-                              _selectedUser!['status'] == 'Active'
-                                  ? "Ban User"
-                                  : "Unban User",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // SizedBox(height: 20),
+                    // // ปุ่มดำเนินการ
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   height: 52,
+                    //   child: ElevatedButton(
+                    //     onPressed: _isLoading
+                    //         ? null
+                    //         : _showStatusConfirmationDialog,
+                    //     style: ElevatedButton.styleFrom(
+                    //       backgroundColor: _selectedUser!['status'] == 'Active'
+                    //           ? Colors.red[500]
+                    //           : Colors.green[500],
+                    //       foregroundColor: Colors.white,
+                    //       shape: RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(14),
+                    //       ),
+                    //       elevation: 2,
+                    //       padding: EdgeInsets.symmetric(horizontal: 20),
+                    //     ),
+                    //     child: Row(
+                    //       mainAxisAlignment: MainAxisAlignment.center,
+                    //       children: [
+                    //         if (_isLoading)
+                    //           SizedBox(
+                    //             width: 20,
+                    //             height: 20,
+                    //             child: CircularProgressIndicator(
+                    //               color: Colors.white,
+                    //               strokeWidth: 2,
+                    //             ),
+                    //           )
+                    //         else
+                    //           Icon(
+                    //             _selectedUser!['status'] == 'Active'
+                    //                 ? Icons.block
+                    //                 : Icons.check_circle,
+                    //             size: 20,
+                    //           ),
+                    //         SizedBox(width: 8),
+                    //         Text(
+                    //           _selectedUser!['status'] == 'Active'
+                    //               ? "Ban User"
+                    //               : "Unban User",
+                    //           style: TextStyle(
+                    //             fontSize: 16,
+                    //             fontWeight: FontWeight.w600,
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),

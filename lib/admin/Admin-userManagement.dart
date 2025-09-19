@@ -1699,7 +1699,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'All Accounts',
                             '$_Total_User',
-                            Colors.black,
+                            const Color.fromARGB(
+                              255,
+                              108,
+                              102,
+                              159,
+                            ).withOpacity(1),
                             Icons.people_alt_rounded,
                           ),
                         ),
@@ -1729,7 +1734,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'Total Users',
                             '$_totalUsersCount',
-                            _infoColor,
+                            const Color.fromARGB(
+                              255,
+                              174,
+                              164,
+                              144,
+                            ).withOpacity(1),
                             Icons.people_alt_rounded,
                           ),
                         ),
@@ -1753,7 +1763,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'Total Admins',
                             '$_totalAdminsCount',
-                            const Color.fromARGB(255, 173, 118, 183),
+                            const Color.fromARGB(255, 101, 116, 125),
                             Icons.admin_panel_settings_rounded,
                           ),
                         ),
@@ -1783,7 +1793,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'Active Users',
                             '$_activeUsersCount',
-                            _infoColor,
+                            const Color.fromARGB(
+                              255,
+                              174,
+                              164,
+                              144,
+                            ).withOpacity(1),
                             Icons.verified_user_rounded,
                           ),
                         ),
@@ -1807,7 +1822,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'Active Admins',
                             '$_active_Admin_count',
-                            const Color.fromARGB(255, 173, 118, 183),
+                            const Color.fromARGB(255, 101, 116, 125),
                             Icons.verified_user_rounded,
                           ),
                         ),
@@ -1837,7 +1852,12 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'Banned Users',
                             '$_bannedUsersCount',
-                            _infoColor,
+                            const Color.fromARGB(
+                              255,
+                              174,
+                              164,
+                              144,
+                            ).withOpacity(1),
                             Icons.block_rounded,
                           ),
                         ),
@@ -1861,7 +1881,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage>
                           child: _buildStatsCard(
                             'Banned Admins',
                             '$_banned_Admin_count',
-                            const Color.fromARGB(255, 173, 118, 183),
+                            const Color.fromARGB(255, 101, 116, 125),
                             Icons.block_rounded,
                           ),
                         ),

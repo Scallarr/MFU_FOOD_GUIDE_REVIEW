@@ -4,12 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
-class ActiveUserPage extends StatefulWidget {
+class userRoleUsersPage extends StatefulWidget {
   @override
   _AllUsersPageState createState() => _AllUsersPageState();
 }
 
-class _AllUsersPageState extends State<ActiveUserPage> {
+class _AllUsersPageState extends State<userRoleUsersPage> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _filteredUsers = [];
   Map<String, dynamic>? _selectedUser;
@@ -21,7 +21,6 @@ class _AllUsersPageState extends State<ActiveUserPage> {
   final Color _accentColor = Color(0xFFA67C52);
   final Color _backgroundColor = Color(0xFFF5F0E6);
   final Color _textColor = Color(0xFF202124);
-
   final Color _primaryColor = Color(0xFF8B5A2B);
   final Color _secondaryColor = Color(0xFFD2B48C);
 
@@ -62,11 +61,8 @@ class _AllUsersPageState extends State<ActiveUserPage> {
     _filteredUsers = _users.where((user) {
       final username = user['username']?.toString().toLowerCase() ?? '';
       final userId = user['User_ID']?.toString().toLowerCase() ?? '';
-      final Email = user['email']?.toString().toLowerCase() ?? '';
 
-      return username.contains(query) ||
-          userId.contains(query) ||
-          Email.contains(query);
+      return username.contains(query) || userId.contains(query);
     }).toList();
   }
 
@@ -76,7 +72,7 @@ class _AllUsersPageState extends State<ActiveUserPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/Usermanagement/users/Active-User'),
+        Uri.parse('http://172.22.173.39:8080/Usermanagement/users/Userrole'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as List;
@@ -137,7 +133,6 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                     pinned: false,
                     floating: true,
                     snap: true,
-                    elevation: 6,
                     leading: IconButton(
                       icon: Icon(Icons.arrow_back),
                       onPressed: () {
@@ -145,6 +140,7 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                         Navigator.pop(context, true);
                       },
                     ),
+                    elevation: 6,
                     shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.vertical(
                         bottom: Radius.circular(20),
@@ -167,10 +163,10 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
-                          SizedBox(width: 15),
+                          SizedBox(width: 60),
                           Center(
                             child: Text(
-                              'Active User list',
+                              'User Role',
 
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -253,7 +249,7 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Total (${_filteredUsers.length})  Accounts  ',
+                            'Total (${_filteredUsers.length})  Accounts ',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -526,45 +522,37 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
+                      SizedBox(width: 7),
+
                       // Coins Badge
-                      // Container(
-                      //   padding: EdgeInsets.symmetric(
-                      //     horizontal: 8,
-                      //     vertical: 4,
-                      //   ),
-                      //   decoration: BoxDecoration(
-                      //     gradient: LinearGradient(
-                      //       colors: [Colors.amber[700]!, Colors.amber[400]!],
-                      //     ),
-                      //     borderRadius: BorderRadius.circular(8),
-                      //     boxShadow: [
-                      //       BoxShadow(
-                      //         color: Colors.black.withOpacity(0.08),
-                      //         blurRadius: 4,
-                      //         offset: Offset(0, 2),
-                      //       ),
-                      //     ],
-                      //   ),
-                      //   child: Row(
-                      //     children: [
-                      //       Icon(
-                      //         Icons.monetization_on,
-                      //         size: 14,
-                      //         color: Colors.yellow[900],
-                      //       ),
-                      //       SizedBox(width: 3),
-                      //       Text(
-                      //         coinsText,
-                      //         style: TextStyle(
-                      //           fontWeight: FontWeight.bold,
-                      //           fontSize: 12,
-                      //           color: Colors.brown[800],
-                      //         ),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
+                      if (user['ban_info'] != null &&
+                          user['ban_info'].isNotEmpty)
+                        SizedBox(height: 6),
+                      if (user['ban_info'] != null &&
+                          user['ban_info'].isNotEmpty)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.orangeAccent.withOpacity(0.2),
+                                Colors.orangeAccent.withOpacity(0.05),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            user['ban_info'],
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orangeAccent[700],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ],
@@ -624,7 +612,10 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                 children: [
                   Container(
                     margin: EdgeInsets.only(bottom: 40),
-                    child: buildUserBanner(_selectedUser?['picture_url']),
+                    child: buildUserBanner(
+                      _selectedUser?['picture_url'],
+                      _selectedUser?['status'],
+                    ),
                   ),
                   Positioned(
                     bottom: 0,
@@ -830,176 +821,66 @@ class _AllUsersPageState extends State<ActiveUserPage> {
                         ),
                       ),
                     ],
-                    SizedBox(height: 20),
-                    // ปุ่มดำเนินการ
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : _showStatusConfirmationDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _selectedUser!['status'] == 'Active'
-                              ? Colors.red[500]
-                              : Colors.green[500],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          elevation: 2,
-                          padding: EdgeInsets.symmetric(horizontal: 20),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_isLoading)
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            else
-                              Icon(
-                                _selectedUser!['status'] == 'Active'
-                                    ? Icons.block
-                                    : Icons.check_circle,
-                                size: 20,
-                              ),
-                            SizedBox(width: 8),
-                            Text(
-                              _selectedUser!['status'] == 'Active'
-                                  ? "Ban User"
-                                  : "Unban User",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    SizedBox(height: 15),
+
+                    // // ปุ่มดำเนินการ
+                    // SizedBox(
+                    //   width: double.infinity,
+                    //   height: 52,
+                    //   child: ElevatedButton(
+                    //     onPressed: _isLoading
+                    //         ? null
+                    //         : _showStatusConfirmationDialog,
+                    //     style: ElevatedButton.styleFrom(
+                    //       backgroundColor: _selectedUser!['status'] == 'Active'
+                    //           ? Colors.red[500]
+                    //           : Colors.green[500],
+                    //       foregroundColor: Colors.white,
+                    //       shape: RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(14),
+                    //       ),
+                    //       elevation: 2,
+                    //       padding: EdgeInsets.symmetric(horizontal: 20),
+                    //     ),
+                    //     child: Row(
+                    //       mainAxisAlignment: MainAxisAlignment.center,
+                    //       children: [
+                    //         if (_isLoading)
+                    //           SizedBox(
+                    //             width: 20,
+                    //             height: 20,
+                    //             child: CircularProgressIndicator(
+                    //               color: Colors.white,
+                    //               strokeWidth: 2,
+                    //             ),
+                    //           )
+                    //         else
+                    //           Icon(
+                    //             _selectedUser!['status'] == 'Active'
+                    //                 ? Icons.block
+                    //                 : Icons.check_circle,
+                    //             size: 20,
+                    //           ),
+                    //         SizedBox(width: 8),
+                    //         Text(
+                    //           _selectedUser!['status'] == 'Active'
+                    //               ? "Ban User"
+                    //               : "Unban User",
+                    //           style: TextStyle(
+                    //             fontSize: 16,
+                    //             fontWeight: FontWeight.w600,
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(
-    IconData icon,
-    String label,
-    String value, {
-    Color? color,
-  }) {
-    final baseColor = color ?? Colors.blue;
-    return Container(
-      width: 120,
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            baseColor.withOpacity(0.95),
-            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: baseColor.withOpacity(0.15),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 3, 3, 3),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: const Color.fromARGB(255, 255, 255, 255),
-            ),
-          ),
-          SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: const Color.fromARGB(255, 255, 255, 255),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: const Color.fromARGB(255, 220, 216, 216),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  String obfuscateEmail(String email) {
-    if (email.endsWith('@lamduan.mfu.ac.th')) {
-      final domain = '@lamduan.mfu.ac.th';
-      if (email.length > domain.length + 2) {
-        final prefix = email.substring(0, 2);
-        return '$prefix********$domain';
-      }
-    } else if (email.endsWith('@mfu.ac.th')) {
-      final domain = '@mfu.ac.th';
-      if (email.length > domain.length + 2) {
-        final prefix = email.substring(0, 2);
-        return '$prefix********$domain';
-      }
-    } else {
-      final atIndex = email.indexOf('@');
-      if (atIndex > 3) {
-        final prefix = email.substring(0, 3);
-        final domain = email.substring(atIndex);
-        return '$prefix********$domain';
-      }
-    }
-    return email;
-  }
-
-  String formatCoins(int coins) => coins.toString();
-
-  Widget buildUserBanner(String? pictureUrl) {
-    return Container(
-      height: 420,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.blueGrey,
-        image: (pictureUrl != null && pictureUrl.isNotEmpty)
-            ? DecorationImage(
-                image: NetworkImage(pictureUrl),
-                fit: BoxFit.cover,
-              )
-            : null,
       ),
     );
   }
@@ -1597,5 +1478,116 @@ class _AllUsersPageState extends State<ActiveUserPage> {
         await _showBanDialog();
       }
     }
+  }
+
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    final baseColor = color ?? Colors.blue;
+    return Container(
+      width: 120,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withOpacity(0.95),
+            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: baseColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 3, 3, 3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color.fromARGB(255, 220, 216, 216),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String obfuscateEmail(String email) {
+    if (email.endsWith('@lamduan.mfu.ac.th')) {
+      final domain = '@lamduan.mfu.ac.th';
+      if (email.length > domain.length + 2) {
+        final prefix = email.substring(0, 2);
+        return '$prefix********$domain';
+      }
+    } else if (email.endsWith('@mfu.ac.th')) {
+      final domain = '@mfu.ac.th';
+      if (email.length > domain.length + 2) {
+        final prefix = email.substring(0, 2);
+        return '$prefix********$domain';
+      }
+    } else {
+      final atIndex = email.indexOf('@');
+      if (atIndex > 3) {
+        final prefix = email.substring(0, 3);
+        final domain = email.substring(atIndex);
+        return '$prefix********$domain';
+      }
+    }
+    return email;
+  }
+
+  String formatCoins(int coins) => coins.toString();
+
+  Widget buildUserBanner(String? pictureUrl, String baninfo) {
+    return Container(
+      height: baninfo == 'Banned' ? 350 : 400,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.blueGrey,
+        image: (pictureUrl != null && pictureUrl.isNotEmpty)
+            ? DecorationImage(
+                image: NetworkImage(pictureUrl),
+                fit: BoxFit.cover,
+              )
+            : null,
+      ),
+    );
   }
 }

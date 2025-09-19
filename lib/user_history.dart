@@ -4,12 +4,12 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
-class MyHistoryPage extends StatefulWidget {
+class userMyHistoryPage extends StatefulWidget {
   @override
   _MyHistoryPageState createState() => _MyHistoryPageState();
 }
 
-class _MyHistoryPageState extends State<MyHistoryPage>
+class _MyHistoryPageState extends State<userMyHistoryPage>
     with SingleTickerProviderStateMixin {
   int? userId;
   late TabController _tabController;
@@ -38,7 +38,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadUserId();
   }
 
@@ -65,8 +65,8 @@ class _MyHistoryPageState extends State<MyHistoryPage>
 
     try {
       await Future.wait([
-        _fetchThreadApprovalHistory(),
-        _fetchReplyApprovalHistory(),
+        // _fetchThreadApprovalHistory(),
+        // _fetchReplyApprovalHistory(),
         _fetchMyThreads(),
         _fetchMyReplies(),
       ]);
@@ -79,105 +79,105 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     }
   }
 
-  Future<void> _fetchThreadApprovalHistory() async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/api/admin_thread_history/$userId'),
-      );
+  // Future<void> _fetchThreadApprovalHistory() async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('http://172.22.173.39:8080/api/admin_thread_history/$userId'),
+  //     );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          _threadApprovalHistory = json.decode(response.body);
-        });
-      }
-    } catch (e) {
-      print('Error fetching thread approval history: $e');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       setState(() {
+  //         _threadApprovalHistory = json.decode(response.body);
+  //       });
+  //     }
+  //   } catch (e) {
+  //     print('Error fetching thread approval history: $e');
+  //   }
+  // }
 
-  Future<void> _fetchReplyApprovalHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final Admin = prefs.getInt('user_id');
-    try {
-      final response = await http.get(
-        Uri.parse(
-          'http://172.22.173.39:8080/api/my_admin_thread_replies/$Admin',
-        ),
-      );
+  // Future<void> _fetchReplyApprovalHistory() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final Admin = prefs.getInt('user_id');
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse(
+  //         'http://172.22.173.39:8080/api/my_admin_thread_replies/$Admin',
+  //       ),
+  //     );
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+  //     if (response.statusCode == 200) {
+  //       final List<dynamic> data = json.decode(response.body);
 
-        setState(() {
-          _replyApprovalHistory = data.map((reply) {
-            // กำหนดสถานะของ reply
-            String status;
-            if (reply['reply_admin_decision'] == 'Banned') {
-              status = 'Banned';
-            } else if (reply['reply_admin_decision'] == 'Posted') {
-              status = 'Posted';
-            } else {
-              status = 'Posted';
-            }
+  //       setState(() {
+  //         _replyApprovalHistory = data.map((reply) {
+  //           // กำหนดสถานะของ reply
+  //           String status;
+  //           if (reply['reply_admin_decision'] == 'Banned') {
+  //             status = 'Banned';
+  //           } else if (reply['reply_admin_decision'] == 'Posted') {
+  //             status = 'Posted';
+  //           } else {
+  //             status = 'Posted';
+  //           }
 
-            return {
-              'Thread_reply_ID': reply['Thread_reply_ID'],
-              'Thread_ID': reply['Thread_ID'],
-              'reply_message': reply['reply_message'],
-              'reply_created_at': reply['reply_created_at'],
-              'reply_total_Likes': reply['reply_total_Likes'],
-              'reply_ai_evaluation': reply['reply_ai_evaluation'],
-              'reply_admin_decision': reply['reply_admin_decision'],
-              'status': status,
+  //           return {
+  //             'Thread_reply_ID': reply['Thread_reply_ID'],
+  //             'Thread_ID': reply['Thread_ID'],
+  //             'reply_message': reply['reply_message'],
+  //             'reply_created_at': reply['reply_created_at'],
+  //             'reply_total_Likes': reply['reply_total_Likes'],
+  //             'reply_ai_evaluation': reply['reply_ai_evaluation'],
+  //             'reply_admin_decision': reply['reply_admin_decision'],
+  //             'status': status,
 
-              // Author info
-              'reply_author_id': reply['reply_author_id'],
-              'reply_author_username': reply['reply_author_username'],
-              'reply_author_email': reply['reply_author_email'],
-              'reply_author_fullname': reply['reply_author_fullname'],
-              'reply_author_picture': reply['reply_author_picture'],
-              'reply_author_status': reply['reply_author_status'] ?? '',
-              'reply_author_role': reply['reply_author_role'] ?? '',
-              'reply_author_coins': reply['reply_author_coins'] ?? 0,
-              'reply_author_total_likes': reply['reply_author_likes'] ?? 0,
-              'reply_author_total_review': reply['reply_author_reviews'] ?? 0,
+  //             // Author info
+  //             'reply_author_id': reply['reply_author_id'],
+  //             'reply_author_username': reply['reply_author_username'],
+  //             'reply_author_email': reply['reply_author_email'],
+  //             'reply_author_fullname': reply['reply_author_fullname'],
+  //             'reply_author_picture': reply['reply_author_picture'],
+  //             'reply_author_status': reply['reply_author_status'] ?? '',
+  //             'reply_author_role': reply['reply_author_role'] ?? '',
+  //             'reply_author_coins': reply['reply_author_coins'] ?? 0,
+  //             'reply_author_total_likes': reply['reply_author_likes'] ?? 0,
+  //             'reply_author_total_review': reply['reply_author_reviews'] ?? 0,
 
-              // Thread info
-              'thread_id': reply['thread_id'],
-              'thread_message': reply['thread_message'],
-              'thread_created_at': reply['thread_created_at'],
-              'thread_admin_decision': reply['thread_admin_decision'],
-              'thread_total_like': reply['thread_totallikes'],
-              'thread_author_username': reply['thread_author_username'],
-              'thread_author_fullname': reply['thread_author_fullname'],
-              'thread_author_picture': reply['thread_author_picture'],
-              'thread_author_id': reply['thread_author_id'] ?? 0,
-              'thread_author_email': reply['thread_author_email'] ?? '',
-              'thread_author_status': reply['thread_author_status'] ?? '',
-              'thread_author_role': reply['thread_author_role'] ?? '',
-              'thread_author_coins': reply['thread_author_coins'] ?? 0,
-              'thread_author_total_likes':
-                  reply['thread_author_total_likes'] ?? 0,
-              'thread_author_total_review':
-                  reply['thread_author_total_reviews'] ?? 0,
+  //             // Thread info
+  //             'thread_id': reply['thread_id'],
+  //             'thread_message': reply['thread_message'],
+  //             'thread_created_at': reply['thread_created_at'],
+  //             'thread_admin_decision': reply['thread_admin_decision'],
+  //             'thread_total_like': reply['thread_totallikes'],
+  //             'thread_author_username': reply['thread_author_username'],
+  //             'thread_author_fullname': reply['thread_author_fullname'],
+  //             'thread_author_picture': reply['thread_author_picture'],
+  //             'thread_author_id': reply['thread_author_id'] ?? 0,
+  //             'thread_author_email': reply['thread_author_email'] ?? '',
+  //             'thread_author_status': reply['thread_author_status'] ?? '',
+  //             'thread_author_role': reply['thread_author_role'] ?? '',
+  //             'thread_author_coins': reply['thread_author_coins'] ?? 0,
+  //             'thread_author_total_likes':
+  //                 reply['thread_author_total_likes'] ?? 0,
+  //             'thread_author_total_review':
+  //                 reply['thread_author_total_reviews'] ?? 0,
 
-              // Admin info
-              'admin_id': reply['admin_id'],
-              'admin_username': reply['admin_username'],
-              'admin_fullname': reply['admin_fullname'],
-              'admin_picture': reply['admin_picture'],
-              'admin_action_taken': reply['admin_action_taken'],
-              'admin_checked_at': reply['admin_checked_at'],
-              'reason_for_taken': reply['reason_for_taken'],
-            };
-          }).toList();
-        });
-        print('Reply data: ${json.encode(data[0])}'); // ดูโครงสร้างข้อมูลแรก
-      }
-    } catch (e) {
-      print('Error fetching reply approval history: $e');
-    }
-  }
+  //             // Admin info
+  //             'admin_id': reply['admin_id'],
+  //             'admin_username': reply['admin_username'],
+  //             'admin_fullname': reply['admin_fullname'],
+  //             'admin_picture': reply['admin_picture'],
+  //             'admin_action_taken': reply['admin_action_taken'],
+  //             'admin_checked_at': reply['admin_checked_at'],
+  //             'reason_for_taken': reply['reason_for_taken'],
+  //           };
+  //         }).toList();
+  //       });
+  //       print('Reply data: ${json.encode(data[0])}'); // ดูโครงสร้างข้อมูลแรก
+  //     }
+  //   } catch (e) {
+  //     print('Error fetching reply approval history: $e');
+  //   }
+  // }
 
   String formatCoins(int coins) {
     final formatter =
@@ -481,18 +481,27 @@ class _MyHistoryPageState extends State<MyHistoryPage>
         backgroundColor: _appBarColor,
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: [
-            Tab(text: 'Thread Approval'),
-            Tab(text: 'Reply Approval'),
-            Tab(text: 'My Threads'),
-            Tab(text: 'My Replies'),
-          ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(50), // กำหนดความสูง
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center, // จัดกลาง
+            children: [
+              Container(
+                width: 250, // ปรับขนาดให้พอดีกับจำนวน tab
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: false, // scrollable = true ให้ tab พอดีข้อความ
+                  indicatorColor: Colors.white,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white70,
+                  tabs: [
+                    Tab(text: 'My Threads'),
+                    Tab(text: 'My Replies'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: _isLoading
@@ -500,8 +509,8 @@ class _MyHistoryPageState extends State<MyHistoryPage>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildThreadApprovalHistory(),
-                _buildReplyApprovalHistory(),
+                // _buildThreadApprovalHistory(),
+                // _buildReplyApprovalHistory(),
                 _buildMyThreads(),
                 _buildMyReplies(),
               ],

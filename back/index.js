@@ -594,6 +594,110 @@ app.get('/restaurants', checkUserStatus, async (req, res) => {
 
 
 
+app.get('/guest/restaurants', async (req, res) => {
+  try {
+    // ดึงร้านทั้งหมดมาก่อน
+    const [restaurants] = await db.promise().query(`SELECT Restaurant_ID FROM Restaurant`);
+
+    for (const restaurant of restaurants) {
+      const restaurantId = restaurant.Restaurant_ID;
+
+      // คำนวณค่าเฉลี่ยใหม่จาก Review (เฉพาะ Posted + User Active)
+      const [avgRows] = await db.promise().execute(
+        `SELECT 
+          AVG(r.rating_hygiene) AS hygiene_avg,
+          AVG(r.rating_flavor) AS flavor_avg,
+          AVG(r.rating_service) AS service_avg,
+          AVG(r.rating_overall) AS overall_avg
+        FROM Review r
+        JOIN User u ON r.User_ID = u.User_ID
+        WHERE r.Restaurant_ID = ? 
+          AND r.message_status = 'Posted'
+          AND u.status = 'Active'`,
+        [restaurantId]
+      );
+
+      const avg = avgRows[0] || {};
+
+      // อัพเดตกลับเข้า Restaurant
+      await db.promise().execute(
+        `UPDATE Restaurant SET 
+          rating_overall_avg = ?,
+          rating_hygiene_avg = ?,
+          rating_flavor_avg = ?,
+          rating_service_avg = ?
+        WHERE Restaurant_ID = ?`,
+        [
+          Number(avg.overall_avg || 0).toFixed(2),
+          Number(avg.hygiene_avg || 0).toFixed(2),
+          Number(avg.flavor_avg || 0).toFixed(2),
+          Number(avg.service_avg || 0).toFixed(2),
+          restaurantId,
+        ]
+      );
+    }
+
+    // ดึงข้อมูลร้านพร้อม count มาแสดง
+    const [results] = await db.promise().query(`
+      SELECT 
+        r.Restaurant_ID,
+        r.restaurant_name, 
+        r.location, 
+        r.operating_hours, 
+        r.phone_number, 
+        r.photos, 
+        r.rating_overall_avg, 
+        r.rating_hygiene_avg, 
+        r.rating_flavor_avg, 
+        r.rating_service_avg, 
+        r.category,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND rev.message_status = 'Posted'
+           AND u.status = 'Active') AS posted_reviews_count,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND rev.message_status = 'Pending'
+           AND u.status = 'Active') AS pending_reviews_count,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND rev.message_status = 'Banned'
+           AND u.status = 'Active') AS banned_reviews_count,
+        (SELECT COUNT(*) 
+         FROM Review rev
+         JOIN User u ON rev.User_ID = u.User_ID
+         WHERE rev.Restaurant_ID = r.Restaurant_ID 
+           AND u.status = 'Active') AS total_reviews_count
+      FROM Restaurant r
+    `);
+
+    // จัด format ให้แน่ใจว่าเป็นตัวเลข
+    const formattedResults = results.map(restaurant => ({
+      ...restaurant,
+      posted_reviews_count: parseInt(restaurant.posted_reviews_count) || 0,
+      pending_reviews_count: parseInt(restaurant.pending_reviews_count) || 0,
+      banned_reviews_count: parseInt(restaurant.banned_reviews_count) || 0,
+      total_reviews_count: parseInt(restaurant.total_reviews_count) || 0
+    }));
+
+    res.json(formattedResults);
+    console.log('Restaurants with updated averages + review counts:', formattedResults);
+
+  } catch (err) {
+    console.error('Error fetching restaurants:', err);
+    res.status(500).json({ error: 'Database query error' });
+  }
+});
+
+
+
+
 
 app.get('/user-profile-pictures/:userId', (req, res) => {
   const userId = parseInt(req.params.userId);
@@ -677,10 +781,12 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
   
 });
 
-app.get('/restaurant/:id', checkUserStatus,(req, res) => {
+app.get('/restaurant/:id', checkUserStatus, (req, res) => {
   const restaurantId = parseInt(req.params.id);
-  console.log("restaurantId from params:", restaurantId);
   const userId = parseInt(req.query.user_id);
+  const lang = req.query.lang || 'th'; // 🔄 ค่าเริ่มต้นเป็นภาษาไทย
+
+  console.log("restaurantId from params:", restaurantId, "lang:", lang);
 
   const restaurantQuery = `
     SELECT Restaurant_ID, restaurant_name, location, operating_hours,
@@ -693,7 +799,8 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
   const reviewQuery = `
     SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
            r.rating_service, r.comment, r.total_likes, r.created_at,
-           r.message_status,r.ai_evaluation,r.User_ID,u.total_likes as User_totallikes ,u.total_reviews,u.coins,u.role,u.status, 
+           r.message_status,r.ai_evaluation,r.User_ID,u.total_likes as User_totallikes ,
+           u.total_reviews,u.coins,u.role,u.status, 
            u.username, u.email, p.picture_url,u.status,
            EXISTS (
              SELECT 1 FROM Review_Likes rl
@@ -713,29 +820,40 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
     WHERE restaurant_id = ? AND message_status = 'Pending'
   `;
 
+  // 🔄 เลือกคอลัมน์ชื่อเมนูตามภาษา
+  const menuNameColumn = lang === 'en' ? 'menu_english_name' : 'menu_thai_name';
+
   const menuQuery = `
-    SELECT Menu_ID, menu_thai_name, menu_english_name, price, menu_img
+    SELECT Menu_ID, ${menuNameColumn} AS menu_name,menu_thai_name, menu_english_name, price, menu_img
     FROM Menu
     WHERE restaurant_id = ?
   `;
 
   db.query(restaurantQuery, [restaurantId], (err, restRes) => {
-    if (err || restRes.length === 0) return res.status(500).json({ error: 'Error fetching restaurant' });
+    if (err || restRes.length === 0) {
+      return res.status(500).json({ error: 'Error fetching restaurant' });
+    }
 
     const restaurant = restRes[0];
-    
+
     // Get pending review count
     db.query(pendingReviewCountQuery, [restaurantId], (errPending, pendingRes) => {
-      if (errPending) return res.status(500).json({ error: 'Error fetching pending reviews count' });
+      if (errPending) {
+        return res.status(500).json({ error: 'Error fetching pending reviews count' });
+      }
 
       const pendingCount = pendingRes[0].pending_count || 0;
       restaurant.pending_reviews_count = pendingCount;
 
       db.query(reviewQuery, [userId, restaurantId], (err2, revRes) => {
-        if (err2) return res.status(500).json({ error: 'Error fetching reviews' });
+        if (err2) {
+          return res.status(500).json({ error: 'Error fetching reviews' });
+        }
 
         db.query(menuQuery, [restaurantId], (err3, menuRes) => {
-          if (err3) return res.status(500).json({ error: 'Error fetching menu' });
+          if (err3) {
+            return res.status(500).json({ error: 'Error fetching menu' });
+          }
 
           restaurant.reviews = revRes.map(r => ({
             ...r,
@@ -750,6 +868,91 @@ app.get('/restaurant/:id', checkUserStatus,(req, res) => {
     });
   });
 });
+
+
+
+app.get('/guest/restaurant/:id',  (req, res) => {
+  const restaurantId = parseInt(req.params.id);
+  const lang = req.query.lang || 'th'; // default เป็นภาษาไทย
+
+  console.log("restaurantId from params:", restaurantId, "lang:", lang);
+
+  const restaurantQuery = `
+    SELECT Restaurant_ID, restaurant_name, location, operating_hours,
+           phone_number, photos, category, rating_overall_avg,
+           rating_hygiene_avg, rating_flavor_avg, rating_service_avg
+    FROM Restaurant
+    WHERE Restaurant_ID = ?
+  `;
+
+  const reviewQueryForGuest = `
+    SELECT r.Review_ID, r.rating_overall, r.rating_hygiene, r.rating_flavor,
+           r.rating_service, r.comment, r.total_likes, r.created_at,
+           r.message_status, r.ai_evaluation, r.User_ID,
+           u.total_likes as User_totallikes,
+           u.total_reviews, u.coins, u.role, u.status,
+           u.username, u.email, p.picture_url,
+           0 AS isLiked  -- สำหรับ Guest ไม่มี user_id
+    FROM Review r
+    JOIN User u ON r.User_ID = u.User_ID
+    LEFT JOIN user_Profile_Picture p ON u.User_ID = p.User_ID AND p.is_active = 1
+    WHERE r.restaurant_id = ? AND r.message_status = 'Posted' AND u.status ='Active'
+    ORDER BY r.created_at DESC
+  `;
+
+  const pendingReviewCountQuery = `
+    SELECT COUNT(*) AS pending_count
+    FROM Review
+    WHERE restaurant_id = ? AND message_status = 'Pending'
+  `;
+
+  const menuNameColumn = lang === 'en' ? 'menu_english_name' : 'menu_thai_name';
+  const menuQuery = `
+    SELECT Menu_ID, ${menuNameColumn} AS menu_name, menu_thai_name, menu_english_name, price, menu_img
+    FROM Menu
+    WHERE restaurant_id = ?
+  `;
+
+  db.query(restaurantQuery, [restaurantId], (err, restRes) => {
+    if (err || restRes.length === 0) {
+      return res.status(500).json({ error: 'Error fetching restaurant' });
+    }
+
+    const restaurant = restRes[0];
+
+    // Get pending review count
+    db.query(pendingReviewCountQuery, [restaurantId], (errPending, pendingRes) => {
+      if (errPending) {
+        return res.status(500).json({ error: 'Error fetching pending reviews count' });
+      }
+
+      restaurant.pending_reviews_count = pendingRes[0].pending_count || 0;
+
+      // ดึง reviews สำหรับ guest
+      db.query(reviewQueryForGuest, [restaurantId], (err2, revRes) => {
+        if (err2) {
+          return res.status(500).json({ error: 'Error fetching reviews' });
+        }
+
+        db.query(menuQuery, [restaurantId], (err3, menuRes) => {
+          if (err3) {
+            return res.status(500).json({ error: 'Error fetching menu' });
+          }
+
+          restaurant.reviews = revRes.map(r => ({
+            ...r,
+            isLiked: false  // Guest ไม่สามารถ like ได้
+          }));
+
+          restaurant.menus = menuRes;
+
+          res.json(restaurant);
+        });
+      });
+    });
+  });
+});
+
 
 // Like/Unlike route (toggle)
 app.post('/review/:reviewId/like',(req, res) => {
@@ -835,22 +1038,40 @@ db.promise().execute(
   });
 });
 
-// Express.js route example
-app.put('/user-profile/update/:id', checkUserStatus,(req, res) => {
+app.put('/user-profile/update/:id', checkUserStatus, (req, res) => {
   const { id } = req.params;
   const { username, bio } = req.body;
-   console.log("PUT /user-profile/update/:id", req.body); // ✅ ตรวจข้อมูลที่รับ
 
+  console.log("PUT /user-profile/update/:id", req.body);
 
-  const sql = `
-    UPDATE User 
-    SET username = ?, bio = ?
-    WHERE User_ID = ?
-  `;
-
-  db.query(sql, [username, bio, id], (err, result) => {
+  // 1. ตรวจสอบ username ซ้ำ
+  const checkSql = `SELECT User_ID FROM User WHERE username = ? AND User_ID != ?`;
+  db.query(checkSql, [username, id], (err, results) => {
     if (err) return res.status(500).json({ error: err });
-    res.status(200).json({ message: 'Updated successfully' });
+
+    if (results.length > 0) {
+      // 🚨 มี username ซ้ำ → ดึง username เดิมของ user
+      const oldSql = `SELECT username FROM User WHERE User_ID = ?`;
+      db.query(oldSql, [id], (err2, oldRes) => {
+        if (err2) return res.status(500).json({ error: err2 });
+        const oldUsername = oldRes[0]?.username || "";
+        return res.status(400).json({ 
+          error: 'Username already exists', 
+          oldUsername 
+        });
+      });
+    } else {
+      // 2. ถ้าไม่ซ้ำ → อัปเดตได้
+      const sql = `
+        UPDATE User 
+        SET username = ?, bio = ?
+        WHERE User_ID = ?
+      `;
+      db.query(sql, [username, bio, id], (err, result) => {
+        if (err) return res.status(500).json({ error: err });
+        res.status(200).json({ message: 'Updated successfully' });
+      });
+    }
   });
 });
 
@@ -1148,6 +1369,116 @@ app.get('/api/my_reviews/:userId', checkUserStatus, async (req, res) => {
 
 // อัปเดต leaderboard เดือนปัจจุบัน
 app.get('/leaderboard/update', checkUserStatus, async (req, res) => {
+  const monthYear = req.query.month_year || new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+  console.log('Month:', monthYear);
+
+  const conn = await db.promise().getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // ---------- Top Users: likes ในเดือนนั้น + จำนวนรีวิวในเดือนนั้น ----------
+    const [topUsers] = await conn.query(`
+      WITH r_month AS (
+        SELECT User_ID, COUNT(*) AS total_reviews
+        FROM Review
+        WHERE message_status = 'Posted' AND DATE_FORMAT(created_at, '%Y-%m') = ?
+        GROUP BY User_ID
+      ),
+      l_month AS (
+        SELECT r.User_ID, COUNT(*) AS total_likes
+        FROM Review_Likes rl
+        JOIN Review r ON r.Review_ID = rl.Review_ID
+        WHERE DATE_FORMAT(rl.Liked_At, '%Y-%m') = ? AND r.message_status = 'Posted'
+        GROUP BY r.User_ID
+      )
+      SELECT
+        u.User_ID,
+        u.email,
+        u.username,
+        u.status,
+        u.role,
+        u.coins,
+        u.total_likes as totallikes,
+        u.total_reviews as totalreviews,
+        COALESCE(rm.total_reviews, 0) AS total_reviews,
+        COALESCE(lm.total_likes, 0) AS total_likes,
+        ROW_NUMBER() OVER (ORDER BY COALESCE(lm.total_likes,0) DESC) AS \`rank\`,
+        upp.picture_url AS profile_image
+      FROM User u
+      LEFT JOIN r_month rm ON rm.User_ID = u.User_ID
+      LEFT JOIN l_month lm ON lm.User_ID = u.User_ID
+      LEFT JOIN user_Profile_Picture upp ON upp.User_ID = u.User_ID AND upp.is_active = 1
+      WHERE u.status = 'Active'
+      ORDER BY total_likes DESC, u.User_ID
+      LIMIT 3
+    `, [monthYear, monthYear]);  // <-- ผูกพารามิเตอร์ครบ 2 ตัว
+
+    // เคลียร์ของเดือนนี้ก่อนแล้วค่อย insert ใหม่
+    await conn.query('DELETE FROM Leaderboard_user_total_like WHERE month_year = ?', [monthYear]);
+
+    let rank = 1;
+    for (const u of topUsers) {
+      const coins = rank === 1 ? 2000 : rank === 2 ? 1000 :  rank === 3 ? 500 : 0; // จะ fix เป็น 100 ก็ได้
+      await conn.query(`
+        INSERT INTO Leaderboard_user_total_like
+          (\`rank\`, User_ID, month_year, total_likes, total_reviews, coins_awarded)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `, [rank, u.User_ID, monthYear, u.total_likes || 0, u.total_reviews || 0, coins]);
+      rank++;
+    }
+
+    // ---------- Top Restaurants: ค่าเฉลี่ยคะแนนของรีวิวเดือนนั้น + จำนวนรีวิวเดือนนั้น ----------
+    const [topRestaurants] = await conn.query(`
+      SELECT
+        res.Restaurant_ID,
+        res.restaurant_name,
+        res.photos,
+        AVG(r.rating_overall) AS overall_rating,
+        COUNT(r.Review_ID) AS total_reviews,
+        ROW_NUMBER() OVER (ORDER BY AVG(r.rating_overall) DESC) AS \`rank\`
+      FROM Restaurant res
+      JOIN Review r ON r.Restaurant_ID = res.Restaurant_ID
+      WHERE r.message_status = 'Posted' AND DATE_FORMAT(r.created_at, '%Y-%m') = ?
+      GROUP BY res.Restaurant_ID
+      ORDER BY overall_rating DESC
+      LIMIT 3
+    `, [monthYear]);
+
+    await conn.query('DELETE FROM Leaderboard_restaurant WHERE month_year = ?', [monthYear]);
+
+    rank = 1;
+    for (const r of topRestaurants) {
+      await conn.query(`
+        INSERT INTO Leaderboard_restaurant
+          (\`rank\`, Restaurant_ID, month_year, overall_rating, total_reviews)
+        VALUES (?, ?, ?, ?, ?)
+      `, [rank, r.Restaurant_ID, monthYear, r.overall_rating, r.total_reviews]);
+      rank++;
+    }
+
+    await conn.commit();
+
+    res.json({
+      message: 'Leaderboard updated successfully',
+      month_year: monthYear,
+      topUsers,
+      topRestaurants
+    });
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+});
+
+
+
+
+
+// อัปเดต leaderboard เดือนปัจจุบัน
+app.get('/guest/leaderboard/update', async (req, res) => {
   const monthYear = req.query.month_year || new Date().toISOString().slice(0, 7); // 'YYYY-MM'
   console.log('Month:', monthYear);
 
@@ -2671,12 +3002,19 @@ app.get('/api/thread_replies/:threadId', async (req, res) => {
         tr.total_likes,
         tr.ai_evaluation,
         u.fullname,
+        u.total_reviews,
         u.username,
+        u.email,
+        u.total_likes as review_total_likes,
+        u.role,
+        u.status,
         upp.picture_url
+ 
       FROM Thread_reply tr
       JOIN User u ON tr.User_ID = u.User_ID
       LEFT JOIN user_Profile_Picture upp
         ON u.User_ID = upp.User_ID AND upp.is_active = 1
+  
       WHERE tr.Thread_ID = ?
         AND tr.admin_decision = 'Posted'
       ORDER BY tr.created_at ASC`,
@@ -3690,13 +4028,12 @@ app.put('/Edit/Menu/:menuId', async (req, res) => {
 
 
 
-// POST endpoint สำหรับเพิ่มโปรไฟล์ใหม่ (รับ URL รูปภาพจาก Frontend)
 app.post('/Add/profiles', async (req, res) => {
   const connection = await db.promise().getConnection();
-  
+
   try {
     await connection.beginTransaction();
-    const now = moment().tz("Asia/Bangkok").toDate(); // แปลงเป็น JS Date object
+    const now = moment().tz("Asia/Bangkok").toDate(); 
     const { profileName, description, imageUrl, requiredCoins } = req.body;
 
     // ตรวจสอบข้อมูลที่จำเป็น
@@ -3708,12 +4045,24 @@ app.post('/Add/profiles', async (req, res) => {
       });
     }
 
+    // ตรวจสอบชื่อซ้ำ
+    const [existing] = await connection.execute(
+      'SELECT * FROM exchange_coin_Shop WHERE Profile_Name = ?',
+      [profileName]
+    );
+
+    if (existing.length > 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(409).json({ error: 'Profile name already exists' });
+    }
+
     // เพิ่มข้อมูลลงฐานข้อมูล
     const [result] = await connection.execute(
       `INSERT INTO exchange_coin_Shop 
        (Profile_Name, Description, Image_URL, Required_Coins, Created_At)
        VALUES (?, ?, ?, ?, ?)`,
-      [profileName, description, imageUrl, requiredCoins,now]
+      [profileName, description, imageUrl, requiredCoins, now]
     );
 
     // ดึงข้อมูลโปรไฟล์ที่เพิ่งสร้างเพื่อส่งกลับ
@@ -3724,12 +4073,12 @@ app.post('/Add/profiles', async (req, res) => {
 
     await connection.commit();
     connection.release();
-    
+
     res.status(201).json(newProfile[0]);
   } catch (error) {
     await connection.rollback();
     connection.release();
-    
+
     console.error('Error creating profile:', error);
     res.status(500).json({ 
       error: 'Internal server error',
@@ -3737,6 +4086,7 @@ app.post('/Add/profiles', async (req, res) => {
     });
   }
 });
+
 
 app.delete('/delete_profile/:id', async (req, res) => {
  const connection = await db.promise().getConnection();
@@ -3782,10 +4132,10 @@ app.delete('/delete_profile/:id', async (req, res) => {
 
 app.put('/api/profiles/:id', async (req, res) => {
   const connection = await db.promise().getConnection();
-  
+
   try {
     await connection.beginTransaction();
-    
+
     const { id } = req.params;
     const { profileName, description, imageUrl, requiredCoins } = req.body;
 
@@ -3798,6 +4148,21 @@ app.put('/api/profiles/:id', async (req, res) => {
       });
     }
 
+    // ตรวจสอบชื่อซ้ำ
+    const [existing] = await connection.execute(
+      `SELECT Profile_Shop_ID FROM exchange_coin_Shop WHERE Profile_Name = ? AND Profile_Shop_ID != ?`,
+      [profileName, id]
+    );
+
+    if (existing.length > 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(409).json({ 
+        success: false,
+        error: 'Profile name already exists'
+      });
+    }
+
     // อัพเดทข้อมูลในฐานข้อมูล
     const [result] = await connection.execute(
       `UPDATE exchange_coin_Shop 
@@ -3806,7 +4171,6 @@ app.put('/api/profiles/:id', async (req, res) => {
       [profileName, description, imageUrl, requiredCoins, id]
     );
 
-    // ตรวจสอบว่ามีแถวถูกอัพเดทหรือไม่
     if (result.affectedRows === 0) {
       await connection.rollback();
       connection.release();
@@ -3815,7 +4179,7 @@ app.put('/api/profiles/:id', async (req, res) => {
 
     await connection.commit();
     connection.release();
-    
+
     res.status(200).json({ 
       success: true,
       message: 'Profile updated successfully',
@@ -4396,6 +4760,12 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         u.username as reply_author_username,
         u.email as reply_author_email,
         u.fullname as reply_author_fullname,
+    u.coins as reply_author_coin,
+    u.role as reply_author_role,
+    u.total_likes as reply_author_like,
+    u.total_reviews as reply_author_review,
+    u.status as reply_author_status, 
+
         upp.picture_url as reply_author_picture,
 
         -- info of parent thread
@@ -4404,9 +4774,8 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         t.created_at as thread_created_at,
         t.admin_decision as thread_admin_decision,
         t.Total_likes as thread_total_like,
-        thread_owner.User_ID as thread_author_id,
-        thread_owner.username as thread_author_username,
-        thread_owner.fullname as thread_author_fullname,
+      
+    
         thread_pp.picture_url as thread_author_picture,
 
         -- admin moderation info
@@ -4416,6 +4785,17 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         admin_user.User_ID as admin_id,
         admin_user.username as admin_username,
         admin_user.fullname as admin_fullname,
+
+        thread_owner.username as thread_author_username,
+        thread_owner.fullname as thread_author_fullname,
+        thread_owner.role as thread_author_role,
+        thread_owner.User_ID as thread_author_id,
+        thread_owner.status as thread_author_status,
+        thread_owner.coins as thread_author_coins,
+        thread_owner.total_likes as thread_author_likes,
+        thread_owner.total_reviews  as thread_author_review,
+        thread_owner.email as thread_author_email,
+        thread_pp.picture_url as thread_author_picture,
         admin_pp.picture_url as admin_picture
 
       FROM Admin_check_inappropriate_thread_reply act
@@ -4455,6 +4835,11 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         reply_ai_evaluation: row.reply_ai_evaluation,
         reply_admin_decision: row.reply_admin_decision,
 
+        reply_author_status: row.reply_author_status,
+        reply_author_role: row.reply_author_role,
+        reply_author_coins: row.reply_author_coin,
+        reply_author_likes: row.reply_author_like,
+        reply_author_reviews: row.reply_author_review,
         reply_author_id: row.reply_author_id,
         reply_author_username: row.reply_author_username,
         reply_author_email: row.reply_author_email,
@@ -4465,6 +4850,15 @@ app.get('/api/my_admin_thread_replies/:adminId', async (req, res) => {
         thread_message: row.thread_message,
         thread_created_at: row.thread_created_at,
         thread_admin_decision: row.thread_admin_decision,
+
+   
+        
+        thread_author_email: row.thread_author_email,
+        thread_author_status: row.thread_author_status,
+        thread_author_role: row.thread_author_role,
+        thread_author_coins: row.thread_author_coins,
+        thread_author_total_likes: row.thread_author_likes,
+        thread_author_total_reviews: row.thread_author_review,
         thread_author_id: row.thread_author_id,
         thread_author_username: row.thread_author_username,
         thread_author_fullname: row.thread_author_fullname,
@@ -4514,6 +4908,12 @@ app.get('/api/my_threads/:userId', async (req, res) => {
     (SELECT COUNT(*) FROM Thread_reply WHERE Thread_ID = t.Thread_ID) as reply_count,
     u.username as author_username,
     u.email as author_email,
+    u.User_ID as author_ID,
+    u.coins as author_coin,
+    u.role as author_role,
+    u.total_likes as author_like,
+    u.total_reviews as author_review,
+    u.status as author_status, 
     upp.picture_url as author_picture,
     act.admin_action_taken,
     act.admin_checked_at,
@@ -4547,7 +4947,13 @@ ORDER BY t.created_at DESC
         admin_decision: row.admin_decision,
         author_username: row.author_username,
         author_email: row.author_email,
-        author_picture: row.author_picture
+        author_picture: row.author_picture,
+        author_status: row.author_status,
+        author_role: row.author_role,
+        author_coins: row.author_coin,
+        author_likes: row.author_like,
+        author_reviews: row.author_review,
+        author_id: row.author_ID
       };
 
       // ถ้าโพสต์ถูกแบน ให้เพิ่มข้อมูล admin
@@ -4589,7 +4995,13 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         -- author of reply
         u.username as reply_author_username,
         u.email as reply_author_email,
-        upp.picture_url as reply_author_picture,
+    u.User_ID as reply_author_ID,
+    u.coins as reply_author_coin,
+    u.role as reply_author_role,
+    u.total_likes as reply_author_like,
+    u.total_reviews as reply_author_review,
+    u.status as reply_author_status, 
+    upp.picture_url as reply_author_picture,
 
         -- info of parent thread
         t.message as thread_message,
@@ -4598,6 +5010,13 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         t.Total_likes  as thread_Total_likes,
         thread_owner.username as thread_author_username,
         thread_owner.fullname as thread_author_fullname,
+        thread_owner.role as thread_author_role,
+        thread_owner.User_ID as thread_author_id,
+        thread_owner.status as thread_author_status,
+        thread_owner.coins as thread_author_coins,
+        thread_owner.total_likes as thread_author_likes,
+        thread_owner.total_reviews  as thread_author_review,
+        thread_owner.email as thread_author_email,
         thread_pp.picture_url as thread_author_picture,
 
         -- admin moderation info for reply
@@ -4649,6 +5068,15 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         reply_author_username: row.reply_author_username,
         reply_author_email: row.reply_author_email,
         reply_author_picture: row.reply_author_picture,
+        reply_author_status: row.reply_author_status,
+        reply_author_role: row.reply_author_role,
+        reply_author_coins: row.reply_author_coin,
+        reply_author_likes: row.reply_author_like,
+        reply_author_reviews: row.reply_author_review,
+        reply_author_id: row.reply_author_ID,
+
+
+
 
         thread_message: row.thread_message,
         thread_created_at: row.thread_created_at,
@@ -4656,6 +5084,13 @@ app.get('/api/my_thread_replies/:userId', async (req, res) => {
         thread_total_like: row.thread_Total_likes,
         thread_author_username: row.thread_author_username,
         thread_author_fullname: row.thread_author_fullname,
+        thread_author_email: row.thread_author_email,
+        thread_author_status: row.thread_author_status,
+        thread_author_role: row.thread_author_role,
+        thread_author_coins: row.thread_author_coins,
+        thread_author_total_likes: row.thread_author_likes,
+        thread_author_total_reviews: row.thread_author_review,
+        thread_author_id: row.thread_author_id,
         thread_author_picture: row.thread_author_picture
       };
 

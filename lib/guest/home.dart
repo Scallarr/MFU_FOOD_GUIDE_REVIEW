@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/Atlas-model.dart';
+import 'package:myapp/RestaurantHistory.dart';
 import 'package:myapp/admin/Admin-AddRestaurant.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
@@ -10,14 +11,16 @@ import 'package:myapp/admin/Admin-Restaurant-Detail.dart';
 import 'package:myapp/admin/Admin-Restaurant-History.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
-import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
+import 'package:myapp/guest/leaderboard.dart';
+import 'package:myapp/guest/restaurantdetail.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
 import 'package:myapp/admin/Admin-Edit-Restaurant.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:myapp/threads.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -75,15 +78,15 @@ class Restaurant {
   }
 }
 
-class RestaurantListPageAdmin extends StatefulWidget {
+class RestaurantListPageGuest extends StatefulWidget {
   @override
   _RestaurantListPageState createState() => _RestaurantListPageState();
   final bool reload;
 
-  const RestaurantListPageAdmin({super.key, this.reload = false});
+  const RestaurantListPageGuest({super.key, this.reload = false});
 }
 
-class _RestaurantListPageState extends State<RestaurantListPageAdmin>
+class _RestaurantListPageState extends State<RestaurantListPageGuest>
     with TickerProviderStateMixin {
   // ✅ เพิ่ม mixin นี้
 
@@ -95,7 +98,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
   String? filterLocation;
   String? filterCategory;
   String? profileImageUrl;
-  int? userId;
+  // int? userId;
   late AnimationController _lockIconController; // ✅ เพิ่ม AnimationController
   late Animation<double> _lockIconAnimation; // ✅ เพิ่ม Animation
   bool _isDeleting = false;
@@ -138,7 +141,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
       CurvedAnimation(parent: _lockIconController, curve: Curves.easeInOut),
     );
 
-    loadUserIdAndFetchProfile();
+    // loadUserIdAndFetchProfile();
     futureRestaurants = fetchRestaurants();
     futureRestaurants.then((list) {
       setState(() {
@@ -173,51 +176,50 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
     return url;
   }
 
-  Future<void> loadUserIdAndFetchProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedUserId = prefs.getInt('user_id');
+  // Future<void> loadUserIdAndFetchProfile() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final storedUserId = prefs.getInt('user_id');
 
-    if (storedUserId != null) {
-      setState(() {
-        userId = storedUserId;
-      });
+  //   if (storedUserId != null) {
+  //     setState(() {
+  //       userId = storedUserId;
+  //     });
 
-      await fetchProfilePicture(userId!);
-    }
-  }
+  //     await fetchProfilePicture(userId!);
+  //   }
+  // }
 
-  Future<void> fetchProfilePicture(int userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
-      );
+  // Future<void> fetchProfilePicture(int userId) async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
+  //     );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          profileImageUrl = _validateImageUrl(data['picture_url']);
-        });
-      } else {
-        debugPrint('Failed to load profile picture');
-      }
-    } catch (e) {
-      debugPrint('Error fetching profile picture: $e');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       final data = json.decode(response.body);
+  //       setState(() {
+  //         profileImageUrl = _validateImageUrl(data['picture_url']);
+  //       });
+  //     } else {
+  //       debugPrint('Failed to load profile picture');
+  //     }
+  //   } catch (e) {
+  //     debugPrint('Error fetching profile picture: $e');
+  //   }
+  // }
 
   Future<List<Restaurant>> fetchRestaurants() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      // final token = prefs.getString('jwt_token');
 
-      if (token == null) {
-        _showAlert(context, 'Access Denied Because Invalid Token');
-        return [];
-      }
+      // if (token == null) {
+      //   _showAlert(context, 'Access Denied Because Invalid Token');
+      //   return [];
+      // }
 
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/restaurants'),
-        headers: {'Authorization': 'Bearer $token'},
+        Uri.parse('http://172.22.173.39:8080/guest/restaurants'),
       );
 
       if (response.statusCode == 200) {
@@ -723,130 +725,13 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
     );
   }
 
-  Future<void> _deleteRestaurant(int restaurantId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.red, width: 2),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.warning, color: Colors.red, size: 48),
-              SizedBox(height: 16),
-              Text(
-                'Delete Restaurant',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Are you sure you want to delete this restaurant?',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(color: Colors.grey),
-                      ),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() {
-      _isDeleting = true;
-    });
-
-    try {
-      final response = await http.delete(
-        Uri.parse('http://172.22.173.39:8080/Delete/restaurants/$restaurantId'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Restaurant deleted successfully!'),
-            backgroundColor: const Color.fromARGB(255, 0, 0, 0),
-          ),
-        );
-        _refreshRestaurantData();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete restaurant: ${response.body}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() {
-        _isDeleting = false;
-      });
-    }
-  }
-
   List<Restaurant> get filteredAndSortedRestaurants {
     List<Restaurant> filtered = allRestaurants.where((res) {
       final query = searchQuery.toLowerCase();
-      final matchesSearch = res.name.toLowerCase().contains(query);
-      // res.location.toLowerCase().contains(query) ||
-      // res.category.toLowerCase().contains(query);
+      final matchesSearch =
+          res.name.toLowerCase().contains(query) ||
+          res.location.toLowerCase().contains(query) ||
+          res.category.toLowerCase().contains(query);
 
       final matchesLocation = filterLocation == null || filterLocation!.isEmpty
           ? true
@@ -883,19 +768,19 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPageAdmin()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageGuest()),
         );
         break;
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ChatbotScreen()),
+          MaterialPageRoute(builder: (context) => userChatbotScreen()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
+          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
         );
         break;
     }
@@ -929,7 +814,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
           slivers: [
             SliverAppBar(
               toolbarHeight: 80,
-              backgroundColor: const Color(0xFFCEBFA3),
+              backgroundColor: const Color.fromARGB(255, 229, 210, 173),
 
               pinned: false,
               floating: true,
@@ -968,13 +853,13 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
                         final shouldRefresh = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProfilePageAdmin(),
+                            builder: (context) => LoginScreen(),
                           ),
                         );
 
-                        if (shouldRefresh == true) {
-                          fetchProfilePicture(userId!);
-                        }
+                        // if (shouldRefresh == true) {
+                        //   fetchProfilePicture(userId!);
+                        // }
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -1013,7 +898,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
                     Expanded(
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'Search restaurants Name ...',
+                          hintText: 'Search restaurants...',
                           hintStyle: TextStyle(
                             color: Color.fromARGB(
                               255,
@@ -1066,164 +951,89 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
                     ),
                     SizedBox(width: 10),
                     // เพิ่ม PopupMenuButton ตรงนี้
-                    PopupMenuButton<String>(
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: Color(0xFF5D4037),
-                        size: 30,
-                      ),
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'approve',
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 8),
+                    // PopupMenuButton<String>(
+                    //   icon: Icon(
+                    //     Icons.more_vert,
+                    //     color: Color(0xFF5D4037),
+                    //     size: 30,
+                    //   ),
+                    //   itemBuilder: (BuildContext context) => [
+                    //     PopupMenuItem(
+                    //       value: 'history',
+                    //       child: Container(
+                    //         padding: EdgeInsets.symmetric(vertical: 8),
 
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.symmetric(vertical: 8),
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.reviews,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                                SizedBox(width: 15),
+                    //         child: Row(
+                    //           children: [
+                    //             Container(
+                    //               padding: EdgeInsets.symmetric(vertical: 8),
+                    //               width: 32,
+                    //               height: 32,
+                    //               decoration: BoxDecoration(
+                    //                 color: Colors.green.shade50,
+                    //                 shape: BoxShape.circle,
+                    //               ),
+                    //               child: Icon(
+                    //                 Icons.history,
+                    //                 color: Colors.green.shade700,
+                    //               ),
+                    //             ),
+                    //             SizedBox(width: 15),
 
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Approve Reviews'),
-                                      if (totalPendingReviews > 0)
-                                        Text(
-                                          '$totalPendingReviews pending',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
+                    //             Expanded(
+                    //               child: Column(
+                    //                 crossAxisAlignment:
+                    //                     CrossAxisAlignment.start,
+                    //                 children: [
+                    //                   Text('My  History'),
+                    //                   // if (totalPendingReviews > 0)
+                    //                   // Text(
+                    //                   //   'See Your History here',
+                    //                   //   style: TextStyle(
+                    //                   //     fontSize: 12,
+                    //                   //     color: Colors.grey.shade600,
+                    //                   //   ),
+                    //                   // ),
+                    //                 ],
+                    //               ),
+                    //             ),
 
-                                if (totalPendingReviews > 0)
-                                  Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFFF4757),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '$totalPendingReviews',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'history',
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 8),
-
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.symmetric(vertical: 8),
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.shade50,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.history,
-                                    color: Colors.green.shade700,
-                                  ),
-                                ),
-                                SizedBox(width: 15),
-
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text('My  History'),
-                                      // if (totalPendingReviews > 0)
-                                      // Text(
-                                      //   'See Your History here',
-                                      //   style: TextStyle(
-                                      //     fontSize: 12,
-                                      //     color: Colors.grey.shade600,
-                                      //   ),
-                                      // ),
-                                    ],
-                                  ),
-                                ),
-
-                                // if (totalPendingReviews > 0)
-                                //   Container(
-                                //     width: 24,
-                                //     height: 24,
-                                //     decoration: BoxDecoration(
-                                //       color: Color(0xFFFF4757),
-                                //       shape: BoxShape.circle,
-                                //     ),
-                                //     child: Center(
-                                //       child: Text(
-                                //         '$totalPendingReviews',
-                                //         style: TextStyle(
-                                //           color: Colors.white,
-                                //           fontSize: 11,
-                                //           fontWeight: FontWeight.bold,
-                                //         ),
-                                //       ),
-                                //     ),
-                                //   ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                      onSelected: (String value) async {
-                        if (value == 'approve') {
-                          final shoulfRefresh = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RestaurantallPendingrewiewPage(),
-                            ),
-                          );
-                          if (shoulfRefresh) {
-                            _refreshRestaurantData();
-                            setState(() {});
-                          }
-                        } else if (value == 'history') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  RestaurantReviewHistoryPage(),
-                            ),
-                          );
-                        }
-                      },
-                    ),
+                    //             // if (totalPendingReviews > 0)
+                    //             //   Container(
+                    //             //     width: 24,
+                    //             //     height: 24,
+                    //             //     decoration: BoxDecoration(
+                    //             //       color: Color(0xFFFF4757),
+                    //             //       shape: BoxShape.circle,
+                    //             //     ),
+                    //             //     child: Center(
+                    //             //       child: Text(
+                    //             //         '$totalPendingReviews',
+                    //             //         style: TextStyle(
+                    //             //           color: Colors.white,
+                    //             //           fontSize: 11,
+                    //             //           fontWeight: FontWeight.bold,
+                    //             //         ),
+                    //             //       ),
+                    //             //     ),
+                    //             //   ),
+                    //           ],
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    //   onSelected: (String value) async {
+                    //     if (value == 'history') {
+                    //       Navigator.push(
+                    //         context,
+                    //         MaterialPageRoute(
+                    //           builder: (context) =>
+                    //               RestaurantReviewHistoryUserPage(),
+                    //         ),
+                    //       );
+                    //     }
+                    //   },
+                    // ),
                   ],
                 ),
               ),
@@ -1522,22 +1332,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color.fromARGB(255, 235, 188, 117),
-        child: Icon(Icons.add, color: Colors.white),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddRestaurantPage(userId: userId!),
-            ),
-          ).then((shouldRefresh) {
-            if (shouldRefresh == true) {
-              _refreshRestaurantData();
-            }
-          });
-        },
-      ),
     );
   }
 
@@ -1585,7 +1379,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          RestaurantDetailAdminPage(restaurantId: res.id),
+                          RestaurantDetailGuestPage(restaurantId: res.id),
                     ),
                   );
 
@@ -1672,118 +1466,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
                       ),
 
                       // Admin controls
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        right: 12,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Left side - Pending reviews or empty container
-                            if (res.pendingReviewsCount > 0)
-                              GestureDetector(
-                                onTap: () async {
-                                  final shouldRefresh = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => PendingReviewsPage(
-                                        restaurantId: res.id,
-                                      ),
-                                    ),
-                                  );
-                                  if (shouldRefresh) {
-                                    _refreshRestaurantData();
-                                  }
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      224,
-                                      50,
-                                      50,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.hourglass_top_rounded,
-                                        color: Colors.white,
-                                        size: 16,
-                                      ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        '${res.pendingReviewsCount} Pending',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              )
-                            else
-                              Container(), // Empty container to maintain space
-                            // Right side - Admin buttons
-                            if (userId != null)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Edit button
-                                  CircleAvatar(
-                                    radius: 23,
-                                    backgroundColor: Colors.white.withOpacity(
-                                      0.9,
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(
-                                        Icons.edit_rounded,
-                                        size: 23,
-                                        color: Colors.blue[700],
-                                      ),
-                                      onPressed: () =>
-                                          _navigateToEditRestaurant(res),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                  ),
-                                  SizedBox(width: 15),
-                                  // Delete button
-                                  CircleAvatar(
-                                    radius: 23,
-                                    backgroundColor: Colors.white.withOpacity(
-                                      0.9,
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(
-                                        Icons.delete_rounded,
-                                        size: 23,
-                                        color: Colors.red[700],
-                                      ),
-                                      onPressed: () =>
-                                          _deleteRestaurant(res.id),
-                                      padding: EdgeInsets.zero,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
 
@@ -2059,23 +1741,6 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
     if (rating >= 2.5) return Colors.orange[600]!; // Below Average
     if (rating >= 2.0) return Colors.deepOrange[600]!; // Poor
     return Colors.red[700]!; // Very Poor
-  }
-
-  void _navigateToEditRestaurant(Restaurant restaurant) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditRestaurant(
-          userId: userId!,
-          restaurantId: restaurant.id,
-          currentData: restaurant,
-        ),
-      ),
-    ).then((shouldRefresh) {
-      if (shouldRefresh == true) {
-        _refreshRestaurantData();
-      }
-    });
   }
 
   void _refreshRestaurantData() {

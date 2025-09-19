@@ -11,10 +11,10 @@ class ProfileShopUserPage extends StatefulWidget {
   const ProfileShopUserPage({Key? key}) : super(key: key);
 
   @override
-  State<ProfileShopUserPage> createState() => _ProfileShopUserPageState();
+  State<ProfileShopUserPage> createState() => _ProfileShopAdminPageState();
 }
 
-class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
+class _ProfileShopAdminPageState extends State<ProfileShopUserPage> {
   List<Map<String, dynamic>> profiles = [];
   bool isLoading = true;
   String errorMsg = "";
@@ -292,6 +292,23 @@ class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Purchase successful!")));
+      } else if (response.statusCode == 400) {
+        await fetchProfiles();
+        // อัพเดต UI หลังซื้อสำเร็จ
+
+        // setState(() {
+        //   currentCoins -= cost;
+        //   // อัพเดตสถานะ is_purchased ของโปรไฟล์ที่ซื้อ
+        //   final index = profiles.indexWhere((p) => p['id'] == profileId);
+        //   if (index != -1) {
+        //     profiles[index]['is_purchased'] = true;
+        //   }
+        // });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Sorry, your coin balance is insufficient!."),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Purchase failed: ${response.statusCode}")),
@@ -321,7 +338,7 @@ class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Padding(
-                      padding: EdgeInsets.only(top: 0),
+                      padding: EdgeInsets.only(top: 0, right: 15),
                       child:
                           // ส่วนแสดงข้อมูลโปรไฟล์
                           Text(
@@ -368,125 +385,135 @@ class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
                                 showDialog(
                                   context: context,
                                   builder: (BuildContext context) {
-                                    return AlertDialog(
+                                    return Dialog(
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
                                       ),
-                                      backgroundColor: Colors
-                                          .transparent, // ทำให้ AlertDialog โปร่งเพื่อใช้ gradient
-                                      contentPadding: EdgeInsets.zero,
-                                      content: Container(
+                                      elevation: 0,
+                                      backgroundColor: Colors.transparent,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(20),
                                         decoration: BoxDecoration(
+                                          color: Colors.white,
                                           borderRadius: BorderRadius.circular(
                                             20,
                                           ),
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Colors.red.withOpacity(0.9),
-                                              Colors.white,
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black26,
-                                              blurRadius: 12,
-                                              offset: Offset(0, 6),
+                                              color: Colors.black.withOpacity(
+                                                0.2,
+                                              ),
+                                              blurRadius: 20,
+                                              spreadRadius: 2,
                                             ),
                                           ],
                                         ),
-                                        padding: EdgeInsets.all(20),
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.shopping_cart,
-                                                  color: const Color.fromARGB(
-                                                    255,
-                                                    9,
-                                                    9,
-                                                    9,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 10),
-                                                Text(
-                                                  "Confirm Purchase",
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: const Color.fromARGB(
-                                                      255,
-                                                      1,
-                                                      1,
-                                                      1,
-                                                    ),
-                                                    fontSize: 18,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(height: 16),
-                                            Icon(
-                                              Icons.warning,
-                                              size: 90,
-                                              color: const Color.fromARGB(
-                                                255,
-                                                0,
-                                                0,
-                                                0,
+                                            TweenAnimationBuilder(
+                                              duration: Duration(
+                                                milliseconds: 300,
                                               ),
+                                              tween: Tween<double>(
+                                                begin: 0,
+                                                end: 1,
+                                              ),
+                                              builder:
+                                                  (
+                                                    context,
+                                                    double value,
+                                                    child,
+                                                  ) {
+                                                    return Transform.scale(
+                                                      scale: value,
+                                                      child: Container(
+                                                        padding: EdgeInsets.all(
+                                                          16,
+                                                        ),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                              color: Colors
+                                                                  .orange
+                                                                  .withOpacity(
+                                                                    0.1,
+                                                                  ),
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                            ),
+                                                        child: Icon(
+                                                          Icons.shopping_cart,
+                                                          size: 40,
+                                                          color: Colors
+                                                              .orange[700],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
                                             ),
-                                            SizedBox(height: 16),
-                                            Text(
-                                              "Do you want to buy this profile for ${profile['coins']} coins?",
-                                              textAlign: TextAlign.center,
+                                            const SizedBox(height: 16),
+                                            const Text(
+                                              'Confirm Purchase',
                                               style: TextStyle(
-                                                fontSize: 16,
-                                                color: const Color.fromARGB(
-                                                  255,
-                                                  0,
-                                                  0,
-                                                  0,
-                                                ),
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w600,
                                               ),
                                             ),
-                                            SizedBox(height: 24),
+                                            const SizedBox(height: 7),
+                                            Text(
+                                              'Do you want to buy ',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              '${profile['name']}" for ${profile['coins']} coins?',
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(fontSize: 14),
+                                            ),
+                                            const SizedBox(height: 24),
                                             Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.spaceEvenly,
                                               children: [
-                                                Flexible(
-                                                  child: ElevatedButton.icon(
+                                                Expanded(
+                                                  child: OutlinedButton(
                                                     onPressed: () =>
                                                         Navigator.of(
                                                           context,
-                                                        ).pop(),
-                                                    icon: Icon(Icons.close),
-                                                    label: Text("Cancel"),
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor:
-                                                          Colors.white70,
-                                                      foregroundColor:
-                                                          Colors.black87,
+                                                        ).pop(false),
+                                                    style: OutlinedButton.styleFrom(
+                                                      backgroundColor: Colors
+                                                          .black
+                                                          .withOpacity(0.7),
+
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 14,
+                                                          ),
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius.circular(
                                                               12,
                                                             ),
                                                       ),
-                                                      padding:
-                                                          EdgeInsets.symmetric(
-                                                            vertical: 12,
-                                                            horizontal: 12,
-                                                          ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Cancel',
+                                                      style: TextStyle(
+                                                        color: Color.fromARGB(
+                                                          221,
+                                                          254,
+                                                          250,
+                                                          250,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
-                                                SizedBox(width: 12),
-                                                Flexible(
-                                                  child: ElevatedButton.icon(
+                                                const SizedBox(width: 16),
+                                                Expanded(
+                                                  child: ElevatedButton(
                                                     onPressed: () {
                                                       Navigator.of(
                                                         context,
@@ -497,26 +524,28 @@ class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
                                                         profile['image'],
                                                       );
                                                     },
-                                                    icon: Icon(
-                                                      Icons.check_circle,
-                                                    ),
-                                                    label: Text("Confirm"),
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor:
-                                                          Colors.redAccent,
-                                                      foregroundColor:
-                                                          Colors.white,
+                                                      backgroundColor: Colors
+                                                          .red
+                                                          .withOpacity(0.7),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            vertical: 14,
+                                                          ),
                                                       shape: RoundedRectangleBorder(
                                                         borderRadius:
                                                             BorderRadius.circular(
                                                               12,
                                                             ),
                                                       ),
-                                                      padding:
-                                                          EdgeInsets.symmetric(
-                                                            vertical: 12,
-                                                            horizontal: 12,
-                                                          ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Confirm',
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                     ),
                                                   ),
                                                 ),
@@ -553,12 +582,210 @@ class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
               ],
             ),
           ),
-
           // เปลี่ยนจาก IconButton เป็น PopupMenuButton
           // ในเมธอด buildProfileCard
+          // Positioned(
+          //   top: -8,
+          //   right: -8,
+          //   child: Material(
+          //     color: Colors.transparent,
+          //     child: PopupMenuButton<String>(
+          //       // เปลี่ยนไอคอนตรงนี้
+          //       icon: Icon(Icons.star, color: Colors.amber, size: 28),
+          //       onSelected: (value) {
+          //         if (value == 'edit') {
+          //           Navigator.push(
+          //             context,
+          //             MaterialPageRoute(
+          //               builder: (context) => EditProfilePage(profile: profile),
+          //             ),
+          //           ).then((shouldRefresh) {
+          //             if (shouldRefresh == true) {
+          //               fetchProfiles();
+          //             }
+          //           });
+          //         } else if (value == 'delete') {
+          //           _showDeleteConfirmation(profile['id']);
+          //         }
+          //       },
+          //       itemBuilder: (BuildContext context) => [
+          //         PopupMenuItem<String>(
+          //           value: 'edit',
+          //           child: Row(
+          //             children: [
+          //               Icon(Icons.edit, color: Colors.blue),
+          //               const SizedBox(width: 8),
+          //               Text('Edit Profile'),
+          //             ],
+          //           ),
+          //         ),
+          //         PopupMenuItem<String>(
+          //           value: 'delete',
+          //           child: Row(
+          //             children: [
+          //               Icon(Icons.delete, color: Colors.red),
+          //               const SizedBox(width: 8),
+          //               Text('Delete Profile'),
+          //             ],
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
+  }
+
+  Future<void> _navigateToEditProfile(Map<String, dynamic> profile) async {
+    // final result = await Navigator.push(
+    //   context,
+    //   MaterialPageRoute(
+    //     builder: (context) => AddProfilePage(
+    //       profileToEdit: profile,
+    //     ),
+    //   ),
+    // );
+
+    // if (result == true) {
+    //   await fetchProfiles();
+    // }
+  }
+
+  Future<void> _showDeleteConfirmation(int profileId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder(
+                duration: Duration(milliseconds: 300),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, double value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.delete,
+                        size: 40,
+                        color: const Color.fromARGB(255, 255, 9, 9),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Confirm Delete',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Are you sure you want to delete this profile?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.black.withOpacity(0.7),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.withOpacity(0.7),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      await _deleteProfile(profileId);
+    }
+  }
+
+  Future<void> _deleteProfile(int profileId) async {
+    try {
+      final url = Uri.parse(
+        'http://172.22.173.39:8080/delete_profile/$profileId',
+      );
+
+      final response = await http.delete(url);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Profile deleted successfully")));
+        await fetchProfiles(); // โหลดข้อมูลใหม่หลังลบสำเร็จ
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Failed to delete profile")));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error deleting profile: $e")));
+    }
   }
 
   @override
@@ -707,6 +934,20 @@ class _ProfileShopUserPageState extends State<ProfileShopUserPage> {
             ),
           ],
         ),
+        // floatingActionButton: FloatingActionButton(
+        //   backgroundColor: const Color.fromARGB(255, 235, 188, 117),
+        //   child: Icon(Icons.add, color: Colors.white),
+        //   onPressed: () {
+        //     Navigator.push(
+        //       context,
+        //       MaterialPageRoute(builder: (context) => AddProfilePage()),
+        //     ).then((shouldRefresh) {
+        //       if (shouldRefresh == true) {
+        //         loadUserAndFetchProfiles();
+        //       }
+        //     });
+        //   },
+        // ),
       ),
     );
   }

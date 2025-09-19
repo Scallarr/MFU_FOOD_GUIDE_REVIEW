@@ -3,16 +3,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
-import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
-import 'package:myapp/home.dart';
-import 'package:myapp/leaderboard.dart';
-import 'package:myapp/threads.dart';
+import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Restaurant Model
@@ -138,12 +135,12 @@ Future<List<Restaurant>> fetchRestaurants() async {
   }
 }
 
-class userChatbot2Screen extends StatefulWidget {
+class Chatbot2Screen extends StatefulWidget {
   @override
   _ChatbotScreenState createState() => _ChatbotScreenState();
 }
 
-class _ChatbotScreenState extends State<userChatbot2Screen>
+class _ChatbotScreenState extends State<Chatbot2Screen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
@@ -702,7 +699,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
                         final shouldRefresh = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProfilePageUser(),
+                            builder: (context) => ProfilePageAdmin(),
                           ),
                         );
 
@@ -876,7 +873,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
           Future.delayed(const Duration(milliseconds: 3000), () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => userChatbotScreen()),
+              MaterialPageRoute(builder: (context) => ChatbotScreen()),
             );
           });
         } else if (id == 'Nexus') {
@@ -1018,19 +1015,19 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantListPageUser()),
+          MaterialPageRoute(builder: (context) => RestaurantListPageAdmin()),
         );
         break;
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPageUser()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageAdmin()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
+          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
         );
         break;
     }

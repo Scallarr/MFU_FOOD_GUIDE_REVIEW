@@ -8,6 +8,7 @@ import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:myapp/dashboard.dart';
+import 'package:myapp/guest/home.dart';
 import 'dart:convert';
 import 'package:myapp/home.dart';
 import 'package:myapp/login.dart';
@@ -15,19 +16,19 @@ import 'package:myapp/threads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
-class LeaderboardPageAdmin extends StatefulWidget {
-  const LeaderboardPageAdmin({super.key});
+class LeaderboardPageGuest extends StatefulWidget {
+  const LeaderboardPageGuest({super.key});
 
   @override
-  State<LeaderboardPageAdmin> createState() => _LeaderboardPageAdminState();
+  State<LeaderboardPageGuest> createState() => _LeaderboardPageUserState();
 }
 
-class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
+class _LeaderboardPageUserState extends State<LeaderboardPageGuest> {
   List<dynamic> topUsers = [];
   List<dynamic> topRestaurants = [];
   int _selectedIndex = 1;
   String monthYear = '';
-  int? userId;
+
   String? profileImageUrl;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
@@ -54,7 +55,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
   void initState() {
     super.initState();
     fetchLeaderboard();
-    loadUserIdAndFetchProfile();
+    // loadUserIdAndFetchProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkRewardAfterBuild();
     });
@@ -76,7 +77,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantListPageAdmin()),
+          MaterialPageRoute(builder: (context) => RestaurantListPageGuest()),
         );
         break;
       case 1:
@@ -85,49 +86,49 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ChatbotScreen()),
+          MaterialPageRoute(builder: (context) => userChatbotScreen()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
+          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
         );
         break;
     }
   }
 
-  Future<void> loadUserIdAndFetchProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedUserId = prefs.getInt('user_id');
+  // Future<void> loadUserIdAndFetchProfile() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final storedUserId = prefs.getInt('user_id');
 
-    if (storedUserId != null) {
-      setState(() {
-        userId = storedUserId;
-      });
+  //   if (storedUserId != null) {
+  //     setState(() {
+  //       userId = storedUserId;
+  //     });
 
-      await fetchProfilePicture(userId!);
-    }
-  }
+  //     await fetchProfilePicture(userId!);
+  //   }
+  // }
 
-  Future<void> fetchProfilePicture(int userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
-      );
+  // Future<void> fetchProfilePicture(int userId) async {
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
+  //     );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          profileImageUrl = data['picture_url'];
-        });
-      } else {
-        print('Failed to load profile picture');
-      }
-    } catch (e) {
-      print('Error fetching profile picture: $e');
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       final data = json.decode(response.body);
+  //       setState(() {
+  //         profileImageUrl = data['picture_url'];
+  //       });
+  //     } else {
+  //       print('Failed to load profile picture');
+  //     }
+  //   } catch (e) {
+  //     print('Error fetching profile picture: $e');
+  //   }
+  // }
 
   // Update the checkPreviousMonthReward method
   Future<void> checkPreviousMonthReward(BuildContext context) async {
@@ -191,24 +192,27 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
     });
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      // final prefs = await SharedPreferences.getInstance();
+      // final token = prefs.getString('jwt_token');
 
-      if (token == null) {
-        _showAlert(context, 'Session expired');
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
+      // if (token == null) {
+      //   _showAlert(context, 'Session expired');
+      //   setState(() {
+      //     _isLoading = false;
+      //   });
+      //   return;
+      // }
 
-      String url = 'http://172.22.173.39:8080/leaderboard/update';
+      String url = 'http://172.22.173.39:8080/guest/leaderboard/update';
       if (customMonthYear != null) {
         url += '?month_year=$customMonthYear';
       }
 
       final response = await http
-          .get(Uri.parse(url), headers: {'Authorization': 'Bearer $token'})
+          .get(
+            Uri.parse(url),
+            //  headers: {'Authorization': 'Bearer $token'}
+          )
           .timeout(Duration(seconds: 30));
 
       if (response.statusCode == 200) {
@@ -1394,7 +1398,7 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                               textAlign: TextAlign.center,
                             ),
                             SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
-                            (_selectedUser!['User_ID'] == userId)
+                            (_selectedUser!['User_ID'] == 0)
                                 ? Text(
                                     (_selectedUser!['email']),
                                     style: TextStyle(
@@ -1701,13 +1705,11 @@ class _LeaderboardPageAdminState extends State<LeaderboardPageAdmin> {
                   onTap: () async {
                     final shouldRefresh = await Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => ProfilePageAdmin(),
-                      ),
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
                     );
-                    if (shouldRefresh == true) {
-                      fetchProfilePicture(userId!);
-                    }
+                    // if (shouldRefresh == true) {
+                    //   fetchProfilePicture(userId!);
+                    // }
                   },
                   child: Container(
                     decoration: BoxDecoration(

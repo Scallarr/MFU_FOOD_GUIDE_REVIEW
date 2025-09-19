@@ -18,6 +18,7 @@ import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
 import 'package:myapp/admin/Admin-Edit-Restaurant.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:myapp/threads.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -772,13 +773,13 @@ class _RestaurantListPageState extends State<RestaurantListPageUser>
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ChatbotScreen()),
+          MaterialPageRoute(builder: (context) => userChatbotScreen()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
+          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
         );
         break;
     }

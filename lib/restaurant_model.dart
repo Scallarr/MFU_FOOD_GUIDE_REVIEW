@@ -129,6 +129,7 @@ class Menu {
   final int id;
   final String nameTH;
   final String nameEN;
+  final String menu_name;
   final String price;
   final String imageUrl;
 
@@ -136,6 +137,7 @@ class Menu {
     required this.id,
     required this.nameTH,
     required this.nameEN,
+    required this.menu_name,
     required this.price,
     required this.imageUrl,
   });
@@ -145,6 +147,7 @@ class Menu {
       id: json['Menu_ID'],
       nameTH: json['menu_thai_name'],
       nameEN: json['menu_english_name'],
+      menu_name: json['menu_name'],
       price: json['price'],
       imageUrl: json['menu_img'],
     );

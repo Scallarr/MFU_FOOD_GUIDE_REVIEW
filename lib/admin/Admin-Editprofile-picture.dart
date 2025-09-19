@@ -292,7 +292,118 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Widget _buildUpdateButton() {
     return ElevatedButton(
-      onPressed: _isUploading ? null : _submitForm,
+      onPressed: () async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TweenAnimationBuilder(
+                    duration: Duration(milliseconds: 300),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, double value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.edit,
+                            size: 40,
+                            color: const Color.fromARGB(255, 255, 9, 9),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Confirm Changes',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Are you sure you want to apply these profile changes?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.black.withOpacity(0.7),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.withOpacity(0.7),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Apply',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        if (confirm == true) {
+          _submitForm(); // ฟังก์ชันของคุณสำหรับอัปเดตข้อมูลโปรไฟล์
+        }
+      },
+
       style: ElevatedButton.styleFrom(
         backgroundColor: Color.fromARGB(255, 77, 76, 75),
         padding: EdgeInsets.symmetric(vertical: 16),
@@ -342,13 +453,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       await _updateProfileInDatabase();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile updated successfully!'),
-          backgroundColor: Color.fromARGB(255, 22, 22, 22),
-        ),
-      );
-      Navigator.pop(context, true);
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Profile updated successfully!'),
+      //     backgroundColor: Color.fromARGB(255, 22, 22, 22),
+      //   ),
+      // );
+      // Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -414,8 +525,130 @@ class _EditProfilePageState extends State<EditProfilePage> {
         }),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to update profile: ${response.body}');
+      if (response.statusCode == 409) {
+        final data = json.decode(response.body);
+        final errorMsg = data['error'] ?? 'Username already exists';
+
+        // คืนค่ากลับไปเป็น username เก่า
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false, // กดนอก dialog ไม่ปิด
+          builder: (BuildContext dialogContext) {
+            // ใช้ dialogContext แยกจาก context ภายนอก
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 10,
+              backgroundColor: Colors.white,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(66, 94, 81, 81),
+                      blurRadius: 15,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.redAccent.withOpacity(0.5),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.white,
+                        size: 56,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Update Fail!',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 26,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMsg,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.black,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(
+                            dialogContext,
+                          ).pop(); // ใช้ dialogContext ปิดเฉพาะ dialog
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 6,
+                          shadowColor: const Color.fromARGB(
+                            255,
+                            0,
+                            0,
+                            0,
+                          ).withOpacity(0.6),
+                        ),
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      } else if (response.statusCode == 200) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Update Profile Successfull'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update profile')),
+        );
       }
     } catch (e) {
       throw Exception('Database update error: $e');

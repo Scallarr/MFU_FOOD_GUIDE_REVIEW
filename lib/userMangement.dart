@@ -1,5 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/User_system_active_user.dart';
+import 'package:myapp/admin/Admin-profile-info.dart';
+import 'package:myapp/admin/system_active_admin.dart';
+import 'package:myapp/admin/system_active_user.dart';
+import 'package:myapp/admin/system_ban_admin.dart';
+import 'package:myapp/admin/system_ban_user.dart';
+import 'package:myapp/admin/system_totalAll_user.dart';
+import 'package:myapp/admin/system_total_admin.dart';
+import 'package:myapp/admin/system_total_user.dart';
+import 'package:myapp/user_system_active_admin.dart';
+import 'package:myapp/user_system_ban_admin.dart';
+import 'package:myapp/user_system_ban_user.dart';
+import 'package:myapp/user_system_totalAll_user.dart';
+import 'package:myapp/user_system_total_admin.dart';
+import 'package:myapp/user_system_total_user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -8,10 +23,10 @@ class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
 
   @override
-  State<UserManagementPage> createState() => _UserManagementPageState();
+  State<UserManagementPage> createState() => _AdminUserManagementPageState();
 }
 
-class _UserManagementPageState extends State<UserManagementPage>
+class _AdminUserManagementPageState extends State<UserManagementPage>
     with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _allUsersSearchController =
@@ -89,16 +104,10 @@ class _UserManagementPageState extends State<UserManagementPage>
         if (data['success'] == true) {
           setState(() {
             userId = storedUserId;
-
             _allUsers = data['users'] ?? [];
+            _allUsers2 = data['counts'] ?? {};
 
-            _allUsers2 = data['counts'] ?? {}; // ตรง ๆ// Wrap the map in a list
-            print(_allUsers2.runtimeType);
-            print(_allUsers2);
-            print(
-              _allUsers2!['user_count'].runtimeType,
-            ); // ดูว่าเป็น String หรือ int
-
+            // อัปเดตค่าทั้งหมด
             _totalUsersCount = int.tryParse(_allUsers2!['user_count']) ?? 0;
             _totalAdminsCount = int.tryParse(_allUsers2!['admin_count']) ?? 0;
             _activeUsersCount =
@@ -126,7 +135,6 @@ class _UserManagementPageState extends State<UserManagementPage>
       });
     }
   }
-
   // void _calculateStats() {
   //   // สมมติ _allUsers2 เป็น Map<String, dynamic>
   //   final userCountValue = _allUsers2['user_count']; // dynamic
@@ -287,7 +295,7 @@ class _UserManagementPageState extends State<UserManagementPage>
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 35),
 
                       // ระยะเวลาการแบน
                       DropdownButtonFormField<int>(
@@ -355,7 +363,7 @@ class _UserManagementPageState extends State<UserManagementPage>
                             child: OutlinedButton(
                               onPressed: () => Navigator.pop(context, false),
                               style: OutlinedButton.styleFrom(
-                                backgroundColor: Colors.grey.shade200,
+                                backgroundColor: Colors.grey.shade700,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
                                 ),
@@ -367,7 +375,7 @@ class _UserManagementPageState extends State<UserManagementPage>
                                 'Cancel',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Colors.black87,
+                                  color: Color.fromARGB(221, 255, 255, 255),
                                 ),
                               ),
                             ),
@@ -419,6 +427,8 @@ class _UserManagementPageState extends State<UserManagementPage>
   Future<void> _banUser(int? durationDays, String reason) async {
     if (_selectedUser == null) return;
 
+    // ตรวจสอบก่อนอัปเดต state
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -428,9 +438,10 @@ class _UserManagementPageState extends State<UserManagementPage>
       final token = prefs.getString('jwt_token');
       final adminId = prefs.getInt('user_id');
 
-      // ตรวจสอบว่ามี token และ adminId
       if (token == null || adminId == null) {
-        _showError('Authentication required. Please login again.');
+        if (!mounted) return; // ตรวจสอบอีกครั้ง
+        _showError('ต้องล็อกอินใหม่');
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
         });
@@ -441,7 +452,6 @@ class _UserManagementPageState extends State<UserManagementPage>
         Uri.parse(
           'http://172.22.173.39:8080/admin/users/${_selectedUser!['User_ID']}/ban',
         ),
-
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -453,63 +463,65 @@ class _UserManagementPageState extends State<UserManagementPage>
         }),
       );
 
-      // ตรวจสอบว่า response เป็น JSON
       final contentType = response.headers['content-type'];
       if (contentType != null && !contentType.contains('application/json')) {
-        throw FormatException(
-          'Server returned non-JSON response: $contentType',
-        );
+        throw FormatException('Server ตอบกลับมาไม่ใช่ JSON');
       }
 
       if (response.statusCode == 200) {
         final responseBody = response.body;
-
-        // Debug print
         print('Ban response: $responseBody');
 
         try {
           final result = json.decode(responseBody);
-          _showSuccess(result['message'] ?? 'User banned successfully');
 
-          // Refresh the user list
-          await _loadAllUsers();
-          if (_searchController.text.isNotEmpty) {
-            await _searchUsers(_searchController.text);
+          // ตรวจสอบก่อนแสดงผล
+          if (!mounted) return;
+          _showSuccess(result['message'] ?? 'แบนผู้ใช้สำเร็จ');
+
+          // ตรวจสอบก่อนโหลดข้อมูลใหม่
+          if (mounted) {
+            await _loadAllUsers();
+            if (_searchController.text.isNotEmpty) {
+              await _searchUsers(_searchController.text);
+            }
+
+            setState(() {
+              _selectedUser = null;
+            });
           }
-
-          // Clear selection
-          setState(() {
-            _selectedUser = null;
-          });
         } catch (e) {
-          _showError('Failed to parse server response: $e');
+          if (!mounted) return;
+          _showError('Ban User fail: $e');
         }
       } else {
-        // ตรวจสอบว่า server return JSON error หรือ HTML
         try {
           final error = json.decode(response.body);
+          if (!mounted) return;
           _showError(
-            error['error'] ?? 'Failed to ban user: ${response.statusCode}',
+            error['error'] ?? 'Ban User Syccessfull: ${response.statusCode}',
           );
         } catch (e) {
-          _showError(
-            'Server error: ${response.statusCode}. Please check server logs.',
-          );
+          if (!mounted) return;
+          _showError('Server error: ${response.statusCode}');
         }
       }
     } catch (e) {
       print('Ban error: $e');
+      if (!mounted) return;
+
       if (e is FormatException) {
-        _showError(
-          'Server returned invalid response. Please check if the server is running correctly.',
-        );
+        _showError('Server not responding');
       } else {
-        _showError('Error: $e');
+        _showError('Have a Problem: $e');
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // ตรวจสอบก่อนอัปเดต state สุดท้าย
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -654,6 +666,7 @@ class _UserManagementPageState extends State<UserManagementPage>
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context, false),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade700,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -662,7 +675,10 @@ class _UserManagementPageState extends State<UserManagementPage>
                         ),
                         child: const Text(
                           'Cancel',
-                          style: TextStyle(fontSize: 16, color: Colors.black87),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color.fromARGB(221, 235, 235, 235),
+                          ),
                         ),
                       ),
                     ),
@@ -719,6 +735,7 @@ class _UserManagementPageState extends State<UserManagementPage>
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        duration: Duration(seconds: 1),
         content: Text(message),
         backgroundColor: _successColor,
         behavior: SnackBarBehavior.floating,
@@ -972,122 +989,111 @@ class _UserManagementPageState extends State<UserManagementPage>
     Color color,
     IconData icon,
   ) {
-    return Expanded(
-      child: Container(
-        height: 190,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [color.withOpacity(0.75), color.withOpacity(0.1)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: [0.0, 0.5],
+    return Container(
+      height: 190,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.75), color.withOpacity(0.1)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0.0, 0.5],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 15,
+            offset: Offset(0, 8),
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 15,
-              offset: Offset(0, 8),
-            ),
-            BoxShadow(
-              color: Colors.white.withOpacity(0.9),
-              blurRadius: 10,
-              offset: Offset(-4, -4),
-            ),
-          ],
-          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-        ),
-        child: Stack(
-          children: [
-            // Decorative elements
-            Positioned(
-              top: 10,
-              right: 10,
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color.withOpacity(0.1),
-                ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.9),
+            blurRadius: 10,
+            offset: Offset(-4, -4),
+          ),
+        ],
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Stack(
+        children: [
+          // Decorative elements
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withOpacity(0.1),
               ),
             ),
-
-            Positioned(
-              bottom: -10,
-              left: -10,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: color.withOpacity(0.05),
-                ),
+          ),
+          Positioned(
+            bottom: -10,
+            left: -10,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withOpacity(0.05),
               ),
             ),
-
-            // Main content
-            Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Icon with floating effect
-                  Container(
-                    padding: EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: color, size: 26),
-                  ),
-
-                  Spacer(),
-
-                  // Value with gradient text
-                  ShaderMask(
-                    shaderCallback: (bounds) {
-                      return LinearGradient(
-                        colors: [color, _darkenColor(color, 0.3)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ).createShader(bounds);
-                    },
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
+          ),
+          // Main content
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
                       ),
-                    ),
+                    ],
                   ),
-
-                  SizedBox(height: 8),
-
-                  // Title with elegant style
-                  Text(
-                    title.toUpperCase(),
+                  child: Icon(icon, color: color, size: 26),
+                ),
+                Spacer(),
+                ShaderMask(
+                  shaderCallback: (bounds) {
+                    return LinearGradient(
+                      colors: [color, _darkenColor(color, 0.3)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ).createShader(bounds);
+                  },
+                  child: Text(
+                    value,
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _secondaryTextColor,
-                      letterSpacing: 1.2,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                ],
-              ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _secondaryTextColor,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1625,16 +1631,16 @@ class _UserManagementPageState extends State<UserManagementPage>
                 },
               ),
               elevation: 0,
-              bottom: TabBar(
-                controller: _tabController,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white.withOpacity(0.7),
-                tabs: [
-                  Tab(text: 'All Users'),
-                  Tab(text: 'Search'),
-                ],
-              ),
+              // bottom: TabBar(
+              //   controller: _tabController,
+              //   indicatorColor: Colors.white,
+              //   labelColor: Colors.white,
+              //   unselectedLabelColor: Colors.white.withOpacity(0.7),
+              //   tabs: [
+              //     Tab(text: 'All Users'),
+              //     Tab(text: 'Search'),
+              //   ],
+              // ),
             ),
       backgroundColor: _backgroundColor,
       body: _selectedUser != null
@@ -1655,203 +1661,342 @@ class _UserManagementPageState extends State<UserManagementPage>
                 ),
               ),
             )
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                // Tab 1: All Users
-                _isInitialLoading
-                    ? Center(
-                        child: CircularProgressIndicator(color: _primaryColor),
-                      )
-                    : SingleChildScrollView(
-                        padding: EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: 10),
-                            // Statistics Section
-                            Text(
-                              'Statistics',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: _textColor,
-                              ),
-                            ),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-                                _buildStatsCard(
-                                  'Total Users',
-                                  '$_Total_User',
-                                  Colors.black,
-                                  Icons.people_alt_rounded,
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 12),
-                            // Row 1: Total Users & Total Admins
-                            Row(
-                              children: [
-                                _buildStatsCard(
-                                  'Total Users',
-                                  '$_totalUsersCount',
-                                  Colors.blue,
-                                  Icons.people_alt_rounded,
-                                ),
-                                SizedBox(width: 16),
-                                _buildStatsCard(
-                                  'Total Admins',
-                                  '$_totalAdminsCount',
-                                  _infoColor,
-                                  Icons.admin_panel_settings_rounded,
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-
-                            // Row 2: Active Users & Active Admins
-                            Row(
-                              children: [
-                                _buildStatsCard(
-                                  'Active Users',
-                                  '$_activeUsersCount',
-                                  _successColor,
-                                  Icons.verified_user_rounded,
-                                ),
-                                SizedBox(width: 16),
-                                _buildStatsCard(
-                                  'Active Admins',
-                                  '$_active_Admin_count',
-                                  _successColor,
-                                  Icons.verified_user_rounded,
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-
-                            // Row 3: Banned Users & Banned Admins
-                            Row(
-                              children: [
-                                _buildStatsCard(
-                                  'Banned Users',
-                                  '$_bannedUsersCount',
-                                  _errorColor,
-                                  Icons.block_rounded,
-                                ),
-                                SizedBox(width: 16),
-                                _buildStatsCard(
-                                  'banned_Admin ',
-                                  '$_banned_Admin_count',
-                                  _errorColor,
-                                  Icons.block_rounded,
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 24),
-                          ],
-                        ),
-                      ),
-
-                // Tab 2: Search
-                SingleChildScrollView(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          :
+            // TabBarView(
+            //     controller: _tabController,
+            //     children: [
+            // Tab 1: All Users
+            _isInitialLoading
+          ? Center(child: CircularProgressIndicator(color: _primaryColor))
+          : SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 10),
+                  // Statistics Section
+                  Text(
+                    'Statistics',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: _textColor,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  // Row: Total All Users
+                  Row(
                     children: [
-                      // Search Section
-                      Text(
-                        'Search User',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: _textColor,
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userAllUsersPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'All Accounts',
+                            '$_Total_User',
+                            const Color.fromARGB(
+                              255,
+                              108,
+                              102,
+                              159,
+                            ).withOpacity(1),
+                            Icons.people_alt_rounded,
+                          ),
                         ),
                       ),
-                      SizedBox(height: 12),
-                      TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          labelText: 'Search by username, email or User ID',
-                          labelStyle: TextStyle(
-                            color: _textColor.withOpacity(0.7),
-                          ),
-                          prefixIcon: Icon(Icons.search, color: _accentColor),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.clear, color: _accentColor),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _searchUsers('');
-                                    setState(() => _hasSearched = false);
-                                  },
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                        ),
-                        onChanged: (value) {
-                          _searchUsers(value);
-                          setState(() => _hasSearched = value.isNotEmpty);
-                        },
-                      ),
-                      SizedBox(height: 16),
-
-                      // Search Results
-                      if (_searchResults.isNotEmpty)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Search Results (${_searchResults.length})',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: _textColor,
-                              ),
-                            ),
-                            SizedBox(height: 12),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: ListView.builder(
-                                shrinkWrap:
-                                    true, // ให้ ListView ย่อขนาดตามเนื้อหา
-                                physics:
-                                    NeverScrollableScrollPhysics(), // ป้องกัน scroll ภายใน
-                                itemCount: _searchResults.length,
-                                itemBuilder: (context, index) {
-                                  final user = _searchResults[index];
-                                  return _buildUserCard(user);
-                                },
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        // ถ้า search แล้วแต่ไม่เจอ
-                        (_hasSearched
-                            ? _buildNoResultsCard()
-                            // ยังไม่ได้ search
-                            : _buildEmptySearchCard()),
                     ],
                   ),
-                ),
-              ],
+                  SizedBox(height: 12),
+
+                  // Row 1: Total Users & Total Admins
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userRoleUsersPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'Total Users',
+                            '$_totalUsersCount',
+                            const Color.fromARGB(
+                              255,
+                              174,
+                              164,
+                              144,
+                            ).withOpacity(1),
+                            Icons.people_alt_rounded,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userRoleAdminPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'Total Admins',
+                            '$_totalAdminsCount',
+                            const Color.fromARGB(255, 101, 116, 125),
+                            Icons.admin_panel_settings_rounded,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+
+                  // Row 2: Active Users & Active Admins
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userActiveUserPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'Active Users',
+                            '$_activeUsersCount',
+                            const Color.fromARGB(
+                              255,
+                              174,
+                              164,
+                              144,
+                            ).withOpacity(1),
+                            Icons.verified_user_rounded,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userActiveAdminPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'Active Admins',
+                            '$_active_Admin_count',
+                            const Color.fromARGB(255, 101, 116, 125),
+                            Icons.verified_user_rounded,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+
+                  // Row 3: Banned Users & Banned Admins
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userBanUserPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'Banned Users',
+                            '$_bannedUsersCount',
+                            const Color.fromARGB(
+                              255,
+                              174,
+                              164,
+                              144,
+                            ).withOpacity(1),
+                            Icons.block_rounded,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () async {
+                            final shouldRefresh = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => userBanAdminPage(),
+                              ),
+                            );
+                            if (shouldRefresh == true) {
+                              setState(() {
+                                _loadAllUsers();
+                              });
+                            }
+                          },
+                          child: _buildStatsCard(
+                            'Banned Admins',
+                            '$_banned_Admin_count',
+                            const Color.fromARGB(255, 101, 116, 125),
+                            Icons.block_rounded,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24),
+                ],
+              ),
             ),
 
+      // // Tab 2: Search
+      // SingleChildScrollView(
+      //   padding: EdgeInsets.all(16),
+      //   child: Column(
+      //     crossAxisAlignment: CrossAxisAlignment.start,
+      //     children: [
+      //       // Search Section
+      //       Text(
+      //         'Search User',
+      //         style: TextStyle(
+      //           fontSize: 18,
+      //           fontWeight: FontWeight.w600,
+      //           color: _textColor,
+      //         ),
+      //       ),
+      //       SizedBox(height: 12),
+      //       TextField(
+      //         controller: _searchController,
+      //         decoration: InputDecoration(
+      //           labelText: 'Search by username, email or User ID',
+      //           labelStyle: TextStyle(
+      //             color: _textColor.withOpacity(0.7),
+      //           ),
+      //           prefixIcon: Icon(Icons.search, color: _accentColor),
+      //           suffixIcon: _searchController.text.isNotEmpty
+      //               ? IconButton(
+      //                   icon: Icon(Icons.clear, color: _accentColor),
+      //                   onPressed: () {
+      //                     _searchController.clear();
+      //                     _searchUsers('');
+      //                     setState(() => _hasSearched = false);
+      //                   },
+      //                 )
+      //               : null,
+      //           border: OutlineInputBorder(
+      //             borderRadius: BorderRadius.circular(12),
+      //           ),
+      //           filled: true,
+      //           fillColor: Colors.white,
+      //         ),
+      //         onChanged: (value) {
+      //           _searchUsers(value);
+      //           setState(() => _hasSearched = value.isNotEmpty);
+      //         },
+      //       ),
+      //       SizedBox(height: 16),
+
+      //       // Search Results
+      //       if (_searchResults.isNotEmpty)
+      //         Column(
+      //           crossAxisAlignment: CrossAxisAlignment.start,
+      //           children: [
+      //             Text(
+      //               'Search Results (${_searchResults.length})',
+      //               style: TextStyle(
+      //                 fontSize: 16,
+      //                 fontWeight: FontWeight.w600,
+      //                 color: _textColor,
+      //               ),
+      //             ),
+      //             SizedBox(height: 12),
+      //             Container(
+      //               decoration: BoxDecoration(
+      //                 color: Colors.white,
+      //                 borderRadius: BorderRadius.circular(12),
+      //                 boxShadow: [
+      //                   BoxShadow(
+      //                     color: Colors.black.withOpacity(0.05),
+      //                     blurRadius: 8,
+      //                     offset: Offset(0, 4),
+      //                   ),
+      //                 ],
+      //               ),
+      //               child: ListView.builder(
+      //                 shrinkWrap:
+      //                     true, // ให้ ListView ย่อขนาดตามเนื้อหา
+      //                 physics:
+      //                     NeverScrollableScrollPhysics(), // ป้องกัน scroll ภายใน
+      //                 itemCount: _searchResults.length,
+      //                 itemBuilder: (context, index) {
+      //                   final user = _searchResults[index];
+      //                   return _buildUserCard(user);
+      //                 },
+      //               ),
+      //             ),
+      //           ],
+      //         )
+      //       else
+      //         // ถ้า search แล้วแต่ไม่เจอ
+      //         (_hasSearched
+      //             ? _buildNoResultsCard()
+      //             // ยังไม่ได้ search
+      //             : _buildEmptySearchCard()),
+      //     ],
+      //   ),
+      // ),
+      //   ],
+      // ),
       bottomSheet: _selectedUser != null
           ? Container(
               padding: EdgeInsets.only(),
@@ -2163,6 +2308,60 @@ class _UserManagementPageState extends State<UserManagementPage>
                           ],
 
                           SizedBox(height: 20),
+
+                          // // ปุ่มดำเนินการ
+                          // SizedBox(
+                          //   width: double.infinity,
+                          //   height: 52,
+                          //   child: ElevatedButton(
+                          //     onPressed: _isLoading
+                          //         ? null
+                          //         : _showStatusConfirmationDialog,
+                          //     style: ElevatedButton.styleFrom(
+                          //       backgroundColor:
+                          //           _selectedUser!['status'] == 'Active'
+                          //           ? Colors.red[500]
+                          //           : Colors.green[500],
+                          //       foregroundColor: Colors.white,
+                          //       shape: RoundedRectangleBorder(
+                          //         borderRadius: BorderRadius.circular(14),
+                          //       ),
+                          //       elevation: 2,
+                          //       padding: EdgeInsets.symmetric(horizontal: 20),
+                          //     ),
+                          //     child: Row(
+                          //       mainAxisAlignment: MainAxisAlignment.center,
+                          //       children: [
+                          //         if (_isLoading)
+                          //           SizedBox(
+                          //             width: 20,
+                          //             height: 20,
+                          //             child: CircularProgressIndicator(
+                          //               color: Colors.white,
+                          //               strokeWidth: 2,
+                          //             ),
+                          //           )
+                          //         else
+                          //           Icon(
+                          //             _selectedUser!['status'] == 'Active'
+                          //                 ? Icons.block
+                          //                 : Icons.check_circle,
+                          //             size: 20,
+                          //           ),
+                          //         SizedBox(width: 8),
+                          //         Text(
+                          //           _selectedUser!['status'] == 'Active'
+                          //               ? "Ban User"
+                          //               : "Unban User",
+                          //           style: TextStyle(
+                          //             fontSize: 16,
+                          //             fontWeight: FontWeight.w600,
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),

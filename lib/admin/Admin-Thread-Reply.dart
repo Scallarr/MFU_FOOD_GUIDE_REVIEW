@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/admin/Admin-Thread-Reply-Pending.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class ThreadRepliesAdminPage extends StatefulWidget {
   final Map thread;
@@ -27,6 +28,8 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
   List<Map<String, dynamic>> mentionSuggestions = [];
   bool showSuggestions = false;
   String currentMention = '';
+  Map<dynamic, dynamic>? _selectedUser;
+  String? profileImageUrl;
   String? pictureUrl;
   ScrollController _scrollController = ScrollController();
   int pendingRepliesCount = 0;
@@ -85,6 +88,47 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
       }
     } catch (e) {
       print('Error fetching profile picture: $e');
+    }
+  }
+
+  Future<void> _fetchCurrentUserInfo(int userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      final uri = Uri.parse('http://172.22.173.39:8080/user/info/$userId');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final userData = json.decode(response.body);
+        setState(() {
+          _selectedUser = {
+            'User_ID': userId,
+            'username': userData['username'] ?? '',
+            'email': userData['email'] ?? '',
+            'review_total_likes': userData['total_likes'] ?? 0,
+            'total_reviews': userData['total_reviews'] ?? 0,
+            'coins': userData['coins'] ?? 0,
+            'formattedCoins': NumberFormat(
+              '#,###',
+            ).format(int.tryParse(userData['coins'].toString()) ?? 0),
+            'status': userData['status'] ?? '',
+            'picture_url': userData['picture_url'] ?? '',
+            'role': userData['role'] ?? '',
+          };
+        });
+        print(' Udfdfdfpgfgplfgpfplg $_selectedUser');
+      } else {
+        print('Failed to fetch user info. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching user info: $e');
     }
   }
 
@@ -555,56 +599,68 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F4EF),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context, true); // ส่งค่ากลับว่าให้รีเฟรชหน้าก่อนหน้า
-          },
-        ),
-        title: Text(
-          'Replies to ${thread['username']} ',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 19,
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                offset: Offset(0, 1),
-                blurRadius: 3,
-                color: Colors.black38,
-              ),
-            ],
-          ),
-        ),
-        backgroundColor: const Color(0xFFCEBFA3),
-        foregroundColor: Colors.black,
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.verified_user, size: 30),
-                onPressed: () async {
-                  final shouldRefresh = await Navigator.push(
+      appBar: _selectedUser == null
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  Navigator.pop(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => PendingRepliesAdminPage(
-                        threadId: widget.thread['Thread_ID'],
-                      ),
-                    ),
-                  );
-                  if (shouldRefresh == true) {
-                    await fetchReplies();
-                    await refreshThreadData();
-                    await fetchPendingRepliesCount(); // รีเฟรชจำนวนหลังจากกลับมา
-                  }
+                    true,
+                  ); // ส่งค่ากลับว่าให้รีเฟรชหน้าก่อนหน้า
                 },
-                tooltip: 'Review pending replies for this thread',
               ),
-            ],
-          ),
-        ],
-      ),
+              title: Text(
+                'Replies to ${thread['username']} ',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 19,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 3,
+                      color: Colors.black38,
+                    ),
+                  ],
+                ),
+              ),
+              backgroundColor: const Color(0xFFCEBFA3),
+              foregroundColor: Colors.black,
+              actions: [
+                Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.verified_user, size: 30),
+                      onPressed: () async {
+                        final shouldRefresh = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PendingRepliesAdminPage(
+                              threadId: widget.thread['Thread_ID'],
+                            ),
+                          ),
+                        );
+                        if (shouldRefresh == true) {
+                          await fetchReplies();
+                          await refreshThreadData();
+                          await fetchPendingRepliesCount(); // รีเฟรชจำนวนหลังจากกลับมา
+                        }
+                      },
+                      tooltip: 'Review pending replies for this thread',
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : AppBar(
+              backgroundColor: Color.fromARGB(
+                255,
+                116,
+                115,
+                113,
+              ).withOpacity(1),
+            ),
       body: SafeArea(
         child: Column(
           children: [
@@ -707,16 +763,22 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage:
-                        (profilePictureUrl != null &&
-                            profilePictureUrl!.isNotEmpty)
-                        ? NetworkImage(profilePictureUrl!)
-                        : const NetworkImage(
-                            'https://e7.pngegg.com/pngimages/84/165/png-clipart-united-states-avatar-organization-information-user-avatar-service-computer-wallpaper-thumbnail.png',
-                          ),
-                    backgroundColor: Colors.grey.shade200,
+                  GestureDetector(
+                    onTap: () {
+                      if (userId != null) {
+                        _fetchCurrentUserInfo(userId!);
+                      }
+                    },
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundImage: profilePictureUrl != null
+                          ? NetworkImage(profilePictureUrl!)
+                          : null,
+                      backgroundColor: Colors.grey.shade300,
+                      child: profilePictureUrl == null
+                          ? const Icon(Icons.person, color: Colors.white)
+                          : null,
+                    ),
                   ),
 
                   const SizedBox(width: 10),
@@ -816,6 +878,511 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
           ],
         ),
       ),
+      bottomSheet: _selectedUser != null
+          ? GestureDetector(
+              // onVerticalDragUpdate: (details) {
+              //   // ถ้าเลื่อนลงมากกว่า 50 pixels ให้ปิด
+              //   if (details.delta.dy > 10) {
+              //     setState(() {
+              //       _selectedUser = null;
+              //     });
+              //   }
+              // },
+              onTap: () {
+                // ถ้าคลิกนอกเนื้อหาให้ปิด
+                // setState(() {
+                //   _selectedUser = null;
+                // });
+              },
+              child: Container(
+                padding: EdgeInsets.only(),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                      const Color.fromARGB(255, 136, 133, 133), // เทาอ่อนด้านบน
+                      const Color.fromARGB(255, 46, 45, 45), // เทาเข้มด้านล่าง
+                    ],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: Offset(0, -6),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ส่วนหัว
+
+                      // Container สำหรับ Banner และ Avatar ที่ซ้อนกัน
+                      Stack(
+                        alignment: Alignment.center,
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Banner
+                          Container(
+                            margin: EdgeInsets.only(
+                              bottom: 40,
+                            ), // ระยะห่างสำหรับ Avatar
+                            child: buildUserBanner(
+                              _selectedUser?['picture_url'],
+                            ),
+                          ),
+
+                          // Avatar (วางซ้อนลงบน Banner)
+                          Positioned(
+                            bottom: 0, // ทำให้ Avatar ยื่นออกมาจาก Banner
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 4,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 40,
+                                backgroundColor: Colors.blue[100],
+                                backgroundImage:
+                                    (_selectedUser!['picture_url'] != null &&
+                                        _selectedUser!['picture_url']
+                                            .isNotEmpty)
+                                    ? NetworkImage(
+                                        _selectedUser!['picture_url'],
+                                      )
+                                    : null,
+                                child:
+                                    (_selectedUser!['picture_url'] == null ||
+                                        _selectedUser!['picture_url'].isEmpty)
+                                    ? Text(
+                                        _selectedUser!['username'][0]
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[800],
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded, size: 40),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    237,
+                                    235,
+                                    235,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedUser = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: 290,
+                            right: -60,
+                            child: Icon(
+                              Icons.lock_outlined,
+                              size: 120,
+                              color: const Color.fromARGB(
+                                255,
+                                0,
+                                0,
+                                0,
+                              ).withOpacity(0.1),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: -550,
+                            left: 40,
+                            child: Icon(
+                              Icons.group,
+                              size: 340,
+                              color: const Color.fromARGB(
+                                255,
+                                9,
+                                9,
+                                9,
+                              ).withOpacity(0.4),
+                            ),
+                          ),
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedUser = null;
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(
+                                  8,
+                                ), // ทำให้ Icon มีพื้นที่รอบ ๆ
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.redAccent.shade100,
+                                      Colors.red.shade700,
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // ชื่อและ email (ลดระยะห่างจาก Avatar)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          top: 7,
+                          bottom: 16,
+                        ), // ลดจาก 60 เป็น 50
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _selectedUser!['username'],
+                                  style: TextStyle(
+                                    fontSize: 22, // เพิ่มขนาดฟอนต์
+                                    fontWeight:
+                                        FontWeight.w800, // ตัวหนากว่าเดิม
+                                    color: const Color.fromARGB(
+                                      255,
+                                      255,
+                                      255,
+                                      255,
+                                    ),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(width: 5),
+                                Icon(
+                                  Icons.verified,
+                                  size: 22,
+                                  color: const Color.fromARGB(255, 10, 10, 10),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6), // เพิ่มระยะห่างเล็กน้อย
+                            (_selectedUser!['User_ID'] == userId)
+                                ? Text(
+                                    (_selectedUser!['email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  )
+                                : Text(
+                                    obfuscateEmail(_selectedUser!['email']),
+                                    style: TextStyle(
+                                      fontSize: 15, // เพิ่มขนาดฟอนต์เล็กน้อย
+                                      color: const Color.fromARGB(
+                                        255,
+                                        222,
+                                        220,
+                                        220,
+                                      ),
+                                      fontWeight:
+                                          FontWeight.w500, // ตัวหนาปานกลาง
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsetsGeometry.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // ชิปข้อมูล
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              alignment: WrapAlignment.center,
+                              children: [
+                                _buildInfoChip(
+                                  Icons.badge_outlined,
+                                  "User ID",
+                                  "${_selectedUser!['User_ID']}",
+                                  color: Colors.blue,
+                                ),
+                                if (_selectedUser!['role'] != null &&
+                                    _selectedUser!['role'].isNotEmpty)
+                                  _buildInfoChip(
+                                    Icons.manage_accounts,
+                                    "Role",
+                                    "${_selectedUser!['role']}",
+                                    color: Colors.teal,
+                                  ),
+                                _buildInfoChip(
+                                  _selectedUser!['status'] == "Active"
+                                      ? Icons.verified_user_outlined
+                                      : Icons.block_outlined,
+                                  "Status",
+                                  _selectedUser!['status'],
+                                  color: _selectedUser!['status'] == "Active"
+                                      ? Colors.green
+                                      : Colors.red,
+                                ),
+                                _buildInfoChip(
+                                  Icons.monetization_on_outlined,
+                                  "Coins",
+                                  "${_selectedUser!['formattedCoins']}",
+                                  color: Colors.orange,
+                                ),
+                                if (_selectedUser!['review_total_likes'] !=
+                                    null)
+                                  _buildInfoChip(
+                                    Icons.favorite_outline,
+                                    "Likes",
+                                    "${_selectedUser!['review_total_likes']}",
+                                    color: Colors.pink,
+                                  ),
+                                if (_selectedUser!['total_reviews'] != null)
+                                  _buildInfoChip(
+                                    Icons.reviews_outlined,
+                                    "Reviews",
+                                    "${_selectedUser!['total_reviews']}",
+                                    color: const Color.fromARGB(
+                                      255,
+                                      183,
+                                      52,
+                                      222,
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            if (_selectedUser!['ban_info'] != null &&
+                                _selectedUser!['ban_info'].isNotEmpty) ...[
+                              SizedBox(height: 16),
+                              Container(
+                                padding: EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.orange[200]!,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.warning_amber_rounded,
+                                      color: Colors.orange[700],
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Ban Info: ${_selectedUser!['ban_info']}",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.orange[800],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
+                            SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildInfoChip(
+    IconData icon,
+    String label,
+    String value, {
+    Color? color,
+  }) {
+    final baseColor = color ?? Colors.blue;
+
+    return Container(
+      width: 120, // ให้ขนาดเท่ากัน
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withOpacity(0.95),
+            const Color.fromARGB(255, 174, 174, 174).withOpacity(0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: baseColor.withOpacity(0.15),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 3, 3, 3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: const Color.fromARGB(255, 255, 255, 255),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: const Color.fromARGB(255, 220, 216, 216),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildUserBanner(String? imageUrl) {
+    final placeholder =
+        "https://via.placeholder.com/400x200.png?text=No+Image"; // fallback
+
+    return Container(
+      width: double.infinity,
+      height: 410,
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              (imageUrl != null && imageUrl.isNotEmpty)
+                  ? imageUrl
+                  : placeholder,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      color: Colors.grey[600],
+                      size: 48,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -843,22 +1410,34 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFCEBFA3),
-                        width: 2,
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (_selectedUser != null &&
+                            _selectedUser!['User_ID'] == thread['User_ID']) {
+                          _selectedUser = null;
+                        } else {
+                          _selectedUser = thread;
+                        }
+                      });
+                    },
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFCEBFA3),
+                          width: 2,
+                        ),
                       ),
-                    ),
-                    child: ClipOval(
-                      child: Image.network(
-                        thread['picture_url'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Container(color: Colors.grey[200]),
+                      child: ClipOval(
+                        child: Image.network(
+                          thread['picture_url'],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(color: Colors.grey[200]),
+                        ),
                       ),
                     ),
                   ),
@@ -1127,6 +1706,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: isMe
@@ -1152,10 +1732,10 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                     left: 15,
                     right: 15,
                   ),
-                  margin: EdgeInsets.only(top: 3),
+                  margin: EdgeInsets.only(top: 10),
                   decoration: BoxDecoration(
                     color: isMe
-                        ? const Color.fromARGB(255, 192, 212, 245)
+                        ? const Color.fromARGB(255, 216, 228, 235)
                         : const Color.fromARGB(255, 255, 255, 255),
                     borderRadius: BorderRadius.only(
                       topLeft: isMe
@@ -1273,7 +1853,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
                                 RichText(
                                   text: TextSpan(
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: 18,
                                       color: isMe
                                           ? const Color.fromARGB(255, 0, 0, 0)
                                           : const Color(0xFF202124),
@@ -1323,10 +1903,22 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        CircleAvatar(
-          backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
-          radius: 24,
-          backgroundColor: Colors.grey[200],
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              if (_selectedUser != null &&
+                  _selectedUser!['User_ID'] == reply['User_ID']) {
+                _selectedUser = null;
+              } else {
+                _selectedUser = reply;
+              }
+            });
+          },
+          child: CircleAvatar(
+            backgroundImage: NetworkImage(reply['picture_url'] ?? ''),
+            radius: 24,
+            backgroundColor: Colors.grey[200],
+          ),
         ),
         Positioned(
           bottom: -2,
@@ -1363,7 +1955,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesAdminPage> {
         TextSpan(
           text: mentionText,
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 18,
             color: const Color.fromARGB(255, 233, 0, 0),
             fontWeight: FontWeight.bold,
           ),

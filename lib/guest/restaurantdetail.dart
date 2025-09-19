@@ -13,16 +13,17 @@ import 'package:myapp/admin/Admin-AddMenu.dart';
 
 // import 'package:myapp/admin/Admin-Home.dart';
 
-class RestaurantDetailUserPage extends StatefulWidget {
+class RestaurantDetailGuestPage extends StatefulWidget {
   final int restaurantId;
 
-  const RestaurantDetailUserPage({super.key, required this.restaurantId});
+  const RestaurantDetailGuestPage({super.key, required this.restaurantId});
 
   @override
-  State<RestaurantDetailUserPage> createState() => _RestaurantDetailPageState();
+  State<RestaurantDetailGuestPage> createState() =>
+      _RestaurantDetailPageState();
 }
 
-class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
+class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
   Restaurant? restaurant;
   bool isLoading = true;
   bool isExpanded = false;
@@ -48,23 +49,23 @@ class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
   }
 
   Future<void> _init() async {
-    await _loadUserId();
+    // await _loadUserId();
     await fetchRestaurant();
   }
 
-  Future<void> _loadUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedUserId = prefs.getInt('user_id');
-    setState(() {
-      userId = storedUserId;
-    });
-  }
+  // Future<void> _loadUserId() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final storedUserId = prefs.getInt('user_id');
+  //   setState(() {
+  //     userId = storedUserId;
+  //   });
+  // }
 
   bool isThai = false;
   Future<void> fetchRestaurant() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
+      // final prefs = await SharedPreferences.getInstance();
+      // final token = prefs.getString('jwt_token');
       final queryParams = {
         if (userId != null) 'user_id': userId.toString(),
         'lang': isThai ? 'th' : 'en', // ✅ เพิ่มภาษาที่เลือก
@@ -72,13 +73,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
 
       final uri = Uri.http(
         '172.22.173.39:8080', // host + port
-        '/restaurant/${widget.restaurantId}', // path
+        '/guest/restaurant/${widget.restaurantId}', // path
         queryParams, // query string
       );
 
       final response = await http.get(
         uri,
-        headers: {'Authorization': 'Bearer $token'},
+        // headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -691,34 +692,16 @@ class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
                           width: double.infinity, // เต็มความกว้าง
                           child: ElevatedButton(
                             onPressed: () async {
-                              final result = await Navigator.push(
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.clear();
+                              Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => WriteReviewPage(
-                                    restaurant: {
-                                      'name': restaurant!.name,
-                                      'category': restaurant!.category,
-                                      'location': restaurant!.location,
-                                      'imageUrl': restaurant!.photoUrl,
-                                      'RestaurantID': restaurant!.id,
-                                    },
-                                  ),
+                                  builder: (_) => LoginScreen(),
                                 ),
+                                (route) => false,
                               );
-
-                              // ถ้ามีการ submit review แล้ว result == true
-                              if (result == true) {
-                                // เรียก setState เพื่อรีเฟรชข้อมูล
-                                setState(() {
-                                  isReviewExpanded = false;
-
-                                  // เรียกฟังก์ชันโหลดร้านใหม่ หรือดึงข้อมูลใหม่
-                                  _loadUserId();
-
-                                  fetchRestaurant();
-                                  // ← ถ้ามีฟังก์ชันนี้ในหน้าแรก
-                                });
-                              }
                             },
 
                             style: ElevatedButton.styleFrom(
@@ -1817,7 +1800,7 @@ class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
                                                 ), // ปรับตามต้องการ
                                                 child: Icon(
                                                   Icons.favorite,
-                                                  color: isLiked
+                                                  color: !isLiked
                                                       ? Colors.red
                                                       : Colors.grey,
                                                   size: 40,

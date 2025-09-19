@@ -306,7 +306,7 @@ class _RestaurantReviewHistoryPageState
               gradient: LinearGradient(
                 colors: [
                   const Color.fromARGB(255, 229, 210, 173),
-                  const Color.fromARGB(255, 229, 210, 173),
+                  const Color(0xFFCEBFA3),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -522,7 +522,7 @@ class _RestaurantReviewHistoryPageState
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+              side: BorderSide(color: Colors.black.withOpacity(0.3), width: 2),
             ),
             color: _cardColor,
             child: Padding(
@@ -543,7 +543,12 @@ class _RestaurantReviewHistoryPageState
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: _primaryColor.withOpacity(0.3),
+                            color: const Color.fromARGB(
+                              255,
+                              50,
+                              50,
+                              50,
+                            ).withOpacity(0.3),
                             width: 2,
                           ),
                         ),
@@ -1062,7 +1067,7 @@ class _RestaurantReviewHistoryPageState
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+              side: BorderSide(color: Colors.black.withOpacity(0.3), width: 2),
             ),
             color: _cardColor,
             child: Padding(

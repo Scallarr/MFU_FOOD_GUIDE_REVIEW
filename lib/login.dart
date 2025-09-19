@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:myapp/admin/Admin-Home.dart';
+import 'package:myapp/guest/home.dart';
 import 'package:myapp/home.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -773,8 +774,19 @@ class _LoginScreenState extends State<LoginScreen>
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            onPressed: () {
-                              print("Guest login");
+                            onPressed: () async {
+                              await _googleSignIn.signOut();
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.clear();
+
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RestaurantListPageGuest(),
+                                ),
+                                (route) => false,
+                              );
                             },
                             style: OutlinedButton.styleFrom(
                               backgroundColor: Colors.white,

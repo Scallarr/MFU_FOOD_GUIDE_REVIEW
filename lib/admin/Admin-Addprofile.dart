@@ -185,30 +185,143 @@ class _AddProfilePageState extends State<AddProfilePage> {
                     SizedBox(height: 25),
 
                     // Submit Button
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color.fromARGB(255, 77, 76, 75),
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 3,
-                      ),
-                      child: Text(
-                        'Add Profile',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: const Color.fromARGB(255, 233, 224, 224),
-                        ),
-                      ),
-                    ),
+                    _buildUpdateButton(),
                     SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildUpdateButton() {
+    return ElevatedButton(
+      onPressed: () async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TweenAnimationBuilder(
+                    duration: Duration(milliseconds: 300),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    builder: (context, double value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.add,
+                            size: 40,
+                            color: const Color.fromARGB(255, 255, 9, 9),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Confirm Add',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Are you sure you want to Add these profile changes?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.black.withOpacity(0.7),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.withOpacity(0.7),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'ADD',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        if (confirm == true) {
+          _submitForm(); // ฟังก์ชันของคุณสำหรับอัปเดตข้อมูลโปรไฟล์
+        }
+      },
+
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Color.fromARGB(255, 77, 76, 75),
+        padding: EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 3,
+      ),
+      child: Text(
+        'Add Profile',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Color.fromARGB(255, 233, 224, 224),
+        ),
+      ),
     );
   }
 
@@ -318,19 +431,19 @@ class _AddProfilePageState extends State<AddProfilePage> {
       // Then insert data to database
       await _insertProfileToDatabase();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile added successfully!'),
-          backgroundColor: const Color.fromARGB(255, 22, 22, 22),
-        ),
-      );
-      Navigator.pop(context, true);
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text('Profile added successfully!'),
+      //     backgroundColor: const Color.fromARGB(255, 22, 22, 22),
+      //   ),
+      // );
+      // Navigator.pop(context, true);
       // Clear form after successful submission
 
-      setState(() {
-        _imageFile = null;
-        _imageUrl = null;
-      });
+      // setState(() {
+      //   _imageFile = null;
+      //   _imageUrl = null;
+      // });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -398,8 +511,126 @@ class _AddProfilePageState extends State<AddProfilePage> {
         }),
       );
 
-      if (response.statusCode != 201) {
-        throw Exception('Failed to insert profile: ${response.body}');
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile added successfully!'),
+            backgroundColor: const Color.fromARGB(255, 22, 22, 22),
+          ),
+        );
+        Navigator.pop(context, true);
+      } else if (response.statusCode == 409) {
+        final data = json.decode(response.body);
+        final errorMsg = data['error'] ?? 'Username already exists';
+
+        // คืนค่ากลับไปเป็น username เก่า
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false, // กดนอก dialog ไม่ปิด
+          builder: (BuildContext dialogContext) {
+            // ใช้ dialogContext แยกจาก context ภายนอก
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+              elevation: 10,
+              backgroundColor: Colors.white,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(66, 94, 81, 81),
+                      blurRadius: 15,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.redAccent.withOpacity(0.5),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.white,
+                        size: 56,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Update Fail!',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 26,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMsg,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.black,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(
+                            dialogContext,
+                          ).pop(); // ใช้ dialogContext ปิดเฉพาะ dialog
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 6,
+                          shadowColor: const Color.fromARGB(
+                            255,
+                            0,
+                            0,
+                            0,
+                          ).withOpacity(0.6),
+                        ),
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
       }
     } catch (e) {
       throw Exception('Database insertion error: $e');

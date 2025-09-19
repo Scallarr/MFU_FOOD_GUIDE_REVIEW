@@ -231,13 +231,13 @@ class _RestaurantallPendingrewiewPageState
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 22,
-              color: const Color.fromARGB(255, 255, 253, 253),
+              color: const Color.fromARGB(255, 13, 13, 13),
               shadows: [
-                Shadow(
-                  offset: const Offset(0, 2),
-                  blurRadius: 4,
-                  color: const Color.fromARGB(255, 68, 68, 68).withOpacity(0.7),
-                ),
+                // Shadow(
+                //   offset: const Offset(0, 2),
+                //   blurRadius: 4,
+                //   color: const Color.fromARGB(255, 68, 68, 68).withOpacity(0.7),
+                // ),
               ],
             ),
           ),
@@ -278,12 +278,7 @@ class _RestaurantallPendingrewiewPageState
             end: Alignment.bottomRight,
           ),
         ),
-        child: _isLoading
-            ? _buildLoadingView()
-            : TabBarView(
-                controller: _tabController,
-                children: [_buildReviewApprovalHistory()],
-              ),
+        child: _isLoading ? _buildLoadingView() : _buildReviewApprovalHistory(),
       ),
     );
   }
@@ -405,7 +400,10 @@ class _RestaurantallPendingrewiewPageState
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: statusColor.withOpacity(0.3), width: 2),
+              side: BorderSide(
+                color: const Color.fromARGB(255, 50, 50, 50).withOpacity(0.3),
+                width: 2,
+              ),
             ),
             color: _cardColor,
             child: Padding(

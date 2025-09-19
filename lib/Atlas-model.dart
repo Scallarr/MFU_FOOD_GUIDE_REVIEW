@@ -2,12 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/Nexus-model.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
+import 'package:myapp/home.dart';
+import 'package:myapp/leaderboard.dart';
+import 'package:myapp/thread_reply.dart';
+import 'package:myapp/threads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Cohere API function
@@ -58,12 +63,12 @@ Future<String?> fetchProfilePicture(int userId) async {
   }
 }
 
-class ChatbotScreen extends StatefulWidget {
+class userChatbotScreen extends StatefulWidget {
   @override
   _ChatbotScreenState createState() => _ChatbotScreenState();
 }
 
-class _ChatbotScreenState extends State<ChatbotScreen>
+class _ChatbotScreenState extends State<userChatbotScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
@@ -228,7 +233,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       Future.delayed(Duration(milliseconds: 1500), () {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Chatbot2Screen()),
+          MaterialPageRoute(builder: (context) => userChatbotScreen()),
         );
       });
     } else if (message.toLowerCase().contains('atlas')
@@ -326,7 +331,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
                         final shouldRefresh = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProfilePageAdmin(),
+                            builder: (context) => ProfilePageUser(),
                           ),
                         );
 
@@ -536,7 +541,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           Future.delayed(const Duration(milliseconds: 3000), () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => Chatbot2Screen()),
+              MaterialPageRoute(builder: (context) => userChatbotScreen()),
             );
           });
         } else if (id == 'Atlas') {
@@ -680,19 +685,19 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantListPageAdmin()),
+          MaterialPageRoute(builder: (context) => RestaurantListPageUser()),
         );
         break;
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPageAdmin()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageUser()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
+          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
         );
         break;
     }

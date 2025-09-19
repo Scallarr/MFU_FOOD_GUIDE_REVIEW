@@ -12,6 +12,7 @@ import 'package:myapp/admin/Admin-myhistoy.dart';
 import 'package:myapp/admin/Admin-pendingThreadsReplied.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
+import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/leaderboard.dart';
@@ -1654,9 +1655,9 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
-                                                obfuscateEmail(
-                                                  thread['email'] ?? '',
-                                                ),
+                                                // obfuscateEmail(
+                                                thread['email'] ?? '',
+
                                                 style: const TextStyle(
                                                   fontSize: 12.3,
                                                   color: Colors.black54,
@@ -2314,18 +2315,77 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
 
                     const SizedBox(width: 12),
 
+                    // Expanded(
+                    //   child: TextField(
+                    //     controller: _textController,
+                    //     maxLines: null,
+                    //     keyboardType: TextInputType.multiline,
+                    //     decoration: InputDecoration(
+                    //       hintText: 'Write a new thread...',
+                    //       border: InputBorder.none,
+                    //     ),
+                    //   ),
+                    // ),
                     Expanded(
-                      child: TextField(
-                        controller: _textController,
-                        maxLines: null,
-                        keyboardType: TextInputType.multiline,
-                        decoration: InputDecoration(
-                          hintText: 'Write a new thread...',
-                          border: InputBorder.none,
-                        ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 0,
+                              vertical: 10,
+                            ),
+                          ),
+                          TextField(
+                            controller: _textController,
+                            maxLines: null,
+                            cursorColor: Colors.black,
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            ),
+                            decoration: const InputDecoration(
+                              hintText: 'Write a new thread...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(20),
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Color(0xFFF0F0F0),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            onChanged: (text) {
+                              final words = text.split(' ');
+                              final lastWord = words.isNotEmpty
+                                  ? words.last
+                                  : '';
+
+                              // if (lastWord.startsWith('@')) {
+                              //   final mentionText = lastWord
+                              //       .substring(1)
+                              //       .toLowerCase();
+                              //   setState(() {
+                              //     currentMention = mentionText;
+                              //     mentionSuggestions = allUsers
+                              //         .where(
+                              //           (user) =>
+                              //               user['username']
+                              //                   .toLowerCase()
+                              //                   .startsWith(mentionText) &&
+                              //               user['User_ID'] != userId,
+                              //         )
+                              //         .toList();
+                              //     showSuggestions = mentionSuggestions.isNotEmpty;
+                              //   });
+                              // }
+                            },
+                          ),
+                        ],
                       ),
                     ),
-
                     const SizedBox(width: 12),
 
                     // Send Button
