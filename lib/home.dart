@@ -897,7 +897,7 @@ class _RestaurantListPageState extends State<RestaurantListPageUser>
                     Expanded(
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'Search restaurants...',
+                          hintText: 'Search restaurants Name...',
                           hintStyle: TextStyle(
                             color: Color.fromARGB(
                               255,

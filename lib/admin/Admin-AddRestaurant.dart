@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:country_icons/country_icons.dart';
 
 class AddRestaurantPage extends StatefulWidget {
   final int userId;
@@ -16,22 +17,26 @@ class AddRestaurantPage extends StatefulWidget {
 }
 
 class _AddRestaurantPageState extends State<AddRestaurantPage> {
-  final Color _primaryColor = Color(0xFF8B5A2B); // Rich brown
-  final Color _secondaryColor = Color(0xFFD2B48C); // Tan
-  final Color _accentColor = Color(0xFFA67C52); // Medium brown
-  final Color _backgroundColor = Color(0xFFF5F0E6); // Cream
-  final Color _textColor = Color(0xFF5D4037); // Dark brown
+  final Color _primaryColor = Color(0xFF8B5A2B);
+  final Color _secondaryColor = Color(0xFFD2B48C);
+  final Color _accentColor = Color(0xFFA67C52);
+  final Color _backgroundColor = Color(0xFFF5F0E6);
+  final Color _textColor = Color(0xFF5D4037);
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String _selectedCategory = 'Main_dish';
   String _selectedLocation = 'D1';
+  String _selectedCuisine = 'OTHER';
+  String? _selectedRegion;
+  String _selectedDietType = 'GENERAL';
+  String _selectedRestaurantType = 'Restaurant';
+  String _selectedServiceType = 'Dine-in';
   TimeOfDay? _openingTime;
   TimeOfDay? _closingTime;
   File? _imageFile;
   String? _imageUrl;
   bool _isUploading = false;
-  List<TextInputFormatter>? inputFormatters;
 
   final List<String> _categories = ['Main_dish', 'Snack', 'Drinks'];
   final List<String> _locations = [
@@ -43,11 +48,93 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
     'M-SQUARE',
     'LAMDUAN',
   ];
+  final List<String> _cuisines = [
+    'THAI',
+    'CHINESE',
+    'JAPANESE',
+    'KOREAN',
+    'INDIAN',
+    'ITALIAN',
+    'FRENCH',
+    'MEXICAN',
+    'AMERICAN',
+    'VIETNAMESE',
+    'OTHER',
+  ];
+  final List<String> _regions = [
+    'NORTH',
+    'CENTRAL',
+    'NORTHEAST',
+    'SOUTH',
+    'EAST',
+    'WEST',
+  ];
+  final List<String> _dietTypes = ['HALAL', 'VEGETARIAN', 'GENERAL'];
+  final List<String> _restaurantTypes = [
+    'Cafeteria',
+    'Mini-Mart',
+    'Cafe',
+    'Restaurant',
+  ];
+  final List<String> _serviceTypes = ['Delivery', 'Dine-in', 'All'];
+
   final ImagePicker _picker = ImagePicker();
-  // Cloudinary Configuration
-  final String _cloudName = 'doyeaento'; // เปลี่ยนเป็น Cloud Name ของคุณ
-  final String _uploadPreset =
-      'flutter_upload'; // เปลี่ยนเป็น Upload Preset ของคุณ
+  final String _cloudName = 'doyeaento';
+  final String _uploadPreset = 'flutter_upload';
+
+  // ไอคอนสำหรับแต่ละประเทศ
+  final Map<String, String> _cuisineFlagAssets = {
+    'THAI': 'assets/icons/flags/th.png',
+    'CHINESE': 'assets/icons/flags/ch.png',
+    'JAPANESE': 'assets/icons/flags/jp.png',
+    'KOREAN': 'assets/icons/flags/kr.png',
+    'INDIAN': 'assets/icons/flags/in.png',
+    'ITALIAN': 'assets/icons/flags/it.png',
+    'FRENCH': 'assets/icons/flags/fr.png',
+    'MEXICAN': 'assets/icons/flags/mx.png',
+    'AMERICAN': 'assets/icons/flags/us.png',
+    'VIETNAMESE': 'assets/icons/flags/vn.png',
+    'OTHER': 'assets/icons/flags/world.png',
+  };
+
+  // ไอคอนสำหรับแต่ละภูมิภาคไทย
+  final Map<String, IconData> _regionIcons = {
+    'NORTH': Icons.terrain,
+    'CENTRAL': Icons.location_city,
+    'NORTHEAST': Icons.agriculture,
+    'SOUTH': Icons.beach_access,
+    'EAST': Icons.waves,
+    'WEST': Icons.forest,
+  };
+
+  // ไอคอนสำหรับประเภทอาหาร
+  final Map<String, IconData> _dietTypeIcons = {
+    'HALAL': Icons.mosque_outlined,
+    'VEGETARIAN': Icons.eco_outlined,
+    'GENERAL': Icons.restaurant_outlined,
+  };
+
+  // ไอคอนสำหรับประเภทร้านอาหาร
+  final Map<String, IconData> _restaurantTypeIcons = {
+    'Cafeteria': Icons.school_outlined,
+    'Mini-Mart': Icons.store_mall_directory_outlined,
+    'Cafe': Icons.local_cafe_outlined,
+    'Restaurant': Icons.restaurant_menu_outlined,
+  };
+
+  // ไอคอนสำหรับประเภทบริการ
+  final Map<String, IconData> _serviceTypeIcons = {
+    'Delivery': Icons.delivery_dining,
+    'Dine-in': Icons.chair_outlined,
+    'All': Icons.all_inclusive_outlined,
+  };
+
+  // ไอคอนสำหรับประเภทอาหาร
+  final Map<String, IconData> _categoryIcons = {
+    'Main_dish': Icons.lunch_dining_outlined,
+    'Snack': Icons.local_cafe_outlined,
+    'Drinks': Icons.local_bar_outlined,
+  };
 
   @override
   void dispose() {
@@ -70,6 +157,10 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
     try {
       if (_imageFile == null) return;
 
+      setState(() {
+        _isUploading = true;
+      });
+
       final uri = Uri.parse(
         'https://api.cloudinary.com/v1_1/$_cloudName/image/upload',
       );
@@ -90,12 +181,12 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
         });
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('อัปโหลดรูปภาพสำเร็จ')));
+        ).showSnackBar(SnackBar(content: Text('Upload Image Successfull')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'อัปโหลดรูปภาพล้มเหลว: ${jsonResponse['error']?.toString() ?? 'Unknown error'}',
+              'Uploading Image Failed: ${jsonResponse['error']?.toString() ?? 'Unknown error'}',
             ),
           ),
         );
@@ -126,7 +217,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
     );
 
     if (picked != null) {
-      // If closing time is already set and is before the new opening time
       if (_closingTime != null &&
           (picked.hour > _closingTime!.hour ||
               (picked.hour == _closingTime!.hour &&
@@ -155,10 +245,7 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
       context: context,
       initialTime:
           _closingTime ??
-          TimeOfDay(
-            hour: _openingTime!.hour + 4, // Default 4 hours after opening
-            minute: _openingTime!.minute,
-          ),
+          TimeOfDay(hour: _openingTime!.hour + 4, minute: _openingTime!.minute),
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -170,7 +257,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
     );
 
     if (picked != null) {
-      // Check if closing time is after opening time
       if (picked.hour < _openingTime!.hour ||
           (picked.hour == _openingTime!.hour &&
               picked.minute <= _openingTime!.minute)) {
@@ -216,128 +302,150 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
         child: Container(
           padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: _backgroundColor, // Use your cream background color
+            color: _backgroundColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _primaryColor, // Use your primary brown color
-              width: 2,
-            ),
+            border: Border.all(color: _primaryColor, width: 2),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title with icon
-              Row(
-                children: [
-                  Icon(
-                    Icons.restaurant_rounded,
-                    color: _primaryColor,
-                    size: 28,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Confirm Restaurant ',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-
-              // Details container
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _secondaryColor, // Use your tan color
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: SingleChildScrollView(
+            // ✅ ครอบ Column
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    _buildDetailRow(Icons.badge, 'Name', _nameController.text),
-                    _buildDetailRow(
-                      Icons.location_on,
-                      'Location',
-                      _selectedLocation,
+                    Icon(
+                      Icons.restaurant_rounded,
+                      color: _primaryColor,
+                      size: 28,
                     ),
-                    _buildDetailRow(
-                      Icons.category,
-                      'Category',
-                      _selectedCategory.replaceAll('_', ' '),
-                    ),
-                    _buildDetailRow(
-                      Icons.access_time,
-                      'Hours',
-                      _formatTimeRange(),
-                    ),
-                    _buildDetailRow(
-                      Icons.phone,
-                      'Phone',
-                      _phoneController.text,
+                    SizedBox(width: 10),
+                    Text(
+                      'Confirm Restaurant',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(height: 24),
-
-              // Buttons row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Cancel button
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(color: _primaryColor),
+                SizedBox(height: 20),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _secondaryColor, width: 1),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow(
+                        Icons.badge,
+                        'Name',
+                        _nameController.text,
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: _primaryColor,
-                          fontWeight: FontWeight.w600,
+                      _buildDetailRow(
+                        Icons.location_on,
+                        'Location',
+                        _selectedLocation,
+                      ),
+                      _buildDetailRow(
+                        _categoryIcons[_selectedCategory] ?? Icons.category,
+                        'Category',
+                        _selectedCategory.replaceAll('_', ' '),
+                      ),
+                      _buildDetailRow(
+                        _categoryIcons[_selectedCuisine] ??
+                            Icons.restaurant_menu,
+                        'Cuisine',
+                        _selectedCuisine,
+                      ),
+                      if (_selectedRegion != null)
+                        _buildDetailRow(
+                          _regionIcons[_selectedRegion] ?? Icons.map,
+                          'Region',
+                          _selectedRegion!,
+                        ),
+                      _buildDetailRow(
+                        _dietTypeIcons[_selectedDietType] ?? Icons.food_bank,
+                        'Diet Type',
+                        _selectedDietType,
+                      ),
+                      _buildDetailRow(
+                        _restaurantTypeIcons[_selectedRestaurantType] ??
+                            Icons.store,
+                        'Restaurant Type',
+                        _selectedRestaurantType,
+                      ),
+                      _buildDetailRow(
+                        _serviceTypeIcons[_selectedServiceType] ??
+                            Icons.delivery_dining,
+                        'Service Type',
+                        _selectedServiceType,
+                      ),
+                      _buildDetailRow(
+                        Icons.access_time,
+                        'Hours',
+                        _formatTimeRange(),
+                      ),
+                      _buildDetailRow(
+                        Icons.phone,
+                        'Phone',
+                        _phoneController.text,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: BorderSide(color: _primaryColor),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(width: 16),
-
-                  // Confirm button
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
                         ),
-                        elevation: 2,
-                      ),
-                      child: Text(
-                        'Confirm',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                        child: Text(
+                          'Confirm',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -360,6 +468,11 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
           'phone_number': _phoneController.text,
           'photos': _imageUrl,
           'category': _selectedCategory,
+          'cuisine_by_nation': _selectedCuisine,
+          'region': _selectedRegion,
+          'diet_type': _selectedDietType,
+          'restaurant_type': _selectedRestaurantType,
+          'service_type': _selectedServiceType,
           'added_by': widget.userId,
         }),
       );
@@ -402,7 +515,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
     }
   }
 
-  // Helper widget for detail rows
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -449,7 +561,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -458,7 +569,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: const Color(0xFFCEBFA3),
-        // backgroundColor: const Color(0xFFF7F4EF),
         iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -483,7 +593,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Header
                     Text(
                       'Restaurant Image',
                       style: TextStyle(
@@ -494,8 +603,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                       textAlign: TextAlign.start,
                     ),
                     SizedBox(height: 20),
-
-                    // Image Upload Section
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(
@@ -549,8 +656,6 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                       ),
                     ),
                     SizedBox(height: 25),
-
-                    // Restaurant Name
                     _buildSectionTitle('Basic Information'),
                     _buildTextField(
                       controller: _nameController,
@@ -568,37 +673,199 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                       },
                     ),
                     SizedBox(height: 16),
-
-                    // Location Dropdown
                     _buildDropdown(
                       value: _selectedLocation,
                       items: _locations,
-                      label: 'Location*',
+                      label: 'Location *',
                       icon: Icons.location_on,
                       onChanged: (value) {
                         setState(() {
                           _selectedLocation = value!;
                         });
                       },
+                      itemBuilder: (item) => Text(item), // ในเมนูแสดงข้อความ
                     ),
                     SizedBox(height: 16),
-
-                    // Category Dropdown
                     _buildDropdown(
                       value: _selectedCategory,
                       items: _categories,
-                      label: 'Category*',
+                      label: 'Category *',
                       icon: Icons.category,
                       onChanged: (value) {
                         setState(() {
                           _selectedCategory = value!;
                         });
                       },
-                      itemBuilder: (item) => Text(item.replaceAll('_', ' ')),
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _categoryIcons[item] ?? Icons.category,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item.replaceAll('_', ' ')),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) =>
+                          Text(item.replaceAll('_', ' ')), // เมื่อเลือกแล้วแสด
+                    ),
+
+                    SizedBox(height: 16),
+                    _buildDropdown(
+                      value: _selectedCuisine,
+                      items: _cuisines,
+                      label: 'Cuisine',
+                      icon: Icons.restaurant_menu,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCuisine = value!;
+                          if (value != 'THAI') {
+                            _selectedRegion = null;
+                          }
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Image.asset(
+                            _cuisineFlagAssets[item] ??
+                                'assets/icons/flags/world.png',
+                            width: 24,
+                            height: 16,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.flag_outlined,
+                              size: 20,
+                              color: _accentColor,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(item),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) => Row(
+                        children: [
+                          Image.asset(
+                            _cuisineFlagAssets[item] ??
+                                'assets/icons/flags/world.png',
+                            width: 24,
+                            height: 16,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.flag_outlined,
+                              size: 20,
+                              color: _accentColor,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(item),
+                        ],
+                      ),
+                    ),
+                    if (_selectedCuisine == 'THAI') ...[
+                      SizedBox(height: 16),
+                      _buildDropdown(
+                        value: _selectedRegion,
+                        items: _regions,
+                        label: 'Region (only for Thai clusine)',
+                        icon: Icons.map,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedRegion = value;
+                          });
+                        },
+                        isRequired: false,
+                        itemBuilder: (item) => Row(
+                          children: [
+                            Icon(
+                              _regionIcons[item] ?? Icons.map,
+                              size: 20,
+                              color: _accentColor,
+                            ),
+                            SizedBox(width: 8),
+                            Text(item),
+                          ],
+                        ),
+                        selectedItemBuilder: (item) =>
+                            Text(item), // เมื่อเลือกแล้วแสดงแค่ข้อความ
+                      ),
+                    ],
+
+                    SizedBox(height: 24),
+
+                    // 🔹 Section: Extra Info
+                    _buildSectionTitle('Additional Information'),
+                    SizedBox(height: 12),
+                    _buildDropdown(
+                      value: _selectedDietType,
+                      items: _dietTypes,
+                      label: 'Diet Type',
+                      icon: Icons.food_bank,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedDietType = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _dietTypeIcons[item] ?? Icons.food_bank,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item),
+                        ],
+                      ),
                     ),
                     SizedBox(height: 16),
+                    _buildDropdown(
+                      value: _selectedRestaurantType,
+                      items: _restaurantTypes,
+                      label: 'Restaurant Type',
+                      icon: Icons.store,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedRestaurantType = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _restaurantTypeIcons[item] ?? Icons.store,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    _buildDropdown(
+                      value: _selectedServiceType,
+                      items: _serviceTypes,
+                      label: 'Service Type',
+                      icon: Icons.delivery_dining,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedServiceType = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _serviceTypeIcons[item] ?? Icons.store,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item),
+                        ],
+                      ),
+                    ),
 
-                    // Phone Number
+                    SizedBox(height: 16),
                     _buildTextField(
                       controller: _phoneController,
                       inputFormatters: [
@@ -618,11 +885,12 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                         return null;
                       },
                     ),
-                    SizedBox(height: 25),
 
-                    // Operating Hours
+                    SizedBox(height: 24),
+
+                    // 🔹 Section: Operating Hours
                     _buildSectionTitle('Operating Hours'),
-
+                    SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
@@ -633,7 +901,7 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                             onPressed: _selectOpeningTime,
                           ),
                         ),
-                        SizedBox(width: 16),
+                        SizedBox(width: 12),
                         Expanded(
                           child: _buildTimeButton(
                             text: _closingTime != null
@@ -644,9 +912,8 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 30),
 
-                    // Submit Button
+                    SizedBox(height: 30),
                     ElevatedButton(
                       onPressed: _addRestaurant,
                       style: ElevatedButton.styleFrom(
@@ -727,12 +994,14 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
   }
 
   Widget _buildDropdown({
-    required String value,
+    required dynamic value,
     required List<String> items,
     required String label,
     required IconData icon,
     required void Function(String?) onChanged,
     Widget Function(String)? itemBuilder,
+    Widget Function(String)? selectedItemBuilder, // เพิ่มพารามิเตอร์ใหม่
+    bool isRequired = true,
   }) {
     return DropdownButtonFormField<String>(
       value: value,
@@ -742,6 +1011,15 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
           child: itemBuilder != null ? itemBuilder(item) : Text(item),
         );
       }).toList(),
+      selectedItemBuilder: (context) {
+        return items.map((item) {
+          if (selectedItemBuilder != null) {
+            return selectedItemBuilder(item);
+          }
+          // ถ้าไม่มี selectedItemBuilder ให้แสดงแค่ข้อความ
+          return Text(item);
+        }).toList();
+      },
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
@@ -765,6 +1043,14 @@ class _AddRestaurantPageState extends State<AddRestaurantPage> {
       style: TextStyle(color: _textColor),
       dropdownColor: _backgroundColor,
       icon: Icon(Icons.arrow_drop_down, color: _accentColor),
+      validator: isRequired
+          ? (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select a $label';
+              }
+              return null;
+            }
+          : null,
     );
   }
 

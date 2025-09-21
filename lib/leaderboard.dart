@@ -1476,11 +1476,11 @@ class _LeaderboardPageUserState extends State<LeaderboardPageUser> {
                                     "${_selectedUser!['totallikes']}",
                                     color: Colors.pink,
                                   ),
-                                if (_selectedUser!['total_reviews'] != null)
+                                if (_selectedUser!['totalreviews'] != null)
                                   _buildInfoChip(
                                     Icons.reviews_outlined,
                                     "Reviews",
-                                    "${_selectedUser!['total_reviews']}",
+                                    "${_selectedUser!['totalreviews']}",
                                     color: const Color.fromARGB(
                                       255,
                                       183,

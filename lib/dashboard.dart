@@ -17,7 +17,7 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardPageState extends State<Dashboard> {
   List<dynamic> restaurants = [];
-  bool isLoading = true;
+  bool isLoading = false;
   int _selectedIndex = 2;
   Map<String, int> foodTypeCount = {};
   Map<String, int> locationCount = {};
@@ -59,7 +59,7 @@ class _DashboardPageState extends State<Dashboard> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.1.67:8080/user-profile/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -77,9 +77,12 @@ class _DashboardPageState extends State<Dashboard> {
   }
 
   Future<void> fetchRestaurants() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.1.67:8080/restaurants'),
+        Uri.parse('http://172.22.173.39:8080/restaurants'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -125,6 +128,7 @@ class _DashboardPageState extends State<Dashboard> {
         setState(() => isLoading = false);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -153,7 +157,7 @@ class _DashboardPageState extends State<Dashboard> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 32,
-                      color: Colors.white,
+                      color: const Color.fromARGB(255, 17, 17, 17),
                       shadows: [
                         Shadow(
                           offset: Offset(0, 1),

@@ -25,16 +25,21 @@ class EditRestaurant extends StatefulWidget {
 
 class _EditRestaurantPageState extends State<EditRestaurant> {
   final _formKey = GlobalKey<FormState>();
-  final Color _primaryColor = Color(0xFF8B5A2B); // Rich brown
-  final Color _secondaryColor = Color(0xFFD2B48C); // Tan
-  final Color _accentColor = Color(0xFFA67C52); // Medium brown
-  final Color _backgroundColor = Color(0xFFF5F0E6); // Cream
-  final Color _textColor = Color(0xFF5D4037); // Dark brown
+  final Color _primaryColor = Color(0xFF8B5A2B);
+  final Color _secondaryColor = Color(0xFFD2B48C);
+  final Color _accentColor = Color(0xFFA67C52);
+  final Color _backgroundColor = Color(0xFFF5F0E6);
+  final Color _textColor = Color(0xFF5D4037);
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   String _selectedCategory = 'Main_dish';
   String _selectedLocation = 'D1';
+  String _selectedCuisine = 'OTHER';
+  String? _selectedRegion;
+  String _selectedDietType = 'GENERAL';
+  String _selectedRestaurantType = 'Restaurant';
+  String _selectedServiceType = 'Dine-in';
   TimeOfDay? _openingTime;
   TimeOfDay? _closingTime;
   File? _imageFile;
@@ -51,11 +56,93 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
     'M-SQUARE',
     'LAMDUAN',
   ];
-  final ImagePicker _picker = ImagePicker();
+  final List<String> _cuisines = [
+    'THAI',
+    'CHINESE',
+    'JAPANESE',
+    'KOREAN',
+    'INDIAN',
+    'ITALIAN',
+    'FRENCH',
+    'MEXICAN',
+    'AMERICAN',
+    'VIETNAMESE',
+    'OTHER',
+  ];
+  final List<String> _regions = [
+    'NORTH',
+    'CENTRAL',
+    'NORTHEAST',
+    'SOUTH',
+    'EAST',
+    'WEST',
+  ];
+  final List<String> _dietTypes = ['HALAL', 'VEGETARIAN', 'GENERAL'];
+  final List<String> _restaurantTypes = [
+    'Cafeteria',
+    'Mini-Mart',
+    'Cafe',
+    'Restaurant',
+  ];
+  final List<String> _serviceTypes = ['Delivery', 'Dine-in', 'All'];
 
-  // Cloudinary configuration
+  final ImagePicker _picker = ImagePicker();
   final String _cloudName = 'doyeaento';
   final String _uploadPreset = 'flutter_upload';
+
+  // ไอคอนสำหรับแต่ละประเทศ
+  final Map<String, String> _cuisineFlagAssets = {
+    'THAI': 'assets/icons/flags/th.png',
+    'CHINESE': 'assets/icons/flags/ch.png',
+    'JAPANESE': 'assets/icons/flags/jp.png',
+    'KOREAN': 'assets/icons/flags/kr.png',
+    'INDIAN': 'assets/icons/flags/in.png',
+    'ITALIAN': 'assets/icons/flags/it.png',
+    'FRENCH': 'assets/icons/flags/fr.png',
+    'MEXICAN': 'assets/icons/flags/mx.png',
+    'AMERICAN': 'assets/icons/flags/us.png',
+    'VIETNAMESE': 'assets/icons/flags/vn.png',
+    'OTHER': 'assets/icons/flags/world.png',
+  };
+
+  // ไอคอนสำหรับแต่ละภูมิภาคไทย
+  final Map<String, IconData> _regionIcons = {
+    'NORTH': Icons.terrain,
+    'CENTRAL': Icons.location_city,
+    'NORTHEAST': Icons.agriculture,
+    'SOUTH': Icons.beach_access,
+    'EAST': Icons.waves,
+    'WEST': Icons.forest,
+  };
+
+  // ไอคอนสำหรับประเภทอาหาร
+  final Map<String, IconData> _dietTypeIcons = {
+    'HALAL': Icons.mosque_outlined,
+    'VEGETARIAN': Icons.eco_outlined,
+    'GENERAL': Icons.restaurant_outlined,
+  };
+
+  // ไอคอนสำหรับประเภทร้านอาหาร
+  final Map<String, IconData> _restaurantTypeIcons = {
+    'Cafeteria': Icons.school_outlined,
+    'Mini-Mart': Icons.store_mall_directory_outlined,
+    'Cafe': Icons.local_cafe_outlined,
+    'Restaurant': Icons.restaurant_menu_outlined,
+  };
+
+  // ไอคอนสำหรับประเภทบริการ
+  final Map<String, IconData> _serviceTypeIcons = {
+    'Delivery': Icons.delivery_dining,
+    'Dine-in': Icons.chair_outlined,
+    'All': Icons.all_inclusive_outlined,
+  };
+
+  // ไอคอนสำหรับประเภทอาหาร
+  final Map<String, IconData> _categoryIcons = {
+    'Main_dish': Icons.lunch_dining_outlined,
+    'Snack': Icons.local_cafe_outlined,
+    'Drinks': Icons.local_bar_outlined,
+  };
 
   @override
   void initState() {
@@ -67,6 +154,13 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
     _selectedCategory = widget.currentData.category;
     _selectedLocation = widget.currentData.location;
     _imageUrl = widget.currentData.photoUrl;
+
+    // Parse ข้อมูลเพิ่มเติมจาก currentData (หากมี)
+    _selectedCuisine = widget.currentData.cuisineByNation ?? 'OTHER';
+    _selectedRegion = widget.currentData.region;
+    _selectedDietType = widget.currentData.dietType ?? 'GENERAL';
+    _selectedRestaurantType = widget.currentData.restaurantType ?? 'Restaurant';
+    _selectedServiceType = widget.currentData.serviceType ?? 'Dine-in';
 
     // Parse operating hours
     if (widget.currentData.operatingHours.contains('-')) {
@@ -84,7 +178,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
       final dateTime = format.parse(timeStr);
       return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
     } catch (e) {
-      return TimeOfDay(hour: 8, minute: 0); // Default if parsing fails
+      return TimeOfDay(hour: 8, minute: 0);
     }
   }
 
@@ -252,119 +346,138 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: _primaryColor, width: 2),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Title with icon
-              SizedBox(height: 14),
-              Row(
-                children: [
-                  Icon(
-                    Icons.restaurant_rounded,
-                    color: _primaryColor,
-                    size: 28,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Confirm Restaurant ',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: _primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20),
-
-              // Details container
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _secondaryColor, width: 1),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    _buildDetailRow(Icons.badge, 'Name', _nameController.text),
-                    _buildDetailRow(
-                      Icons.location_on,
-                      'Location',
-                      _selectedLocation,
+                    Icon(
+                      Icons.restaurant_rounded,
+                      color: _primaryColor,
+                      size: 28,
                     ),
-                    _buildDetailRow(
-                      Icons.category,
-                      'Category',
-                      _selectedCategory.replaceAll('_', ' '),
-                    ),
-                    _buildDetailRow(
-                      Icons.access_time,
-                      'Hours',
-                      _formatTimeRange(),
-                    ),
-                    _buildDetailRow(
-                      Icons.phone,
-                      'Phone',
-                      _phoneController.text,
+                    SizedBox(width: 10),
+                    Text(
+                      'Confirm Restaurant',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              SizedBox(height: 24),
-
-              // Buttons row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Cancel button
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(color: _primaryColor),
+                SizedBox(height: 20),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _secondaryColor, width: 1),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow(
+                        Icons.badge,
+                        'Name',
+                        _nameController.text,
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: _primaryColor,
-                          fontWeight: FontWeight.w600,
+                      _buildDetailRow(
+                        Icons.location_on,
+                        'Location',
+                        _selectedLocation,
+                      ),
+                      _buildDetailRow(
+                        Icons.category,
+                        'Category',
+                        _selectedCategory.replaceAll('_', ' '),
+                      ),
+                      _buildDetailRow(
+                        Icons.restaurant_menu,
+                        'Cuisine',
+                        _selectedCuisine,
+                      ),
+                      if (_selectedRegion != null)
+                        _buildDetailRow(Icons.map, 'Region', _selectedRegion!),
+                      _buildDetailRow(
+                        Icons.food_bank,
+                        'Diet Type',
+                        _selectedDietType,
+                      ),
+                      _buildDetailRow(
+                        Icons.store,
+                        'Restaurant Type',
+                        _selectedRestaurantType,
+                      ),
+                      _buildDetailRow(
+                        Icons.delivery_dining,
+                        'Service Type',
+                        _selectedServiceType,
+                      ),
+                      _buildDetailRow(
+                        Icons.access_time,
+                        'Hours',
+                        _formatTimeRange(),
+                      ),
+                      _buildDetailRow(
+                        Icons.phone,
+                        'Phone',
+                        _phoneController.text,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          side: BorderSide(color: _primaryColor),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: _primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SizedBox(width: 16),
-
-                  // Confirm button
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryColor,
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
                         ),
-                        elevation: 2,
-                      ),
-                      child: Text(
-                        'Update',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                        child: Text(
+                          'Update',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -389,6 +502,11 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
           'operating_hours': _formatTimeRange(),
           'phone_number': _phoneController.text,
           'category': _selectedCategory,
+          'cuisine_by_nation': _selectedCuisine,
+          'region': _selectedRegion,
+          'diet_type': _selectedDietType,
+          'restaurant_type': _selectedRestaurantType,
+          'service_type': _selectedServiceType,
           'image_url': _imageUrl,
         }),
       );
@@ -489,14 +607,12 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(20.0),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Header
-                    SizedBox(height: 15),
                     Text(
                       'Restaurant Image',
                       style: TextStyle(
@@ -506,9 +622,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                       ),
                       textAlign: TextAlign.start,
                     ),
-                    SizedBox(height: 10),
-
-                    // Image Upload Section
+                    SizedBox(height: 20),
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(
@@ -531,86 +645,75 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                                     width: 2,
                                   ),
                                 ),
-                                child: Stack(
-                                  children: [
-                                    // Image or placeholder
-                                    if (_imageFile != null)
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.file(
-                                          width: double.infinity,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Stack(
+                                    fit: StackFit
+                                        .expand, // ทำให้ child ทั้งหมดเต็ม container
+                                    children: [
+                                      // รูปภาพ
+                                      if (_imageFile != null)
+                                        Image.file(
                                           _imageFile!,
                                           fit: BoxFit.cover,
-                                        ),
-                                      )
-                                    else if (_imageUrl != null)
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.network(
-                                          width: double.infinity,
+                                        )
+                                      else if (_imageUrl != null)
+                                        Image.network(
                                           _imageUrl!,
                                           fit: BoxFit.cover,
-                                        ),
-                                      )
-                                    else
-                                      Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_a_photo,
-                                            size: 50,
-                                            color: _accentColor,
-                                          ),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            'Tap to add restaurant photo',
-                                            style: TextStyle(color: _textColor),
-                                          ),
-                                        ],
-                                      ),
-
-                                    // Semi-transparent overlay with camera icon (แสดงทุกครั้งเมื่อมีรูป)
-                                    Positioned.fill(
-                                      child: AnimatedOpacity(
-                                        opacity:
-                                            1, // ความทึบลดลงเพื่อให้เห็นรูปชัดเจนขึ้น
-                                        duration: Duration(milliseconds: 200),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.black.withOpacity(
-                                              0.3,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
+                                        )
+                                      else
+                                        Container(
+                                          color: _secondaryColor.withOpacity(
+                                            0.3,
                                           ),
                                           child: Center(
                                             child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Icon(
-                                                  Icons.camera_alt,
-                                                  size: 40,
-                                                  color: Colors.white,
+                                                  Icons.add_a_photo,
+                                                  size: 50,
+                                                  color: _accentColor,
                                                 ),
                                                 SizedBox(height: 8),
                                                 Text(
-                                                  'Tap to change photo',
+                                                  'Tap to add restaurant photo',
                                                   style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w500,
+                                                    color: _textColor,
                                                   ),
                                                 ),
                                               ],
                                             ),
                                           ),
                                         ),
+                                      // Overlay
+                                      Container(
+                                        color: Colors.black.withOpacity(0.3),
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.camera_alt,
+                                                size: 40,
+                                                color: Colors.white,
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                'Tap to change photo',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -619,8 +722,6 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                       ),
                     ),
                     SizedBox(height: 25),
-
-                    // Restaurant Name
                     _buildSectionTitle('Basic Information'),
                     _buildTextField(
                       controller: _nameController,
@@ -628,71 +729,224 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                       icon: Icons.restaurant,
                       maxLength: 20,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.isEmpty)
                           return 'Please enter a name';
-                        }
-                        if (value.length > 20) {
+                        if (value.length > 20)
                           return 'Name must be 20 characters or less';
-                        }
                         return null;
                       },
                     ),
-                    SizedBox(height: 20),
-
-                    // Location Dropdown
+                    SizedBox(height: 16),
                     _buildDropdown(
                       value: _selectedLocation,
                       items: _locations,
-                      label: 'Location*',
+                      label: 'Location *',
                       icon: Icons.location_on,
                       onChanged: (value) {
                         setState(() {
                           _selectedLocation = value!;
                         });
                       },
+                      itemBuilder: (item) => Text(item),
                     ),
-                    SizedBox(height: 35),
-
-                    // Category Dropdown
+                    SizedBox(height: 16),
                     _buildDropdown(
                       value: _selectedCategory,
                       items: _categories,
-                      label: 'Category*',
+                      label: 'Category *',
                       icon: Icons.category,
                       onChanged: (value) {
                         setState(() {
                           _selectedCategory = value!;
                         });
                       },
-                      itemBuilder: (item) => Text(item.replaceAll('_', ' ')),
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _categoryIcons[item] ?? Icons.category,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item.replaceAll('_', ' ')),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) =>
+                          Text(item.replaceAll('_', ' ')),
                     ),
-                    SizedBox(height: 35),
-
-                    // Phone Number
+                    SizedBox(height: 16),
+                    _buildDropdown(
+                      value: _selectedCuisine,
+                      items: _cuisines,
+                      label: 'Cuisine',
+                      icon: Icons.restaurant_menu,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCuisine = value!;
+                          if (value != 'THAI') {
+                            _selectedRegion = null;
+                          }
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Image.asset(
+                            _cuisineFlagAssets[item] ??
+                                'assets/icons/flags/world.png',
+                            width: 24,
+                            height: 16,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.flag_outlined,
+                              size: 20,
+                              color: _accentColor,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(item),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) => Row(
+                        children: [
+                          Image.asset(
+                            _cuisineFlagAssets[item] ??
+                                'assets/icons/flags/world.png',
+                            width: 24,
+                            height: 16,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.flag_outlined,
+                              size: 20,
+                              color: _accentColor,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(item),
+                        ],
+                      ),
+                    ),
+                    if (_selectedCuisine == 'THAI') ...[
+                      SizedBox(height: 16),
+                      _buildDropdown(
+                        value: _selectedRegion,
+                        items: _regions,
+                        label: 'Region (Only for Thai Cuisine)',
+                        icon: Icons.map,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedRegion = value;
+                          });
+                        },
+                        isRequired: false, // ตั้งค่าเป็น false เพราะไม่บังคับ
+                        itemBuilder: (item) => Row(
+                          children: [
+                            Icon(
+                              _regionIcons[item] ?? Icons.map,
+                              size: 20,
+                              color: _accentColor,
+                            ),
+                            SizedBox(width: 8),
+                            Text(item),
+                          ],
+                        ),
+                        selectedItemBuilder: (item) => Text(item),
+                      ),
+                    ],
+                    SizedBox(height: 24),
+                    _buildSectionTitle('Additional Information'),
+                    SizedBox(height: 12),
+                    _buildDropdown(
+                      value: _selectedDietType,
+                      items: _dietTypes,
+                      label: 'Diet Type',
+                      icon: Icons.food_bank,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedDietType = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _dietTypeIcons[item] ?? Icons.food_bank,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) => Text(item),
+                    ),
+                    SizedBox(height: 16),
+                    _buildDropdown(
+                      value: _selectedRestaurantType,
+                      items: _restaurantTypes,
+                      label: 'Restaurant Type',
+                      icon: Icons.store,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedRestaurantType = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _restaurantTypeIcons[item] ?? Icons.store,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) => Text(item),
+                    ),
+                    SizedBox(height: 16),
+                    _buildDropdown(
+                      value: _selectedServiceType,
+                      items: _serviceTypes,
+                      label: 'Service Type',
+                      icon: Icons.delivery_dining,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedServiceType = value!;
+                        });
+                      },
+                      itemBuilder: (item) => Row(
+                        children: [
+                          Icon(
+                            _serviceTypeIcons[item] ?? Icons.delivery_dining,
+                            size: 20,
+                            color: _accentColor,
+                          ),
+                          SizedBox(width: 8),
+                          Text(item),
+                        ],
+                      ),
+                      selectedItemBuilder: (item) => Text(item),
+                    ),
+                    SizedBox(height: 16),
                     _buildTextField(
                       controller: _phoneController,
-                      label: 'Phone Number*',
-                      icon: Icons.phone,
                       inputFormatters: [
                         FilteringTextInputFormatter.digitsOnly,
                         LengthLimitingTextInputFormatter(10),
                       ],
+                      label: 'Phone Number*',
+                      icon: Icons.phone,
                       keyboardType: TextInputType.phone,
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null || value.isEmpty)
                           return 'Please enter a phone number';
-                        }
-                        if (value.length < 9 || value.length > 10) {
+                        if (value.length > 10 || value.length < 9)
                           return 'Phone number must be 9-10 digits';
-                        }
                         return null;
                       },
                     ),
-                    SizedBox(height: 35),
-
-                    // Operating Hours
+                    SizedBox(height: 24),
                     _buildSectionTitle('Operating Hours'),
-                    SizedBox(height: 5),
+                    SizedBox(height: 12),
                     Row(
                       children: [
                         Expanded(
@@ -703,7 +957,7 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                             onPressed: _selectOpeningTime,
                           ),
                         ),
-                        SizedBox(width: 16),
+                        SizedBox(width: 12),
                         Expanded(
                           child: _buildTimeButton(
                             text: _closingTime != null
@@ -715,12 +969,10 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
                       ],
                     ),
                     SizedBox(height: 30),
-
-                    // Update Button
                     ElevatedButton(
                       onPressed: _updateRestaurant,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 62, 61, 61),
+                        backgroundColor: Color.fromARGB(255, 77, 76, 75),
                         padding: EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -797,21 +1049,39 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
   }
 
   Widget _buildDropdown({
-    required String value,
+    required dynamic value,
     required List<String> items,
     required String label,
     required IconData icon,
     required void Function(String?) onChanged,
     Widget Function(String)? itemBuilder,
+    Widget Function(String)? selectedItemBuilder,
+    bool isRequired = true,
   }) {
+    // ตรวจสอบและจัดการค่า value ที่เป็น null หรือ empty string
+    String? currentValue;
+    if (value != null && value.toString().isNotEmpty && items.contains(value)) {
+      currentValue = value;
+    } else if (isRequired && items.isNotEmpty) {
+      currentValue = items.first;
+    } else {
+      currentValue = null;
+    }
+
     return DropdownButtonFormField<String>(
-      value: value,
+      value: currentValue,
       items: items.map((item) {
         return DropdownMenuItem(
           value: item,
           child: itemBuilder != null ? itemBuilder(item) : Text(item),
         );
       }).toList(),
+      selectedItemBuilder: (context) {
+        return items.map((item) {
+          if (selectedItemBuilder != null) return selectedItemBuilder(item);
+          return Text(item);
+        }).toList();
+      },
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
@@ -835,6 +1105,12 @@ class _EditRestaurantPageState extends State<EditRestaurant> {
       style: TextStyle(color: _textColor),
       dropdownColor: _backgroundColor,
       icon: Icon(Icons.arrow_drop_down, color: _accentColor),
+      validator: isRequired
+          ? (value) {
+              if (value == null || value.isEmpty) return 'กรุณาเลือก $label';
+              return null;
+            }
+          : null,
     );
   }
 

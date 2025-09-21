@@ -23,10 +23,15 @@ class RestaurantDetailGuestPage extends StatefulWidget {
       _RestaurantDetailPageState();
 }
 
-class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
+class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage>
+    with TickerProviderStateMixin {
   Restaurant? restaurant;
   bool isLoading = true;
   bool isExpanded = false;
+  late AnimationController _lockIconAnimationController;
+  late Animation<double> _lockIconAnimation;
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
 
   Map<String, dynamic>? _selectedUser;
   bool isReviewExpanded = false;
@@ -45,6 +50,33 @@ class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
   @override
   void initState() {
     super.initState();
+
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _typingAnimation = CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // _lockIconAnimation = CurvedAnimation(
+    //   parent: _lockIconAnimationController,
+    //   curve: Curves.easeInOut,
+    // );
+
+    _lockIconAnimation = Tween<double>(begin: 0.3, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
     _init();
   }
 
@@ -109,6 +141,13 @@ class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
     } catch (e) {
       print('Error: $e');
     }
+  }
+
+  void dispose() {
+    _typingAnimationController.dispose();
+    _lockIconAnimationController.dispose();
+
+    super.dispose();
   }
 
   void _showAlert(BuildContext context, String message) {
@@ -391,6 +430,210 @@ class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
       print('Error liking/unliking review: $e');
       isProcessing = false;
     }
+  }
+
+  void _showLoginAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // ✅ Decorative icons background
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 120,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+                Positioned(
+                  bottom: -30,
+                  left: -30,
+                  child: Icon(
+                    Icons.vpn_key_rounded,
+                    size: 100,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ✅ Animated lock icon
+                      AnimatedBuilder(
+                        animation: _lockIconAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _lockIconAnimation.value,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFE74C3C).withOpacity(0.2),
+                                border: Border.all(
+                                  color: const Color(0xFFE74C3C),
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 48,
+                                color: Color(0xFFE74C3C),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Title
+                      const Text(
+                        "Login Required",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 249, 249, 248),
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Subtitle
+                      const Text(
+                        "You must log in before accessing To Write a Review.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color.fromARGB(221, 255, 244, 244),
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Action: Go to Login
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange.withOpacity(0.8),
+
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                            elevation: 4,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => LoginScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.login, size: 20),
+                          label: const Text(
+                            "Go to Login",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Action: Continue as Guest
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              41,
+                              38,
+                              38,
+                            ).withOpacity(0.6),
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: const Color.fromARGB(255, 50, 45, 45),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon: Icon(
+                            Icons.home_outlined,
+                            size: 20,
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                          ),
+                          label: Text(
+                            "Continue as Guest",
+                            style: TextStyle(
+                              fontSize: 15,
+
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<Map<String, dynamic>?> fetchUserInfo(int userId) async {
@@ -692,16 +935,18 @@ class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
                           width: double.infinity, // เต็มความกว้าง
                           child: ElevatedButton(
                             onPressed: () async {
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              await prefs.clear();
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => LoginScreen(),
-                                ),
-                                (route) => false,
-                              );
+                              _showLoginAlert(context);
+
+                              // final prefs =
+                              //     await SharedPreferences.getInstance();
+                              // await prefs.clear();
+                              // Navigator.pushAndRemoveUntil(
+                              //   context,
+                              //   MaterialPageRoute(
+                              //     builder: (_) => LoginScreen(),
+                              //   ),
+                              //   (route) => false,
+                              // );
                             },
 
                             style: ElevatedButton.styleFrom(
@@ -733,7 +978,6 @@ class _RestaurantDetailPageState extends State<RestaurantDetailGuestPage> {
                           ),
                         ),
                       ),
-
                       SizedBox(height: 20),
                     ],
                   ),

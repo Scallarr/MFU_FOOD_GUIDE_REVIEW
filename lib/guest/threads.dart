@@ -12,23 +12,25 @@ import 'package:myapp/admin/Admin-myhistoy.dart';
 import 'package:myapp/admin/Admin-pendingThreadsReplied.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
-import 'package:myapp/admin/Admin_atlas-model.dart';
 import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:myapp/dashboard.dart';
+import 'package:myapp/guest/home.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/thread_reply.dart';
+import 'package:myapp/user_history.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class ThreadsAdminPage extends StatefulWidget {
-  const ThreadsAdminPage({super.key});
+class ThreadsguestPage extends StatefulWidget {
+  const ThreadsguestPage({super.key});
 
   @override
-  State<ThreadsAdminPage> createState() => _ThreadsAdminPageState();
+  State<ThreadsguestPage> createState() => _ThreadsAdminPageState();
 }
 
-class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
+class _ThreadsAdminPageState extends State<ThreadsguestPage>
+    with TickerProviderStateMixin {
   List threads = [];
   int? userId;
   int _selectedIndex = 3;
@@ -45,6 +47,10 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool isSending = false;
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
+  late AnimationController _lockIconAnimationController;
+  late Animation<double> _lockIconAnimation;
 
   String? profileImageUrl;
   int _pendingThreadsCount = 0; // เพิ่มตัวแปรเก็บจำนวน pending threads
@@ -53,10 +59,252 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserID();
-    loadUserIdAndFetchProfile();
-    fetchPendingThreadsCount();
-    fetchPendingRepliedThreadsCount();
+
+    // _loadUserID();
+    // loadUserIdAndFetchProfile();
+    // fetchPendingThreadsCount();
+    // fetchPendingRepliedThreadsCount();
+
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _typingAnimation = CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // _lockIconAnimation = CurvedAnimation(
+    //   parent: _lockIconAnimationController,
+    //   curve: Curves.easeInOut,
+    // );
+
+    _lockIconAnimation = Tween<double>(begin: 0.3, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showLoginAlert(context);
+    });
+  }
+
+  void _showLoginAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // ✅ Decorative icons background
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 120,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+                Positioned(
+                  bottom: -30,
+                  left: -30,
+                  child: Icon(
+                    Icons.vpn_key_rounded,
+                    size: 100,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ✅ Animated lock icon
+                      AnimatedBuilder(
+                        animation: _lockIconAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _lockIconAnimation.value,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFE74C3C).withOpacity(0.2),
+                                border: Border.all(
+                                  color: const Color(0xFFE74C3C),
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 48,
+                                color: Color(0xFFE74C3C),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Title
+                      const Text(
+                        "Login Required",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 249, 249, 248),
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Subtitle
+                      const Text(
+                        "You must log in before accessing the AI Assistant.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color.fromARGB(221, 255, 244, 244),
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Action: Go to Login
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange.withOpacity(0.8),
+
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                            elevation: 4,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => LoginScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.login, size: 20),
+                          label: const Text(
+                            "Go to Login",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Action: Continue as Guest
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              41,
+                              38,
+                              38,
+                            ).withOpacity(0.6),
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: const Color.fromARGB(255, 50, 45, 45),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RestaurantListPageGuest(),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.home_outlined,
+                            size: 20,
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                          ),
+                          label: Text(
+                            "Continue as Guest",
+                            style: TextStyle(
+                              fontSize: 15,
+
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> fetchPendingThreadsCount() async {
@@ -112,6 +360,8 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
   @override
   void dispose() {
     _textController.dispose();
+    _typingAnimationController.dispose();
+    _lockIconAnimationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -897,19 +1147,19 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantListPageAdmin()),
+          MaterialPageRoute(builder: (context) => RestaurantListPageUser()),
         );
         break;
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPageAdmin()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageUser()),
         );
         break;
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ChatbotScreen()),
+          MaterialPageRoute(builder: (context) => userChatbotScreen()),
         );
         break;
       // case 3:
@@ -1178,7 +1428,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                               final shouldRefresh = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => ProfilePageAdmin(),
+                                  builder: (context) => ProfilePageUser(),
                                 ),
                               );
                               if (shouldRefresh == true) {
@@ -1281,145 +1531,145 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                   color: const Color.fromARGB(255, 0, 0, 0),
                                 ),
                                 itemBuilder: (BuildContext context) => [
-                                  PopupMenuItem(
-                                    value: 'verify_threads',
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 8,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 32,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              color: Colors.blue.shade50,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.verified_outlined,
-                                              size: 18,
-                                              color: Colors.blue.shade700,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Verify Threads',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 14,
-                                                  ),
-                                                ),
-                                                if (_pendingThreadsCount > -1)
-                                                  Text(
-                                                    '$_pendingThreadsCount pending',
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color:
-                                                          Colors.grey.shade600,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (_pendingThreadsCount > 0)
-                                            Container(
-                                              width: 24,
-                                              height: 24,
-                                              decoration: BoxDecoration(
-                                                color: Color(0xFFFF4757),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  '$_pendingThreadsCount',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'verify_threads_replied',
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 8,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 32,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              color: Colors.green.shade50,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.reply_all_rounded,
-                                              size: 18,
-                                              color: Colors.green.shade700,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Verify Threads Replied',
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 13.5,
-                                                  ),
-                                                ),
-                                                if (_pendingRepliedThreadsCount >
-                                                    -1)
-                                                  Text(
-                                                    '$_pendingRepliedThreadsCount pending',
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color:
-                                                          Colors.grey.shade600,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                          if (_pendingRepliedThreadsCount > 0)
-                                            Container(
-                                              width: 24,
-                                              height: 24,
-                                              decoration: BoxDecoration(
-                                                color: Color(0xFFFF4757),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Center(
-                                                child: Text(
-                                                  '$_pendingRepliedThreadsCount',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                  // PopupMenuItem(
+                                  //   value: 'verify_threads',
+                                  //   child: Container(
+                                  //     padding: EdgeInsets.symmetric(
+                                  //       vertical: 8,
+                                  //     ),
+                                  //     child: Row(
+                                  //       children: [
+                                  //         Container(
+                                  //           width: 32,
+                                  //           height: 32,
+                                  //           decoration: BoxDecoration(
+                                  //             color: Colors.blue.shade50,
+                                  //             shape: BoxShape.circle,
+                                  //           ),
+                                  //           child: Icon(
+                                  //             Icons.verified_outlined,
+                                  //             size: 18,
+                                  //             color: Colors.blue.shade700,
+                                  //           ),
+                                  //         ),
+                                  //         SizedBox(width: 12),
+                                  //         Expanded(
+                                  //           child: Column(
+                                  //             crossAxisAlignment:
+                                  //                 CrossAxisAlignment.start,
+                                  //             children: [
+                                  //               Text(
+                                  //                 'Verify Threads',
+                                  //                 style: TextStyle(
+                                  //                   fontWeight: FontWeight.w500,
+                                  //                   fontSize: 14,
+                                  //                 ),
+                                  //               ),
+                                  //               if (_pendingThreadsCount > -1)
+                                  //                 Text(
+                                  //                   '$_pendingThreadsCount pending',
+                                  //                   style: TextStyle(
+                                  //                     fontSize: 12,
+                                  //                     color:
+                                  //                         Colors.grey.shade600,
+                                  //                   ),
+                                  //                 ),
+                                  //             ],
+                                  //           ),
+                                  //         ),
+                                  //         if (_pendingThreadsCount > 0)
+                                  //           Container(
+                                  //             width: 24,
+                                  //             height: 24,
+                                  //             decoration: BoxDecoration(
+                                  //               color: Color(0xFFFF4757),
+                                  //               shape: BoxShape.circle,
+                                  //             ),
+                                  //             child: Center(
+                                  //               child: Text(
+                                  //                 '$_pendingThreadsCount',
+                                  //                 style: TextStyle(
+                                  //                   color: Colors.white,
+                                  //                   fontSize: 11,
+                                  //                   fontWeight: FontWeight.bold,
+                                  //                 ),
+                                  //               ),
+                                  //             ),
+                                  //           ),
+                                  //       ],
+                                  //     ),
+                                  //   ),
+                                  // ),
+                                  // PopupMenuItem(
+                                  //   value: 'verify_threads_replied',
+                                  //   child: Container(
+                                  //     padding: EdgeInsets.symmetric(
+                                  //       vertical: 8,
+                                  //     ),
+                                  //     child: Row(
+                                  //       children: [
+                                  //         Container(
+                                  //           width: 32,
+                                  //           height: 32,
+                                  //           decoration: BoxDecoration(
+                                  //             color: Colors.green.shade50,
+                                  //             shape: BoxShape.circle,
+                                  //           ),
+                                  //           child: Icon(
+                                  //             Icons.reply_all_rounded,
+                                  //             size: 18,
+                                  //             color: Colors.green.shade700,
+                                  //           ),
+                                  //         ),
+                                  //         SizedBox(width: 12),
+                                  //         Expanded(
+                                  //           child: Column(
+                                  //             crossAxisAlignment:
+                                  //                 CrossAxisAlignment.start,
+                                  //             children: [
+                                  //               Text(
+                                  //                 'Verify Threads Replied',
+                                  //                 style: TextStyle(
+                                  //                   fontWeight: FontWeight.w500,
+                                  //                   fontSize: 13.5,
+                                  //                 ),
+                                  //               ),
+                                  //               if (_pendingRepliedThreadsCount >
+                                  //                   -1)
+                                  //                 Text(
+                                  //                   '$_pendingRepliedThreadsCount pending',
+                                  //                   style: TextStyle(
+                                  //                     fontSize: 12,
+                                  //                     color:
+                                  //                         Colors.grey.shade600,
+                                  //                   ),
+                                  //                 ),
+                                  //             ],
+                                  //           ),
+                                  //         ),
+                                  //         if (_pendingRepliedThreadsCount > 0)
+                                  //           Container(
+                                  //             width: 24,
+                                  //             height: 24,
+                                  //             decoration: BoxDecoration(
+                                  //               color: Color(0xFFFF4757),
+                                  //               shape: BoxShape.circle,
+                                  //             ),
+                                  //             child: Center(
+                                  //               child: Text(
+                                  //                 '$_pendingRepliedThreadsCount',
+                                  //                 style: TextStyle(
+                                  //                   color: Colors.white,
+                                  //                   fontSize: 11,
+                                  //                   fontWeight: FontWeight.bold,
+                                  //                 ),
+                                  //               ),
+                                  //             ),
+                                  //           ),
+                                  //       ],
+                                  //     ),
+                                  //   ),
+                                  // ),
                                   // เพิ่มเมนู My History
                                   PopupMenuItem(
                                     value: 'my_history',
@@ -1473,14 +1723,15 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                 onSelected: (String value) async {
                                   Widget page;
 
-                                  if (value == 'verify_threads') {
-                                    page = PendingThreadsPage();
-                                  } else if (value ==
-                                      'verify_threads_replied') {
-                                    page = PendingThreadsRepliedPage();
-                                  } else if (value == 'my_history') {
+                                  // if (value == 'verify_threads') {
+                                  //   page = PendingThreadsPage();
+                                  // } else if (value ==
+                                  //     'verify_threads_replied') {
+                                  //   page = PendingThreadsRepliedPage();
+
+                                  if (value == 'my_history') {
                                     page =
-                                        MyHistoryPage(); // หน้าใหม่สำหรับประวัติ
+                                        userMyHistoryPage(); // หน้าใหม่สำหรับประวัติ
                                   } else {
                                     return;
                                   }
@@ -1520,7 +1771,7 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                           final shouldRefresh = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ThreadRepliesAdminPage(
+                              builder: (context) => ThreadRepliesUserPage(
                                 thread: thread,
                                 likedByUser: likedByUser,
                               ),
@@ -1707,41 +1958,40 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                     Row(
                                       children: [
                                         // Report
-                                        Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                Colors.redAccent.shade200,
-                                                Colors.deepOrange.shade400,
-                                              ],
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.redAccent
-                                                    .withOpacity(0.3),
-                                                blurRadius: 6,
-                                                offset: const Offset(2, 3),
-                                              ),
-                                            ],
-                                          ),
-                                          child: IconButton(
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            icon: const Icon(
-                                              Icons
-                                                  .report_gmailerrorred_rounded,
-                                              size: 18,
-                                              color: Colors.white,
-                                            ),
-                                            onPressed: () =>
-                                                _showRejectDialog2(thread),
-                                            tooltip: "Report this thread",
-                                          ),
-                                        ),
-
+                                        // Container(
+                                        //   width: 36,
+                                        //   height: 36,
+                                        //   decoration: BoxDecoration(
+                                        //     shape: BoxShape.circle,
+                                        //     gradient: LinearGradient(
+                                        //       colors: [
+                                        //         Colors.redAccent.shade200,
+                                        //         Colors.deepOrange.shade400,
+                                        //       ],
+                                        //     ),
+                                        //     boxShadow: [
+                                        //       BoxShadow(
+                                        //         color: Colors.redAccent
+                                        //             .withOpacity(0.3),
+                                        //         blurRadius: 6,
+                                        //         offset: const Offset(2, 3),
+                                        //       ),
+                                        //     ],
+                                        //   ),
+                                        //   child: IconButton(
+                                        //     padding: EdgeInsets.zero,
+                                        //     constraints: const BoxConstraints(),
+                                        //     icon: const Icon(
+                                        //       Icons
+                                        //           .report_gmailerrorred_rounded,
+                                        //       size: 18,
+                                        //       color: Colors.white,
+                                        //     ),
+                                        //     onPressed: () =>
+                                        //         _showRejectDialog2(thread),
+                                        //     tooltip: "Report this thread",
+                                        //   ),
+                                        // ),
                                         const Spacer(),
 
                                         // Like button

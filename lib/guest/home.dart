@@ -13,8 +13,10 @@ import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
+import 'package:myapp/guest/ai_assistant.dart';
 import 'package:myapp/guest/leaderboard.dart';
 import 'package:myapp/guest/restaurantdetail.dart';
+import 'package:myapp/guest/threads.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/login.dart';
 import 'package:myapp/restaurantDetail.dart';
@@ -98,6 +100,10 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
   String? filterLocation;
   String? filterCategory;
   String? profileImageUrl;
+  late AnimationController _lockIconAnimationController;
+
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
   // int? userId;
   late AnimationController _lockIconController; // ✅ เพิ่ม AnimationController
   late Animation<double> _lockIconAnimation; // ✅ เพิ่ม Animation
@@ -141,6 +147,28 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
       CurvedAnimation(parent: _lockIconController, curve: Curves.easeInOut),
     );
 
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _typingAnimation = CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _lockIconAnimation = Tween<double>(begin: 0.3, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     // loadUserIdAndFetchProfile();
     futureRestaurants = fetchRestaurants();
     futureRestaurants.then((list) {
@@ -153,7 +181,10 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
 
   @override
   void dispose() {
+    _typingAnimationController.dispose();
     _lockIconController.dispose(); // ✅ อย่าลืม dispose controller
+    _lockIconAnimationController.dispose(); // เพิ่มบรรทัดนี้
+    // _lockIconAnimation.dispose();
     super.dispose();
   }
 
@@ -725,13 +756,234 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
     );
   }
 
+  Future<void> _checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final isLoggedIn =
+        prefs.getBool('isLoggedIn') ?? false; // flag จากตอน login
+
+    if (!isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showLoginAlert(context);
+      });
+    }
+  }
+
+  void _showLoginAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // ✅ Decorative icons background
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 120,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+                Positioned(
+                  bottom: -30,
+                  left: -30,
+                  child: Icon(
+                    Icons.vpn_key_rounded,
+                    size: 100,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ✅ Animated lock icon
+                      AnimatedBuilder(
+                        animation: _lockIconAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _lockIconAnimation.value,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFE74C3C).withOpacity(0.2),
+                                border: Border.all(
+                                  color: const Color(0xFFE74C3C),
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 48,
+                                color: Color(0xFFE74C3C),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Title
+                      const Text(
+                        "Login Required",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 249, 249, 248),
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // Subtitle
+                      const Text(
+                        "Please sign in to enjoy the full experience and unlock all features.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color.fromARGB(221, 255, 244, 244),
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Action: Go to Login
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange.withOpacity(0.8),
+
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                            elevation: 4,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => LoginScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.login, size: 20),
+                          label: const Text(
+                            "Go to Login",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Action: Continue as Guest
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              41,
+                              38,
+                              38,
+                            ).withOpacity(0.6),
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: const Color.fromARGB(255, 50, 45, 45),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            // Navigator.pushReplacement(
+                            //   context,
+                            //   MaterialPageRoute(
+                            //     builder: (_) => RestaurantListPageGuest(),
+                            //   ),
+                            // );
+                          },
+                          icon: Icon(
+                            Icons.home_outlined,
+                            size: 20,
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                          ),
+                          label: Text(
+                            "Continue as Guest",
+                            style: TextStyle(
+                              fontSize: 15,
+
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   List<Restaurant> get filteredAndSortedRestaurants {
     List<Restaurant> filtered = allRestaurants.where((res) {
       final query = searchQuery.toLowerCase();
-      final matchesSearch =
-          res.name.toLowerCase().contains(query) ||
-          res.location.toLowerCase().contains(query) ||
-          res.category.toLowerCase().contains(query);
+      final matchesSearch = res.name.toLowerCase().contains(query);
+      // res.location.toLowerCase().contains(query) ||
+      // res.category.toLowerCase().contains(query);
 
       final matchesLocation = filterLocation == null || filterLocation!.isEmpty
           ? true
@@ -774,13 +1026,13 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
       case 2:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => userChatbotScreen()),
+          MaterialPageRoute(builder: (context) => guestChatbot2Screen()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
+          MaterialPageRoute(builder: (context) => ThreadsguestPage()),
         );
         break;
     }
@@ -850,16 +1102,7 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
                     ),
                     GestureDetector(
                       onTap: () async {
-                        final shouldRefresh = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => LoginScreen(),
-                          ),
-                        );
-
-                        // if (shouldRefresh == true) {
-                        //   fetchProfilePicture(userId!);
-                        // }
+                        _checkLoginStatus();
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -898,7 +1141,7 @@ class _RestaurantListPageState extends State<RestaurantListPageGuest>
                     Expanded(
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: 'Search restaurants...',
+                          hintText: 'Search restaurants Name ...',
                           hintStyle: TextStyle(
                             color: Color.fromARGB(
                               255,

@@ -9,6 +9,7 @@ import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/Nexus-model.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
+import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/thread_reply.dart';
@@ -214,7 +215,7 @@ class _ChatbotScreenState extends State<userChatbotScreen>
       Future.delayed(Duration(milliseconds: 1500), () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => DashboardAdmin()),
+          MaterialPageRoute(builder: (context) => Dashboard()),
         );
       });
     } else if (message.toLowerCase().contains('nexus')) {
@@ -233,7 +234,7 @@ class _ChatbotScreenState extends State<userChatbotScreen>
       Future.delayed(Duration(milliseconds: 1500), () {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => userChatbotScreen()),
+          MaterialPageRoute(builder: (context) => userChatbot2Screen()),
         );
       });
     } else if (message.toLowerCase().contains('atlas')
@@ -541,7 +542,7 @@ class _ChatbotScreenState extends State<userChatbotScreen>
           Future.delayed(const Duration(milliseconds: 3000), () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => userChatbotScreen()),
+              MaterialPageRoute(builder: (context) => userChatbot2Screen()),
             );
           });
         } else if (id == 'Atlas') {

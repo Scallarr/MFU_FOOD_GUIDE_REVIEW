@@ -23,7 +23,8 @@ class ProfilePageUser extends StatefulWidget {
   State<ProfilePageUser> createState() => _ProfilePageAdminState();
 }
 
-class _ProfilePageAdminState extends State<ProfilePageUser> {
+class _ProfilePageAdminState extends State<ProfilePageUser>
+    with TickerProviderStateMixin {
   Map<String, dynamic>? userData;
   bool isLoading = true;
   String error = '';
@@ -35,10 +36,42 @@ class _ProfilePageAdminState extends State<ProfilePageUser> {
   late TextEditingController usernameController;
   late TextEditingController bioController;
 
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
+  late AnimationController _lockIconAnimationController;
+  late Animation<double> _lockIconAnimation;
+
   @override
   void initState() {
     super.initState();
     loadUserIdAndFetch();
+
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _typingAnimation = CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // _lockIconAnimation = CurvedAnimation(
+    //   parent: _lockIconAnimationController,
+    //   curve: Curves.easeInOut,
+    // );
+
+    _lockIconAnimation = Tween<double>(begin: 0.5, end: 1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   Future<void> loadUserIdAndFetch() async {
@@ -774,6 +807,8 @@ class _ProfilePageAdminState extends State<ProfilePageUser> {
   void dispose() {
     usernameController.dispose();
     bioController.dispose();
+    _typingAnimationController.dispose();
+    _lockIconAnimationController.dispose();
     super.dispose();
   }
 
@@ -941,7 +976,7 @@ class _ProfilePageAdminState extends State<ProfilePageUser> {
                     children: [
                       const Icon(Icons.monetization_on, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text('$formattedCoins'),
+                      Flexible(child: Text('$formattedCoins  ' + 'coins')),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -1068,6 +1103,14 @@ class _ProfilePageAdminState extends State<ProfilePageUser> {
                             child: Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color.fromARGB(255, 255, 255, 255),
+                                    Color.fromARGB(255, 254, 254, 254),
+                                  ],
+                                ),
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
@@ -1078,95 +1121,146 @@ class _ProfilePageAdminState extends State<ProfilePageUser> {
                                   ),
                                 ],
                               ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.center,
                                 children: [
-                                  TweenAnimationBuilder(
-                                    duration: Duration(milliseconds: 300),
-                                    tween: Tween<double>(begin: 0, end: 1),
-                                    builder: (context, double value, child) {
-                                      return Transform.scale(
-                                        scale: value,
-                                        child: Container(
-                                          padding: EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red.withOpacity(0.1),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(
-                                            Icons.logout,
-                                            size: 40,
-                                            color: Colors.red,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Log Out?',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600,
+                                  // Background lock icons
+                                  Positioned(
+                                    top: -30,
+                                    right: -40,
+                                    child: Icon(
+                                      Icons.lock_outline_rounded,
+                                      size: 140,
+                                      color: Colors.grey.withOpacity(0.08),
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Are you sure you want to log out from your account?',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 16),
+                                  Positioned(
+                                    bottom: -20,
+                                    left: -50,
+                                    child: Icon(
+                                      Icons.lock_outline_rounded,
+                                      size: 120,
+                                      color: Colors.grey.withOpacity(0.06),
+                                    ),
                                   ),
-                                  const SizedBox(height: 24),
-                                  Row(
+
+                                  // Main content
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(false),
-                                          style: OutlinedButton.styleFrom(
-                                            backgroundColor: Colors.black
-                                                .withOpacity(0.7),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 14,
+                                      // Animated logout icon
+                                      AnimatedBuilder(
+                                        animation: _lockIconAnimation,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                            scale: _lockIconAnimation.value,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(20),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withOpacity(
+                                                  0.15,
+                                                ),
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.red
+                                                        .withOpacity(0.2),
+                                                    blurRadius: 12,
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.logout,
+                                                size: 50,
+                                                color: Colors.red,
+                                              ),
                                             ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Cancel',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 20),
+
+                                      // Title
+                                      const Text(
+                                        'Log Out?',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
                                         ),
                                       ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: () =>
-                                              Navigator.of(context).pop(true),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red
-                                                .withOpacity(0.7),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 14,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Log Out',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                      const SizedBox(height: 10),
+
+                                      // Subtitle
+                                      const Text(
+                                        'Are you sure you want to log out from your account?',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black54,
                                         ),
+                                      ),
+                                      const SizedBox(height: 30),
+
+                                      // Buttons
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () => Navigator.of(
+                                                context,
+                                              ).pop(false),
+                                              style: OutlinedButton.styleFrom(
+                                                backgroundColor: Colors.black
+                                                    .withOpacity(0.7),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Cancel',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () => Navigator.of(
+                                                context,
+                                              ).pop(true),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red
+                                                    .withOpacity(0.8),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 16,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Log Out',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),

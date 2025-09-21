@@ -28,7 +28,8 @@ class ThreadsUserPage extends StatefulWidget {
   State<ThreadsUserPage> createState() => _ThreadsAdminPageState();
 }
 
-class _ThreadsAdminPageState extends State<ThreadsUserPage> {
+class _ThreadsAdminPageState extends State<ThreadsUserPage>
+    with TickerProviderStateMixin {
   List threads = [];
   int? userId;
   int _selectedIndex = 3;
@@ -45,7 +46,10 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage> {
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool isSending = false;
-
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
+  late AnimationController _lockIconAnimationController;
+  late Animation<double> _lockIconAnimation;
   String? profileImageUrl;
   int _pendingThreadsCount = 0; // เพิ่มตัวแปรเก็บจำนวน pending threads
   final ScrollController _scrollController = ScrollController();
@@ -57,6 +61,33 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage> {
     loadUserIdAndFetchProfile();
     fetchPendingThreadsCount();
     fetchPendingRepliedThreadsCount();
+
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _typingAnimation = CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // _lockIconAnimation = CurvedAnimation(
+    //   parent: _lockIconAnimationController,
+    //   curve: Curves.easeInOut,
+    // );
+
+    _lockIconAnimation = Tween<double>(begin: 0.5, end: 1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   Future<void> fetchPendingThreadsCount() async {
@@ -113,6 +144,8 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage> {
   void dispose() {
     _textController.dispose();
     _searchController.dispose();
+    _typingAnimationController.dispose();
+    _lockIconAnimationController.dispose();
     super.dispose();
   }
 
@@ -760,26 +793,35 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade600,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.redAccent.withOpacity(0.5),
-                              blurRadius: 12,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 6),
+                      AnimatedBuilder(
+                        animation: _lockIconAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _lockIconAnimation.value,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade600,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.redAccent.withOpacity(0.5),
+                                    blurRadius: 12,
+                                    spreadRadius: 1,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              child: const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                                size: 56,
+                              ),
                             ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        child: const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.white,
-                          size: 56,
-                        ),
+                          );
+                        },
                       ),
+
                       const SizedBox(height: 20),
                       const Text(
                         'Warning!',

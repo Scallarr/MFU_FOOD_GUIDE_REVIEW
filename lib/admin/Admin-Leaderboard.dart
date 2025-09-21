@@ -6,6 +6,7 @@ import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
 import 'package:myapp/Atlas-model.dart';
+import 'package:myapp/admin/Admin_atlas-model.dart';
 import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:myapp/dashboard.dart';
 import 'dart:convert';

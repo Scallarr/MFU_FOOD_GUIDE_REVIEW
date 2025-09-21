@@ -12,11 +12,60 @@ class WriteReviewPage extends StatefulWidget {
   _WriteReviewPageState createState() => _WriteReviewPageState();
 }
 
-class _WriteReviewPageState extends State<WriteReviewPage> {
+class _WriteReviewPageState extends State<WriteReviewPage>
+    with TickerProviderStateMixin {
   int hygieneRating = 0;
   int flavorRating = 0;
   int serviceRating = 0;
   final TextEditingController commentController = TextEditingController();
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
+  late AnimationController _lockIconAnimationController;
+  late Animation<double> _lockIconAnimation;
+
+  void initState() {
+    super.initState();
+
+    // _loadUserID();
+    // loadUserIdAndFetchProfile();
+    // fetchPendingThreadsCount();
+    // fetchPendingRepliedThreadsCount();
+
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _typingAnimation = CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // _lockIconAnimation = CurvedAnimation(
+    //   parent: _lockIconAnimationController,
+    //   curve: Curves.easeInOut,
+    // );
+
+    _lockIconAnimation = Tween<double>(begin: 0.5, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  void dispose() {
+    // _textController.dispose();
+    _typingAnimationController.dispose();
+    _lockIconAnimationController.dispose();
+    // _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   @override
@@ -299,11 +348,20 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.help_outline_rounded,
-                  size: 60,
-                  color: Color.fromARGB(255, 247, 103, 25),
+                AnimatedBuilder(
+                  animation: _lockIconAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _lockIconAnimation.value,
+                      child: Icon(
+                        Icons.help_outline_rounded,
+                        size: 48,
+                        color: Color.fromARGB(255, 247, 103, 25),
+                      ),
+                    );
+                  },
                 ),
+
                 const SizedBox(height: 20),
                 const Text(
                   'Confirm Submission',

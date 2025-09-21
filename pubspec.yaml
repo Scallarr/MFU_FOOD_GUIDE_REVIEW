@@ -45,6 +45,7 @@ dependencies:
   shimmer: ^2.0.0
   firebase_core: ^2.0.0
   firebase_storage: ^11.0.0
+  country_icons: ^3.0.0
   
 
   
@@ -67,6 +68,17 @@ flutter:
    assets:
       - assets/google_logo.png
       - assets/food.png
+      - assets/icons/flags/th.png
+      - assets/icons/flags/ch.png
+      - assets/icons/flags/jp.png
+      - assets/icons/flags/kr.png
+      - assets/icons/flags/in.png
+      - assets/icons/flags/it.png
+      - assets/icons/flags/fr.png
+      - assets/icons/flags/mx.png
+      - assets/icons/flags/us.png
+      - assets/icons/flags/vn.png
+      - assets/icons/flags/world.png
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

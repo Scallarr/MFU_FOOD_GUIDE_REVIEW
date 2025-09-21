@@ -1374,8 +1374,8 @@ class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
                       ),
                       child: Image.network(
                         menu.imageUrl,
-                        width: 180,
-                        height: 100,
+                        width: 160,
+                        height: 110,
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -1387,16 +1387,42 @@ class _RestaurantDetailPageState extends State<RestaurantDetailUserPage> {
                         children: [
                           Text(
                             menu.menu_name,
-                            style: TextStyle(fontSize: 15, color: Colors.black),
+                            style: isThai
+                                ? TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                  )
+                                : TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                           ),
+                          // : Text(
+                          //     menu.menu_name,
+                          //     style: TextStyle(
+                          //       fontSize: 15,
+                          //       color: Colors.black,
+                          //       fontWeight: FontWeight.w500,
+                          //     ),
+                          //   ),
                           SizedBox(height: 6),
                           Text(
-                            "฿ ${menu.price}",
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 94, 66, 31),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            !isThai
+                                ? "Price ${menu.price}  Bath     "
+                                : "ราคา ${menu.price} บาท ",
+                            style: !isThai
+                                ? TextStyle(
+                                    color: Color.fromARGB(255, 94, 85, 75),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  )
+                                : TextStyle(
+                                    color: Color.fromARGB(255, 94, 85, 75),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                           ),
                         ],
                       ),

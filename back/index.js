@@ -541,12 +541,17 @@ app.get('/restaurants', checkUserStatus, async (req, res) => {
         r.location, 
         r.operating_hours, 
         r.phone_number, 
+        r.category,
         r.photos, 
         r.rating_overall_avg, 
         r.rating_hygiene_avg, 
         r.rating_flavor_avg, 
         r.rating_service_avg, 
-        r.category,
+        r.cuisine_by_nation,
+        r.region,
+        r.diet_type,
+        r.restaurant_type,
+        r.service_type,
         (SELECT COUNT(*) 
          FROM Review rev
          JOIN User u ON rev.User_ID = u.User_ID
@@ -1747,7 +1752,7 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
     const currentDay = currentDate.getDate();
     
     // ตรวจสอบว่าเป็นวันที่ 6 ของเดือนหรือไม่
-    if (currentDay !== 12) {
+    if (currentDay !== 21) {
       return res.json({ 
         success: false, 
         message: 'สามารถแจก coins ได้เฉพาะวันที่ 1 ของเดือนเท่านั้น' 
@@ -1868,7 +1873,7 @@ app.post('/leaderboard/award-monthly-coins', async (req, res) => {
 
 
 // รันทุกวันเวลา 1:0 (เที่ยงคืน 1 นาที)
-cron.schedule('20 00 * * *', async () => {
+cron.schedule('14 09 * * *', async () => {
   try {
     console.log('Running automatic coin award at 10:40 AM Thailand time...');
     
@@ -2780,9 +2785,10 @@ app.get('/all_threads/:userId',checkUserStatus, async (req, res) => {
     (
       SELECT COUNT(*) 
       FROM Thread_reply TR
+      JOIN User Ru ON TR.User_ID = Ru.User_ID
       JOIN Thread TT ON TT.Thread_ID = TR.Thread_ID
       WHERE TR.Thread_ID = T.Thread_ID
-        AND TR.admin_decision = 'Posted'
+        AND TR.admin_decision = 'Posted' ANd Ru.status='Active'
     ) AS total_comments,
     EXISTS (
       SELECT 1 
@@ -2817,32 +2823,34 @@ app.get('/thread/:threadId/:userId', async (req, res) => {
   try {
     const [rows] = await db.promise().execute(`
       SELECT 
-        T.Thread_ID, 
-        T.message, 
-        T.created_at, 
-        T.User_ID,
-        U.fullname, 
-        U.username,
-        U.email,
-        P.picture_url,
-        T.Total_likes AS total_likes,
-        (
-          SELECT COUNT(*) 
-          FROM Thread_reply TR
-          WHERE TR.Thread_ID = T.Thread_ID
-            AND TR.admin_decision = 'Posted'
-        ) AS total_comments,
-        EXISTS (
-          SELECT 1 
-          FROM Thread_Likes 
-          WHERE Thread_ID = T.Thread_ID 
-            AND User_ID = ?
-        ) AS is_liked
-      FROM Thread T
-      JOIN User U ON T.User_ID = U.User_ID
-      LEFT JOIN user_Profile_Picture P ON P.User_ID = U.User_ID AND P.is_active = 1
-      WHERE T.Thread_ID = ?
-        AND T.admin_decision = 'Posted'
+   T.Thread_ID, 
+    T.message, 
+    T.created_at, 
+    T.User_ID,
+    U.fullname, 
+    U.username,
+    U.email,
+    P.picture_url,
+    T.Total_likes AS total_likes,
+    (
+      SELECT COUNT(*) 
+      FROM Thread_reply TR
+      JOIN User RU ON TR.User_ID = RU.User_ID
+      WHERE TR.Thread_ID = T.Thread_ID
+        AND TR.admin_decision = 'Posted'
+        AND RU.status = 'active'   -- ✅ เพิ่มเงื่อนไขเฉพาะ user active
+    ) AS total_comments,
+    EXISTS (
+      SELECT 1 
+      FROM Thread_Likes 
+      WHERE Thread_ID = T.Thread_ID 
+        AND User_ID = ?
+    ) AS is_liked
+FROM Thread T
+JOIN User U ON T.User_ID = U.User_ID
+LEFT JOIN user_Profile_Picture P ON P.User_ID = U.User_ID AND P.is_active = 1
+WHERE T.Thread_ID = ?
+  AND T.admin_decision = 'Posted'
     `, [userId, threadId]);
 
     if (rows.length === 0) {
@@ -3017,6 +3025,7 @@ app.get('/api/thread_replies/:threadId', async (req, res) => {
   
       WHERE tr.Thread_ID = ?
         AND tr.admin_decision = 'Posted'
+        AND u.status='Active'
       ORDER BY tr.created_at ASC`,
       [threadId]
     );
@@ -3155,17 +3164,20 @@ app.put('/edit/restaurants/:id', async (req, res) => {
     location, 
     operating_hours, 
     phone_number, 
-    category ,
+    category,
+    cuisine_by_nation,
+    region,
+    diet_type,
+    restaurant_type,
+    service_type,
     image_url
   } = req.body;
 
-  // ตรวจสอบข้อมูลที่จำเป็น
   if (!restaurant_name || !location || !operating_hours || !phone_number || !category) {
     return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
   }
 
   try {
-    // อัพเดทข้อมูลในฐานข้อมูล
     const [result] = await db.promise().execute(
       `UPDATE Restaurant SET 
         restaurant_name = ?, 
@@ -3173,29 +3185,35 @@ app.put('/edit/restaurants/:id', async (req, res) => {
         operating_hours = ?, 
         phone_number = ?, 
         category = ?,
+        cuisine_by_nation = ?,
+        region = ?,
+        diet_type = ?,
+        restaurant_type = ?,
+        service_type = ?,
         photos = ?
       WHERE Restaurant_ID = ?`,
-      [restaurant_name, location, operating_hours, phone_number, category,image_url, id]
+      [
+        restaurant_name, location, operating_hours, phone_number, category,
+        cuisine_by_nation, region, diet_type, restaurant_type, service_type,
+        image_url, id
+      ]
     );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'ไม่พบร้านอาหาร' });
     }
 
-    // ดึงข้อมูลร้านอาหารที่อัพเดทแล้ว
     const [updatedRestaurant] = await db.promise().execute(
       'SELECT * FROM Restaurant WHERE Restaurant_ID = ?',
       [id]
     );
 
     res.json(updatedRestaurant[0]);
-    console.log(updatedRestaurant[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทร้านอาหาร' });
   }
 });
-
 // DELETE /Delete/restaurants/:id
 // app.delete('/Delete/restaurants/:id', async (req, res) => {
 //   const { id } = req.params;
@@ -3366,7 +3384,67 @@ app.delete('/Delete/restaurants/:id', async (req, res) => {
 });
 
 
-// Add Restaurant Endpoint
+// // Add Restaurant Endpoint
+// app.post('/Add/restaurants', async (req, res) => {
+//   const {
+//     restaurant_name,
+//     location,
+//     operating_hours,
+//     phone_number,
+//     photos,
+//     category,
+//     added_by
+//   } = req.body;
+
+//   // Validate required fields
+//   if (!restaurant_name || !location || !category || !photos) {
+//     return res.status(400).json({ 
+//       error: 'Missing required fields: name, location, category, and photo are required' 
+//     });
+//   }
+
+
+   
+    
+//     try {
+//       // Insert new restaurant
+//       const [result] = await db.promise().execute(
+//         `INSERT INTO Restaurant 
+//         (restaurant_name, location, operating_hours, phone_number, photos, category) 
+//         VALUES (?, ?, ?, ?, ?, ?)`,
+//         [restaurant_name, location, operating_hours, phone_number, photos, category]
+//       );
+
+//       // Get the newly created restaurant
+//       const [rows] = await db.promise().execute(
+//         `SELECT 
+//           Restaurant_ID as id,
+//           restaurant_name as name,
+//           location,
+//           operating_hours as operatingHours,
+//           phone_number as phoneNumber,
+//           photos as photoUrl,
+//           category,
+//           rating_overall_avg as ratingOverall,
+//           rating_hygiene_avg as ratingHygiene,
+//           rating_flavor_avg as ratingFlavor,
+//           rating_service_avg as ratingService,
+//           0 as pendingReviewsCount,
+//           0 as postedReviewsCount
+//         FROM Restaurant WHERE Restaurant_ID = ?`,
+//         [result.insertId]
+//       );
+
+//       res.status(201).json(rows[0]);
+//     } 
+//    catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทร้านอาหาร' });
+//   }
+// })
+
+
+
 app.post('/Add/restaurants', async (req, res) => {
   const {
     restaurant_name,
@@ -3375,55 +3453,81 @@ app.post('/Add/restaurants', async (req, res) => {
     phone_number,
     photos,
     category,
-    added_by
+    cuisine_by_nation ,  // default value
+    region ,
+    diet_type ,
+    restaurant_type,
+    service_type ,
   } = req.body;
 
   // Validate required fields
   if (!restaurant_name || !location || !category || !photos) {
     return res.status(400).json({ 
-      error: 'Missing required fields: name, location, category, and photo are required' 
+      error: 'Missing required fields: restaurant_name, location, category, and photos are required' 
     });
   }
 
+  try {
+    // Insert new restaurant
+    const [result] = await db.promise().execute(
+      `INSERT INTO Restaurant 
+      (restaurant_name, location, operating_hours, phone_number, photos, category,
+       cuisine_by_nation, region, diet_type, restaurant_type, service_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        restaurant_name,
+        location,
+        operating_hours,
+        phone_number,
+        photos,
+        category,
+        cuisine_by_nation,
+        region,
+        diet_type,
+        restaurant_type,
+        service_type
+        
+      ]
+    );
 
-   
-    
-    try {
-      // Insert new restaurant
-      const [result] = await db.promise().execute(
-        `INSERT INTO Restaurant 
-        (restaurant_name, location, operating_hours, phone_number, photos, category) 
-        VALUES (?, ?, ?, ?, ?, ?)`,
-        [restaurant_name, location, operating_hours, phone_number, photos, category]
-      );
+    // Get the newly created restaurant
+    const [rows] = await db.promise().execute(
+      `SELECT 
+        Restaurant_ID as id,
+        restaurant_name as name,
+        location,
+        operating_hours as operatingHours,
+        phone_number as phoneNumber,
+        photos as photoUrl,
+        category,
+        cuisine_by_nation as cuisineByNation,
+        region,
+        diet_type as dietType,
+        restaurant_type as restaurantType,
+        service_type as serviceType,
+        rating_overall_avg as ratingOverall,
+        rating_hygiene_avg as ratingHygiene,
+        rating_flavor_avg as ratingFlavor,
+        rating_service_avg as ratingService,
+        0 as pendingReviewsCount,
+        0 as postedReviewsCount
+      
+      FROM Restaurant WHERE Restaurant_ID = ?`,
+      [result.insertId]
+    );
 
-      // Get the newly created restaurant
-      const [rows] = await db.promise().execute(
-        `SELECT 
-          Restaurant_ID as id,
-          restaurant_name as name,
-          location,
-          operating_hours as operatingHours,
-          phone_number as phoneNumber,
-          photos as photoUrl,
-          category,
-          rating_overall_avg as ratingOverall,
-          rating_hygiene_avg as ratingHygiene,
-          rating_flavor_avg as ratingFlavor,
-          rating_service_avg as ratingService,
-          0 as pendingReviewsCount,
-          0 as postedReviewsCount
-        FROM Restaurant WHERE Restaurant_ID = ?`,
-        [result.insertId]
-      );
-
-      res.status(201).json(rows[0]);
-    } 
-   catch (err) {
+    res.status(201).json(rows[0]);
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทร้านอาหาร' });
   }
-})
+});
+
+
+
+
+
+
 
 // Error handling middleware
 

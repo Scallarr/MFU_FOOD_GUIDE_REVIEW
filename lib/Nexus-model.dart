@@ -10,6 +10,7 @@ import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
+import 'package:myapp/dashboard.dart';
 import 'package:myapp/home.dart';
 import 'package:myapp/leaderboard.dart';
 import 'package:myapp/threads.dart';
@@ -608,7 +609,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
       Future.delayed(Duration(milliseconds: 1500), () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => DashboardAdmin()),
+          MaterialPageRoute(builder: (context) => Dashboard()),
         );
       });
     } else {

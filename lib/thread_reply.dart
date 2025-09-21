@@ -2021,6 +2021,7 @@ class _ThreadRepliesAdminPageState extends State<ThreadRepliesUserPage> {
 }
 
 String obfuscateEmail(String email) {
+  final atIndex = email.indexOf('@');
   if (email.endsWith('@lamduan.mfu.ac.th')) {
     final domain = '@lamduan.mfu.ac.th';
     if (email.length > domain.length + 2) {
@@ -2030,6 +2031,11 @@ String obfuscateEmail(String email) {
   } else if (email.endsWith('@mfu.ac.th')) {
     final domain = '@mfu.ac.th';
     return '**********$domain';
+  } else if (atIndex > 2) {
+    // ถ้า email มีมากกว่า 2 ตัวอักษรก่อน @
+    final prefix = email.substring(0, 2);
+    final domain = email.substring(atIndex); // @domain
+    return '$prefix********$domain';
   }
-  return email; // กรณีอื่น ๆ
+  return email;
 }

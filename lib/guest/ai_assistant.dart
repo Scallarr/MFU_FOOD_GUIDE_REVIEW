@@ -3,13 +3,18 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:http/http.dart' as http;
+import 'package:myapp/Profileinfo.dart';
 import 'package:myapp/admin/Admin-Dashboard.dart';
 import 'package:myapp/admin/Admin-Home.dart';
 import 'package:myapp/admin/Admin-Leaderboard.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/Atlas-model.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
-import 'package:myapp/admin/Admin_atlas-model.dart';
+import 'package:myapp/guest/home.dart';
+import 'package:myapp/home.dart';
+import 'package:myapp/leaderboard.dart';
+import 'package:myapp/login.dart';
+import 'package:myapp/threads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Restaurant Model
@@ -118,17 +123,13 @@ Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
 
 // ฟังก์ชันสำหรับดึงข้อมูลร้านอาหาร
 Future<List<Restaurant>> fetchRestaurants() async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('jwt_token');
   try {
     final response = await http.get(
       Uri.parse('http://172.22.173.39:8080/restaurants'),
-      headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
       List jsonList = json.decode(response.body);
-      print(jsonList);
       return jsonList.map((json) => Restaurant.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load restaurants: ${response.statusCode}');
@@ -139,16 +140,18 @@ Future<List<Restaurant>> fetchRestaurants() async {
   }
 }
 
-class Chatbot2Screen extends StatefulWidget {
+class guestChatbot2Screen extends StatefulWidget {
   @override
-  _Chatbot2ScreenState createState() => _Chatbot2ScreenState();
+  _ChatbotScreenState createState() => _ChatbotScreenState();
 }
 
-class _Chatbot2ScreenState extends State<Chatbot2Screen>
-    with SingleTickerProviderStateMixin {
+class _ChatbotScreenState extends State<guestChatbot2Screen>
+    with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, String>> _messages = [];
   bool _isLoading = false;
+  late AnimationController _lockIconAnimationController;
+  late Animation<double> _lockIconAnimation;
   final ScrollController _scrollController = ScrollController();
   String? profileImageUrl;
   int? userId;
@@ -167,6 +170,7 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
     super.initState();
     loadUserIdAndFetchProfile();
     _addWelcomeMessage();
+    _checkLoginStatus();
 
     // ดึงข้อมูลร้านอาหาร
     fetchRestaurants()
@@ -187,6 +191,23 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
     _typingAnimation = CurvedAnimation(
       parent: _typingAnimationController,
       curve: Curves.easeInOut,
+    );
+
+    _lockIconAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    // _lockIconAnimation = CurvedAnimation(
+    //   parent: _lockIconAnimationController,
+    //   curve: Curves.easeInOut,
+    // );
+
+    _lockIconAnimation = Tween<double>(begin: 0.3, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _lockIconAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
 
     // เพิ่ม listener สำหรับ scroll controller
@@ -216,6 +237,7 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
   void dispose() {
     _scrollController.dispose();
     _typingAnimationController.dispose();
+    _lockIconAnimationController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -228,6 +250,228 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
         curve: Curves.easeOut,
       );
     }
+  }
+
+  Future<void> _checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final isLoggedIn =
+        prefs.getBool('isLoggedIn') ?? false; // flag จากตอน login
+
+    if (!isLoggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showLoginAlert(context);
+      });
+    }
+  }
+
+  void _showLoginAlert(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // ✅ Decorative icons background
+                Positioned(
+                  top: -20,
+                  right: -20,
+                  child: Icon(
+                    Icons.lock_outline_rounded,
+                    size: 120,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+                Positioned(
+                  bottom: -30,
+                  left: -30,
+                  child: Icon(
+                    Icons.vpn_key_rounded,
+                    size: 100,
+                    color: const Color(0xFFB39D70).withOpacity(0.08),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ✅ Animated lock icon
+                      AnimatedBuilder(
+                        animation: _lockIconAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _lockIconAnimation.value,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFE74C3C).withOpacity(0.2),
+                                border: Border.all(
+                                  color: const Color(0xFFE74C3C),
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.lock_outline_rounded,
+                                size: 48,
+                                color: Color(0xFFE74C3C),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Title
+                      const Text(
+                        "Login Required",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 249, 249, 248),
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Subtitle
+                      const Text(
+                        "You must log in before accessing the AI Assistant.",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color.fromARGB(221, 255, 244, 244),
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Action: Go to Login
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepOrange.withOpacity(0.8),
+
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                            elevation: 4,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => LoginScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.login, size: 20),
+                          label: const Text(
+                            "Go to Login",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Action: Continue as Guest
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              41,
+                              38,
+                              38,
+                            ).withOpacity(0.6),
+                            foregroundColor: Colors.white,
+                            side: BorderSide(
+                              color: const Color.fromARGB(255, 50, 45, 45),
+                              width: 1.2,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 24,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RestaurantListPageGuest(),
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.home_outlined,
+                            size: 20,
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                          ),
+                          label: Text(
+                            "Continue as Guest",
+                            style: TextStyle(
+                              fontSize: 15,
+
+                              color: const Color.fromARGB(255, 255, 255, 255),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> loadUserIdAndFetchProfile() async {
@@ -703,7 +947,7 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
                         final shouldRefresh = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ProfilePageAdmin(),
+                            builder: (context) => ProfilePageUser(),
                           ),
                         );
 
@@ -877,7 +1121,7 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
           Future.delayed(const Duration(milliseconds: 3000), () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => ChatbotScreen()),
+              MaterialPageRoute(builder: (context) => userChatbotScreen()),
             );
           });
         } else if (id == 'Nexus') {
@@ -1019,19 +1263,19 @@ class _Chatbot2ScreenState extends State<Chatbot2Screen>
       case 0:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantListPageAdmin()),
+          MaterialPageRoute(builder: (context) => RestaurantListPageUser()),
         );
         break;
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LeaderboardPageAdmin()),
+          MaterialPageRoute(builder: (context) => LeaderboardPageUser()),
         );
         break;
       case 3:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ThreadsAdminPage()),
+          MaterialPageRoute(builder: (context) => ThreadsUserPage()),
         );
         break;
     }

@@ -10,6 +10,7 @@ import 'package:myapp/admin/Admin-Restaurant-Detail.dart';
 import 'package:myapp/admin/Admin-Restaurant-History.dart';
 import 'package:myapp/admin/Admin-Thread.dart';
 import 'package:myapp/admin/Admin-profile-info.dart';
+import 'package:myapp/admin/Admin_atlas-model.dart';
 import 'package:myapp/admin/Admin_nexus-model.dart';
 import 'package:myapp/dashboard.dart';
 import 'package:myapp/Profileinfo.dart';
@@ -37,6 +38,11 @@ class Restaurant {
   final double ratingFlavor;
   final double ratingService;
   final String category;
+  final String region;
+  final String cuisineByNation;
+  final String dietType;
+  final String restaurantType;
+  final String serviceType;
   final int pendingReviewsCount;
   final int postedReviewsCount;
 
@@ -52,6 +58,11 @@ class Restaurant {
     required this.ratingFlavor,
     required this.ratingService,
     required this.category,
+    required this.region,
+    required this.cuisineByNation,
+    required this.dietType,
+    required this.restaurantType,
+    required this.serviceType,
     required this.pendingReviewsCount,
     required this.postedReviewsCount,
   });
@@ -69,6 +80,11 @@ class Restaurant {
       ratingFlavor: double.parse(json['rating_flavor_avg'].toString()),
       ratingService: double.parse(json['rating_service_avg'].toString()),
       category: json['category'],
+      cuisineByNation: json['cuisine_by_nation'] ?? '',
+      region: json['region'] ?? '',
+      dietType: json['diet_type'] ?? '',
+      restaurantType: json['restaurant_type'] ?? '',
+      serviceType: json['service_type'] ?? '',
       pendingReviewsCount: json['pending_reviews_count'] ?? 0,
       postedReviewsCount: json['posted_reviews_count'] ?? 0,
     );
