@@ -113,7 +113,7 @@ class _LeaderboardPageUserState extends State<LeaderboardPageUser> {
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -148,9 +148,7 @@ class _LeaderboardPageUserState extends State<LeaderboardPageUser> {
 
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://172.27.112.167:8080/leaderboard/coins/previous-month',
-        ),
+        Uri.parse('http://172.22.173.39:8080/leaderboard/coins/previous-month'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -204,7 +202,7 @@ class _LeaderboardPageUserState extends State<LeaderboardPageUser> {
         return;
       }
 
-      String url = 'http://172.27.112.167:8080/leaderboard/update';
+      String url = 'http://172.22.173.39:8080/leaderboard/update';
       if (customMonthYear != null) {
         url += '?month_year=$customMonthYear';
       }

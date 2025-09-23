@@ -205,7 +205,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
+        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -232,7 +232,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
       }
 
       final response = await http.get(
-        Uri.parse('http://172.27.112.167:8080/restaurants'),
+        Uri.parse('http://172.22.173.39:8080/restaurants'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -826,9 +826,7 @@ class _RestaurantListPageState extends State<RestaurantListPageAdmin>
 
     try {
       final response = await http.delete(
-        Uri.parse(
-          'http://172.27.112.167:8080/Delete/restaurants/$restaurantId',
-        ),
+        Uri.parse('http://172.22.173.39:8080/Delete/restaurants/$restaurantId'),
         headers: {'Content-Type': 'application/json'},
       );
 

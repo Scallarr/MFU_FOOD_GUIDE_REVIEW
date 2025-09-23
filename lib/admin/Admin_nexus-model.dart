@@ -81,7 +81,7 @@ class Restaurant {
 Future<String?> fetchProfilePicture(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
+      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -101,7 +101,7 @@ Future<String?> fetchProfilePicture(int userId) async {
 Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
+      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -122,7 +122,7 @@ Future<List<Restaurant>> fetchRestaurants() async {
   final token = prefs.getString('jwt_token');
   try {
     final response = await http.get(
-      Uri.parse('http://172.27.112.167:8080/restaurants'),
+      Uri.parse('http://172.22.173.39:8080/restaurants'),
       headers: {'Authorization': 'Bearer $token'},
     );
 

@@ -82,9 +82,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchThreadApprovalHistory() async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://172.27.112.167:8080/api/admin_thread_history/$userId',
-        ),
+        Uri.parse('http://172.22.173.39:8080/api/admin_thread_history/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -103,7 +101,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
     try {
       final response = await http.get(
         Uri.parse(
-          'http://172.27.112.167:8080/api/my_admin_thread_replies/$Admin',
+          'http://172.22.173.39:8080/api/my_admin_thread_replies/$Admin',
         ),
       );
 
@@ -332,7 +330,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchMyThreads() async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.27.112.167:8080/api/my_threads/$userId'),
+        Uri.parse('http://172.22.173.39:8080/api/my_threads/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -399,7 +397,7 @@ class _MyHistoryPageState extends State<MyHistoryPage>
   Future<void> _fetchMyReplies() async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.27.112.167:8080/api/my_thread_replies/$userId'),
+        Uri.parse('http://172.22.173.39:8080/api/my_thread_replies/$userId'),
       );
 
       if (response.statusCode == 200) {

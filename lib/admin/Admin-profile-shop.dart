@@ -18,7 +18,8 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
   List<Map<String, dynamic>> profiles = [];
   bool isLoading = true;
   String errorMsg = "";
-  int currentCoins = 1250;
+  int? userCoinsFromApi; // cannot be null, always starts at 0
+
   String currentCoins2 = '';
   int? userId;
 
@@ -48,9 +49,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     final userId = prefs.getInt('user_id');
     final token = prefs.getString('jwt_token');
     print(userId);
-    final url = Uri.parse(
-      'http://172.27.112.167:8080/profile-exchange/$userId',
-    );
+    final url = Uri.parse('http://172.22.173.39:8080/profile-exchange/$userId');
 
     try {
       final response = await http.get(
@@ -59,6 +58,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        // int  coins = data['user'] as int;
 
         if (data.isNotEmpty) {
           print(data);
@@ -74,7 +74,8 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
           });
 
           setState(() {
-            int userCoinsFromApi = data[0]['user_coins'] ?? 0;
+            userCoinsFromApi = data[0]['user_coins'] ?? 0;
+            print('  coin receive from api $userCoinsFromApi');
             currentCoins2 = NumberFormat('#,###').format(userCoinsFromApi);
 
             profiles = data
@@ -229,7 +230,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     if (confirmed != true) return;
 
     final url = Uri.parse(
-      'http://172.27.112.167:8080/delete_profile/$profileId',
+      'http://172.22.173.39:8080/delete_profile/$profileId',
     );
 
     try {
@@ -254,7 +255,8 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
   Future<void> buyProfile(int profileId, int cost, String imageurl) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('user_id');
-    if (currentCoins < cost) {
+    if (userCoinsFromApi! < cost) {
+      print(' coins  $userCoinsFromApi');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Insufficient coins.")));
@@ -262,7 +264,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     }
 
     final url = Uri.parse(
-      'http://172.27.112.167:8080/purchase_profile',
+      'http://172.22.173.39:8080/purchase_profile',
     ); // เปลี่ยน URL
 
     final body = jsonEncode({
@@ -505,7 +507,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
                                                       ).pop();
                                                       buyProfile(
                                                         profile['id'],
-                                                        profile['coins'],
+                                                        profile!['coins'],
                                                         profile['image'],
                                                       );
                                                       print(profile['coins']);
@@ -753,7 +755,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
   Future<void> _deleteProfile(int profileId) async {
     try {
       final url = Uri.parse(
-        'http://172.27.112.167:8080/delete_profile/$profileId',
+        'http://172.22.173.39:8080/delete_profile/$profileId',
       );
 
       final response = await http.delete(url);

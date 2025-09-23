@@ -85,7 +85,7 @@ class Restaurant {
 Future<String?> fetchProfilePicture(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
+      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -105,7 +105,7 @@ Future<String?> fetchProfilePicture(int userId) async {
 Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
+      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -124,7 +124,7 @@ Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
 Future<List<Restaurant>> fetchRestaurants() async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.27.112.167:8080/restaurants'),
+      Uri.parse('http://172.22.173.39:8080/restaurants'),
     );
 
     if (response.statusCode == 200) {
@@ -213,6 +213,32 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
     });
   }
 
+  Future<List<dynamic>> fetchRestaurantsByCuisine({
+    required String? cuisine,
+    String? region,
+    String? location,
+  }) async {
+    final queryParams = {
+      if (cuisine != null) 'cuisine': cuisine,
+      if (region != null) 'region': region,
+      if (location != null) 'location': location,
+    };
+
+    final uri = Uri.http(
+      "172.22.173.39:8080",
+      "/restaurants/cuisine",
+      queryParams,
+    );
+
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception("Failed to load restaurants");
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -238,7 +264,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
   // ✅ fetch categories
   Future<List<String>> fetchCategories() async {
     final res = await http.get(
-      Uri.parse("http://172.27.112.167:8080/restaurants/categories"),
+      Uri.parse("http://172.22.173.39:8080/restaurants/categories"),
     );
     if (res.statusCode == 200) {
       return List<String>.from(json.decode(res.body));
@@ -250,7 +276,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
   // ✅ fetch locations
   Future<List<String>> fetchLocations() async {
     final res = await http.get(
-      Uri.parse("http://172.27.112.167:8080/restaurants/locations"),
+      Uri.parse("http://172.22.173.39:8080/restaurants/locations"),
     );
     if (res.statusCode == 200) {
       return List<String>.from(json.decode(res.body));
@@ -266,7 +292,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
   ) async {
     final res = await http.get(
       Uri.parse(
-        "http://172.27.112.167:8080/restaurants/search?category=$category&location=$location",
+        "http://172.22.173.39:8080/restaurants/search?category=$category&location=$location",
       ),
     );
     if (res.statusCode == 200) {
@@ -300,13 +326,14 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         "👋 Hello!\n"
         "I'm Nexus, your assistant in the MFU Food Guide & Review app \n\n"
         "I can help you with restaurants, reviews, profiles, coins, "
-        "and other app services 💡\n"
-        "Ask me anytime! \n\n "
-        "💬 You can type commands like:\n"
-        "1️⃣ User Profile Information \n"
-        "2️⃣ Restaurants  Information \n"
-        "3️⃣ Threads  \n\n"
-        "Ask me anytime!";
+        "and other app services 💡\n\n"
+        " + + + + + + + + + + + + + + + + + + \n"
+        "You can type commands like:\n"
+        "1️⃣ User Information\n"
+        "2️⃣ Restaurant Recommendetion\n"
+        "3️⃣ Dashboard Overview\n"
+        " + + + + + + + + + + + + + + + + + +  \n"
+        "   For other questions outside your account or the app, please use the Atlas model.";
 
     setState(() {
       _messages.add({
@@ -323,15 +350,29 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
     });
   }
 
+  bool awaitingCuisineChoice = false;
+  bool awaitingRegionChoice = false;
+  bool awaitingCuisineLocationChoice = false;
   bool awaitingUserChoice = false; // อยู่ระดับ class
-  bool awaitingRestaurantChoice = false; // ระดับ class
+  bool awaitingRestaurantChoice = false;
+  String? selectedCuisine;
+  String? selectedRegion; // ระดับ class
   // สมมติ awaitingUserChoice, awaitingRestaurantChoice อยู่ระดับ class
   // และตัวแปรอื่นๆ เช่น _messages, _isLoading, _isBotTyping, userProfile มีอยู่แล้ว
+  bool awaitingDietTypeChoice = false;
+  bool awaitingDietLocationChoice = false;
+  String? selectedDietType;
+  bool awaitingRestaurantTypeChoice = false;
+  bool awaitingRestaurantTypeLocationChoice = false;
+  String? selectedRestaurantType;
+  bool awaitingServiceTypeChoice = false;
+  bool awaitingServiceTypeLocationChoice = false;
+  String? selectedServiceType;
 
   void sendMessage() async {
     final raw = _controller.text;
     final message = raw.trim();
-    if (message.isEmpty || _isBotTyping) return;
+    if (message.isEmpty || _isBotTyping || _isLoading) return;
 
     // add user message
     setState(() {
@@ -372,7 +413,8 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         _messages.add({
           "role": "bot",
           "content":
-              "📄 User Information Commands:\n\n"
+              " User Information Commands:\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
               "1️⃣ View Full Name\n"
               "2️⃣ View Username\n"
               "3️⃣ View Email\n"
@@ -380,11 +422,13 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
               "5️⃣ View Total Reviews\n"
               "6️⃣ View Coins\n"
               "7️⃣ View Role\n"
-              "8️⃣ Exit\n\n"
+              "8️⃣ Exit\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
               "Type the number or name of the information you want to see.",
           "timestamp": DateTime.now().toString(),
           "shouldAnimate": true,
         });
+
         awaitingUserChoice = true;
         _isLoading = false;
       });
@@ -402,13 +446,16 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         _messages.add({
           "role": "bot",
           "content":
-              "🍽 Restaurant Information Commands:\n\n"
+              "🍽 Restaurant Recommendetion \n"
+              " + + + + + + + + + + + + + + + + + + \n"
+              "You can type commands like:\n"
               "1️⃣ Category\n"
               "2️⃣ Cuisine by Nation\n"
               "3️⃣ Diet Type\n"
               "4️⃣ Restaurant Type\n"
               "5️⃣ Service Type\n"
-              "6️⃣ Exit\n\n"
+              "6️⃣ Exit\n"
+              " + + + + + + + + + + + + + + + + + + \n"
               "Type the number or name of the information you want to see.",
           "timestamp": DateTime.now().toString(),
           "shouldAnimate": true,
@@ -417,7 +464,51 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         _isLoading = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
-      setState(() => _isBotTyping = false);
+      // setState(() => _isBotTyping = false);
+      return;
+    }
+    if (RegExp(r'^3$').hasMatch(message) ||
+        msgLower == 'dashboard' ||
+        msgLower == 'overview' ||
+        msgLower.contains('over')) {
+      // case "4":
+      //   // ต้องเพิ่มข้อความก่อน navigate
+
+      //   WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+
+      //   Future.delayed(Duration(milliseconds: 1000), () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(builder: (context) => Dashboard()),
+      //     );
+      //   });
+      //   return; // return ทันทีหลังจาก navigate
+      // show restaurant menu
+
+      setState(() {
+        _messages.add({
+          "role": "bot",
+          "content": "Redirecting to Dashboard...",
+          "timestamp": DateTime.now().toString(),
+          "shouldAnimate": true,
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+        awaitingUserChoice = false;
+        Future.delayed(Duration(milliseconds: 2500), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => Dashboard()),
+          );
+        });
+        return; // return ทันทีหลังจาก navigate
+        // show restaurant menu
+        //   _isLoading = false;
+      });
+
+      _isLoading = false;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+      // setState(() => _isBotTyping = false);
       return;
     }
 
@@ -430,15 +521,16 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
       _messages.add({
         "role": "bot",
         "content":
-            "⚠️ Your command is not valid.\n\n"
-            "💬 You can type commands like:\n"
-            "1️⃣ User Profile\n"
-            "2️⃣ Restaurants\n"
-            "3️⃣ Threads\n"
-            "4️⃣ Dashboard Overview\n\n"
-            "💡 For other questions outside your account or the app, please use the Atlas model.",
+            "⚠️ Your command is not valid.\n"
+            " + + + + + + + + + + + + + + + + + + \n"
+            "You can type commands like:\n"
+            "1️⃣ User Information\n"
+            "2️⃣ Restaurant Recommendetion\n"
+            "3️⃣ Dashboard Overview\n"
+            " + + + + + + + + + + + + + + + + + +  \n"
+            "   For other questions outside your account or the app, please use the Atlas model.",
         "timestamp": DateTime.now().toString(),
-        "shouldAnimate": false,
+        "shouldAnimate": true,
       });
       _isLoading = false;
       _isBotTyping = false;
@@ -452,17 +544,28 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
     await Future.delayed(Duration(milliseconds: 400));
 
     String content = '';
-    final opt = option.trim();
+    final opt = option.trim().toLowerCase();
+    bool shouldExit = false;
 
-    switch (option) {
+    switch (opt) {
       case "1":
       case "fullname":
       case "full":
         content =
-            "📝 Your Fullname is\n"
+            " Your Fullname is\n"
             "+ + + + + + + + + + + + + + + + + + \n"
             "➡️ ${userProfile!['fullname'] ?? 'Not set'}\n"
-            "+ + + + + + + + + + + + + + + + + +";
+            "+ + + + + + + + + + + + + + + + + +\n"
+            "▶️ User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Total Reviews\n"
+            "5️⃣ View Coins\n"
+            "6️⃣ View Role\n"
+            "7️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
         break;
 
       case "2":
@@ -470,9 +573,20 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
       case "user":
         content =
             "📝 Your Username is\n"
+            "+ + + + + + + + + + + + + + + + + +\n"
+            "▶️ ${userProfile!['username'] ?? 'Not set'}\n"
             "+ + + + + + + + + + + + + + + + + + \n"
-            "➡️ ${userProfile!['username'] ?? 'Not set'}\n"
-            "+ + + + + + + + + + + + + + + + + +";
+            "➡️ User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Dashboard\n"
+            "5️⃣ View Total Reviews\n"
+            "6️⃣ View Coins\n"
+            "7️⃣ View Role\n"
+            "8️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
         break;
 
       case "3":
@@ -481,31 +595,45 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
             "📝 Your Email That Registered is\n"
             "+ + + + + + + + + + + + + + + + + + \n"
             "${userProfile!['email'] ?? 'Not set'}\n"
-            "+ + + + + + + + + + + + + + + + + +";
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Total Reviews\n"
+            "5️⃣ View Coins\n"
+            "6️⃣ View Role\n"
+            "7️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
         break;
+
+      // case "4":
+      //   // ต้องเพิ่มข้อความก่อน navigate
+      //   setState(() {
+      //     _messages.add({
+      //       "role": "bot",
+      //       "content": "Redirecting to Dashboard...",
+      //       "timestamp": DateTime.now().toString(),
+      //       "shouldAnimate": true,
+      //     });
+      //     _isLoading = false;
+      //     awaitingUserChoice = false;
+      //   });
+
+      //   WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+
+      //   Future.delayed(Duration(milliseconds: 1000), () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(builder: (context) => Dashboard()),
+      //     );
+      //   });
+      //   return; // return ทันทีหลังจาก navigate
 
       case "4":
-        content = "Redirect To Dashboard...";
-
-        // setState(() {
-        //   _messages.add({
-        //     "role": "bot",
-        //     "content": "Redirect To Dashboard...",
-        //     "timestamp": DateTime.now().toString(),
-        //   });
-        // });
-
-        // รอสักครู่แล้วนำทางไปยังหน้า Dashboard
-        Future.delayed(Duration(milliseconds: 1000), () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => Dashboard()),
-          );
-        });
-        break;
-
-      case "5":
       case "total reviews":
+      case "total":
         int totalReviews = userProfile!['total_reviews'] ?? 0;
         final reviews = userProfile!['reviews'] as List<dynamic>? ?? [];
 
@@ -513,8 +641,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         if (reviews.isNotEmpty) {
           for (var r in reviews) {
             reviewSummary +=
-                """
-━━━━━━━━━━━━━━━━━━━━
+                """━━━━━━━━━━━━━━━━━━━━
  ${r['restaurant_name']}
  Location: ${r['location']}
  Reviews: ${r['review_count']}
@@ -528,57 +655,107 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         content =
             "📝 Review Summary \n"
             "+ + + + + + + + + + + + + + + + + + \n"
-            "➡️ $totalReviews reviews\n"
+            "▶️ $totalReviews reviews\n"
             "+ + + + + + + + + + + + + + + + + + \n\n"
-            "$reviewSummary";
+            "$reviewSummary"
+            "\n+ + + + + + + + + + + + + + + + + \n"
+            "➡️User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Total Reviews\n"
+            "5️⃣ View Coins\n"
+            "6️⃣ View Role\n"
+            "7️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
         break;
 
-      case "6":
+      case "5":
       case "coins":
         content =
             "💰 Coins \n"
             "+ + + + + + + + + + + + + + + + + + \n"
-            "➡️ ${userProfile!['coins'] ?? 0} coins\n"
-            "+ + + + + + + + + + + + + + + + + +";
+            "▶️ ${userProfile!['coins'] ?? 0} coins\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Total Reviews\n"
+            "5️⃣ View Coins\n"
+            "6️⃣ View Role\n"
+            "7️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
         break;
 
-      case "7":
+      case "6":
       case "role":
         content =
             "🎭 Role\n"
             "+ + + + + + + + + + + + + + + + + + \n"
-            "➡️ ${userProfile!['role'] ?? 'Not set'}\n"
-            "+ + + + + + + + + + + + + + + + + +";
+            "▶️ ${userProfile!['role'] ?? 'Not set'}\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Total Reviews\n"
+            "5️⃣ View Coins\n"
+            "6️⃣ View Role\n"
+            "7️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
         break;
 
-      case "8":
+      case "7":
       case "exit":
         content =
             "💬 You can type commands like:\n"
-            "1️⃣ User Profile \n"
-            "2️⃣ Restaurants \n"
-            "3️⃣ Threads \n\n"
-            "Ask me anytime!";
-        awaitingUserChoice = false;
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "1️⃣ User Information \n"
+            "2️⃣ Restaurants Recommendations \n"
+            "3️⃣ Dashboard Overview \n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
+        shouldExit = true;
         break;
 
       default:
-        content = "⚠️ Invalid option. Please type 1-8 or the command name.";
+        content =
+            "⚠️ Invalid option.\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "▶️ User Information Commands:\n"
+            "1️⃣ View Full Name\n"
+            "2️⃣ View Username\n"
+            "3️⃣ View Email\n"
+            "4️⃣ View Dashboard\n"
+            "5️⃣ View Total Reviews\n"
+            "6️⃣ View Coins\n"
+            "7️⃣ View Role\n"
+            "8️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
     }
 
+    // อัพเดท state และเพิ่มข้อความ
     setState(() {
       _messages.add({
         "role": "bot",
-        "content":
-            content +
-            (awaitingUserChoice
-                ? "\n\n📄 User Information Commands:\n1️⃣ View Full Name\n2️⃣ View Username\n3️⃣ View Email\n4️⃣ View Dashboard\n5️⃣ View Total Reviews\n6️⃣ View Coins\n7️⃣ View Role\n8️⃣ Exit\n\nType the number or name of the information you want to see."
-                : ""),
+        "content": content,
         "timestamp": DateTime.now().toString(),
         "shouldAnimate": true,
       });
+
+      if (shouldExit) {
+        awaitingUserChoice = false;
+      }
+
       _isLoading = false;
+      _isBotTyping = false;
     });
+
     WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
   }
 
@@ -597,15 +774,723 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
       "8️⃣",
       "9️⃣",
       "🔟",
+      "1️⃣1️⃣ ",
+      "⓬",
+      "⓭",
+      "⓮",
+      "⓯",
+      "⓰",
+      "⓱",
+      "⓲",
+      "⓳",
+      "⓴",
     ];
 
     String content = '';
-    final opt = option.trim();
+    final opt = option.trim().toLowerCase();
 
+    // ------------------ Service Type Selection ------------------
+    if (awaitingServiceTypeChoice) {
+      List<String> serviceTypes = ["Delivery", "Dine-in", "All"];
+
+      String? chosenServiceType;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ service type
+        for (var type in serviceTypes) {
+          if (type.toLowerCase().contains(opt)) {
+            chosenServiceType = type;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < serviceTypes.length) {
+        chosenServiceType = serviceTypes[index];
+      }
+
+      if (chosenServiceType != null) {
+        selectedServiceType = chosenServiceType;
+
+        final locations = await fetchLocations();
+        List<String> locationOptions = ["All", ...locations];
+
+        content =
+            "📍 Please Choose Locations for\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "$chosenServiceType service:\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Type the number or name of the location.";
+
+        awaitingServiceTypeChoice = false;
+        awaitingServiceTypeLocationChoice = true;
+      } else {
+        content =
+            "⚠️ Invalid service type.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "Please choose a valid option:\n" +
+            serviceTypes
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the service type.";
+      }
+    }
+    // ------------------ Service Type Location Selection ------------------
+    else if (awaitingServiceTypeLocationChoice) {
+      final locations = await fetchLocations();
+      List<String> locationOptions = ["All", ...locations];
+      String? chosenLocation;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ location
+        for (var location in locationOptions) {
+          if (location.toLowerCase().contains(opt)) {
+            chosenLocation = location;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < locationOptions.length) {
+        chosenLocation = locationOptions[index];
+      }
+
+      if (chosenLocation != null) {
+        // เรียก API เพื่อดึงข้อมูลร้านอาหารตาม service type และ location
+        final restaurants = await fetchRestaurantsByServiceTypeAndLocation(
+          serviceType: selectedServiceType,
+          location: chosenLocation,
+        );
+
+        if (restaurants.isNotEmpty) {
+          content =
+              "🍽 Restaurants Found:\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
+              "Service Type: ${selectedServiceType ?? 'All'}\n"
+              "Location: ${chosenLocation ?? 'All'}\n"
+              "+ + + + + + + + + + + + + + + + + + \n";
+
+          int index = 1;
+          for (var r in restaurants) {
+            String numberIcon = "${index}️⃣";
+            content += "━━━━━━━━━━━━━━━━━━━━\n";
+            content += "$numberIcon ${r['restaurant_name']}\n";
+            content += "Location: ${r['location']}\n";
+            content += "Categories Product: ${r['category']}\n";
+            content += "Service: ${r['service_type']}\n";
+            // content += "Type: ${r['restaurant_type']}\n";
+            content += "Cuisine Nation: ${r['cuisine_by_nation']}\n";
+            content += "Diet: ${r['diet_type']}\n";
+            content +=
+                "Rating: ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
+            content += "Hours: ${r['operating_hours'] ?? 'Not specified'}\n";
+            content += "Phone: ${r['phone_number'] ?? 'Not provided'}\n";
+            index++;
+          }
+          content += "━━━━━━━━━━━━━━━━━━━━\n";
+        } else {
+          content =
+              "⚠️ No restaurants found for $selectedServiceType service at ${chosenLocation ?? 'all locations'}.\n";
+        }
+
+        // รีเซ็ต state หลังจากแสดงผล
+        content +=
+            "\n💬 You can type commands like:\n"
+            "1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n"
+            "4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
+
+        awaitingServiceTypeLocationChoice = false;
+        selectedServiceType = null;
+      } else {
+        content =
+            "⚠️ Invalid location.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "Please choose a valid option:\n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the location.";
+      }
+    }
+    // ------------------ Restaurant Type Selection ------------------
+    else if (awaitingRestaurantTypeChoice) {
+      List<String> restaurantTypes = [
+        "Cafeteria",
+        "Mini-Mart",
+        "Cafe",
+        "Restaurant",
+      ];
+
+      String? chosenRestaurantType;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ restaurant type
+        for (var type in restaurantTypes) {
+          if (type.toLowerCase().contains(opt)) {
+            chosenRestaurantType = type;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < restaurantTypes.length) {
+        chosenRestaurantType = restaurantTypes[index];
+      }
+
+      if (chosenRestaurantType != null) {
+        selectedRestaurantType = chosenRestaurantType;
+
+        final locations = await fetchLocations();
+        List<String> locationOptions = ["All", ...locations];
+
+        content =
+            "📍 Please Choose Locations for \n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "$chosenRestaurantType:\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Type the number or name of the location.";
+
+        awaitingRestaurantTypeChoice = false;
+        awaitingRestaurantTypeLocationChoice = true;
+      } else {
+        content =
+            "⚠️ Invalid restaurant type.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "Please choose a valid option:\n" +
+            restaurantTypes
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the restaurant type.";
+      }
+    }
+    // ------------------ Restaurant Type Location Selection ------------------
+    else if (awaitingRestaurantTypeLocationChoice) {
+      final locations = await fetchLocations();
+      List<String> locationOptions = ["All", ...locations];
+      String? chosenLocation;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ location
+        for (var location in locationOptions) {
+          if (location.toLowerCase().contains(opt)) {
+            chosenLocation = location;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < locationOptions.length) {
+        chosenLocation = locationOptions[index];
+      }
+
+      if (chosenLocation != null) {
+        // เรียก API เพื่อดึงข้อมูลร้านอาหารตาม restaurant type และ location
+        final restaurants = await fetchRestaurantsByRestaurantTypeAndLocation(
+          restaurantType: selectedRestaurantType,
+          location: chosenLocation == "All" ? null : chosenLocation,
+        );
+
+        if (restaurants.isNotEmpty) {
+          content =
+              "🍽 Restaurants Found:\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
+              "Restaurant Type: ${selectedRestaurantType ?? 'All'}\n"
+              "Location: ${chosenLocation ?? 'All'}\n"
+              "+ + + + + + + + + + + + + + + + + + \n";
+
+          int index = 1;
+          for (var r in restaurants) {
+            String numberIcon = "${index}️⃣";
+            content += "━━━━━━━━━━━━━━━━━━━━\n";
+            content += "$numberIcon ${r['restaurant_name']}\n";
+            content += "Location: ${r['location']}\n";
+            content += "Category Product: ${r['category']}\n";
+            content += "Restaurant Type: ${r['restaurant_type']}\n";
+            content += "Cuisine Nation: ${r['cuisine_by_nation']}\n";
+            content += "Diet: ${r['diet_type']}\n";
+            content +=
+                "Rating: ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
+            content += "Hours: ${r['operating_hours'] ?? 'Not specified'}\n";
+            content += "Phone: ${r['phone_number'] ?? 'Not provided'}\n";
+            index++;
+          }
+          content += "━━━━━━━━━━━━━━━━━━━━\n";
+        } else {
+          content =
+              "⚠️ No restaurants found for" +
+              "\n+ + + + + + + + + + + + + + + + + + \n" +
+              "$selectedRestaurantType at ${chosenLocation ?? 'all locations'}.\n" +
+              "\n+ + + + + + + + + + + + + + + + + + \n";
+        }
+
+        // รีเซ็ต state หลังจากแสดงผล
+        content +=
+            "\n💬 You can type commands like:\n"
+            "1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n"
+            "4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
+
+        awaitingRestaurantTypeLocationChoice = false;
+        selectedRestaurantType = null;
+      } else {
+        content =
+            "⚠️ Invalid location.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "Please choose a valid option:\n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the location.";
+      }
+    }
+    // ------------------ Diet Type Selection ------------------
+    else if (awaitingDietTypeChoice) {
+      List<String> dietTypes = ["HALAL", "VEGETARIAN", "GENERAL"];
+
+      String? chosenDietType;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ diet type
+        for (var diet in dietTypes) {
+          if (diet.toLowerCase().contains(opt)) {
+            chosenDietType = diet;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < dietTypes.length) {
+        chosenDietType = dietTypes[index];
+      }
+
+      if (chosenDietType != null) {
+        selectedDietType = chosenDietType;
+
+        final locations = await fetchLocations();
+        List<String> locationOptions = ["All", ...locations];
+
+        content =
+            "📍 Please Choose Locations for" +
+            "\n + + + + + + + + + + + + + + + + + + \n" +
+            "$chosenDietType diet:\n"
+                " + + + + + + + + + + + + + + + + + + \n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Type the number or name of the location.";
+
+        awaitingDietTypeChoice = false;
+        awaitingDietLocationChoice = true;
+      } else {
+        content =
+            "⚠️ Invalid diet type.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "Please choose a valid option:\n" +
+            dietTypes
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the diet type.";
+      }
+    }
+    // ------------------ Diet Location Selection ------------------
+    else if (awaitingDietLocationChoice) {
+      final locations = await fetchLocations();
+      List<String> locationOptions = ["All", ...locations];
+      String? chosenLocation;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ location
+        for (var location in locationOptions) {
+          if (location.toLowerCase().contains(opt)) {
+            chosenLocation = location;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < locationOptions.length) {
+        chosenLocation = locationOptions[index];
+      }
+
+      if (chosenLocation != null) {
+        // เรียก API เพื่อดึงข้อมูลร้านอาหารตาม diet type และ location
+        final restaurants = await fetchRestaurantsByDietAndLocation(
+          dietType: selectedDietType,
+          location: chosenLocation == "All" ? null : chosenLocation,
+        );
+
+        if (restaurants.isNotEmpty) {
+          content =
+              "🍽 Restaurants Found:\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
+              "Diet Type: ${selectedDietType ?? 'All'}\n"
+              "Location: ${chosenLocation ?? 'All'}\n"
+              "+ + + + + + + + + + + + + + + + + + \n";
+
+          int index = 1;
+          for (var r in restaurants) {
+            String numberIcon = "${index}️⃣";
+            content += "━━━━━━━━━━━━━━━━━━━━\n";
+            content += "$numberIcon ${r['restaurant_name']}\n";
+            content += "Location: ${r['location']}\n";
+            content += "Category: ${r['category']}\n";
+            content += "Diet Type: ${r['diet_type']}\n";
+            content += "Cuisine: ${r['cuisine_by_nation']}\n";
+            content +=
+                "Rating: ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
+            content += "Hours: ${r['operating_hours'] ?? 'Not specified'}\n";
+            content += "Phone: ${r['phone_number'] ?? 'Not provided'}\n";
+            index++;
+          }
+          content += "+ + + + + + + + + + + + + + + + + + \n";
+        } else {
+          content =
+              "⚠️ No restaurants found for " +
+              "\n+ + + + + + + + + + + + + + + + + + \n" +
+              "  $selectedDietType diet at ${chosenLocation ?? 'all locations'}.\n" +
+              "+ + + + + + + + + + + + + + + + + + \n";
+        }
+
+        // รีเซ็ต state หลังจากแสดงผล
+        content +=
+            "\n💬 You can type commands like:\n"
+            "1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n"
+            "4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "Type the number or name of the information you want to see.";
+
+        awaitingDietLocationChoice = false;
+        selectedDietType = null;
+      } else {
+        content =
+            "⚠️ Invalid location.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "Please choose a valid option:\n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the location.";
+      }
+    }
+    // ------------------ Cuisine Selection ------------------
+    else if (awaitingCuisineChoice) {
+      List<String> cuisines = [
+        "THAI",
+        "CHINESE",
+        "JAPANESE",
+        "KOREAN",
+        "INDIAN",
+        "ITALIAN",
+        "FRENCH",
+        "MEXICAN",
+        "AMERICAN",
+        "VIETNAMESE",
+        "OTHER",
+      ];
+
+      String? chosenCuisine;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ cuisine
+        for (var cuisine in cuisines) {
+          if (cuisine.toLowerCase().contains(opt)) {
+            chosenCuisine = cuisine;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < cuisines.length) {
+        chosenCuisine = cuisines[index];
+      }
+
+      if (chosenCuisine != null) {
+        selectedCuisine = chosenCuisine;
+
+        if (chosenCuisine == "THAI") {
+          // ต้องเลือก Region ต่อสำหรับอาหารไทย
+          List<String> regions = [
+            "NORTH",
+            "CENTRAL",
+            "NORTHEAST",
+            "SOUTH",
+            "EAST",
+            "WEST",
+          ];
+          content =
+              "🌏 You chose THAI cuisine.\n"
+                  "Please choose the region:\n"
+                  "+ + + + + + + + + + + + + + + + + + \n" +
+              regions
+                  .asMap()
+                  .entries
+                  .map((e) => "${emojis[e.key]} ${e.value}")
+                  .join("\n") +
+              "\n+ + + + + + + + + + + + + + + + + + \n"
+                  "Type the number or name of the region.";
+          awaitingCuisineChoice = false;
+          awaitingRegionChoice = true;
+        } else {
+          // อาหารประเทศอื่นๆ ข้ามการเลือก region
+          final locations = await fetchLocations();
+          List<String> locationOptions = ["All", ...locations];
+
+          content =
+              "📍 Please Choose Locations for " +
+              "\n + + + + + + + + + + + + + + + + + + \n" +
+              "$chosenCuisine cuisine:\n"
+                  "+ + + + + + + + + + + + + + + + + + \n" +
+              locationOptions
+                  .asMap()
+                  .entries
+                  .map((e) => "${emojis[e.key]} ${e.value}")
+                  .join("\n") +
+              "\n+ + + + + + + + + + + + + + + + + + \n"
+                  "Type the number or name of the location.";
+
+          awaitingCuisineChoice = false;
+          awaitingCuisineLocationChoice = true;
+        }
+      } else {
+        content =
+            "⚠️ Invalid cuisine.\n" +
+            "+ + + + + + + + + + + + + + + + + + \n" +
+            "💬 You can type commands like:\n" +
+            cuisines
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n" +
+            "Type the number or name of the location.";
+      }
+    }
+    // ------------------ Region Selection (เฉพาะ THAI) ------------------
+    else if (awaitingRegionChoice) {
+      List<String> regions = [
+        "NORTH",
+        "CENTRAL",
+        "NORTHEAST",
+        "SOUTH",
+        "EAST",
+        "WEST",
+      ];
+
+      String? chosenRegion;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ region
+        for (var region in regions) {
+          if (region.toLowerCase().contains(opt)) {
+            chosenRegion = region;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < regions.length) {
+        chosenRegion = regions[index];
+      }
+
+      if (chosenRegion != null) {
+        selectedRegion = chosenRegion;
+
+        final locations = await fetchLocations();
+        List<String> locationOptions = ["All", ...locations];
+
+        content =
+            "📍 Please Choose Locations for \n " +
+            " + + + + + + + + + + + + + + + + + + \n" +
+            "  Thai ($chosenRegion) cuisine:\n"
+                "+ + + + + + + + + + + + + + + + + + \n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Type the number or name of the location.";
+
+        awaitingRegionChoice = false;
+        awaitingCuisineLocationChoice = true;
+      } else {
+        content =
+            "⚠️ Invalid region. Please choose a valid option:\n\n" +
+            regions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n");
+      }
+    }
+    // ------------------ Cuisine Location Selection ------------------
+    else if (awaitingCuisineLocationChoice) {
+      final locations = await fetchLocations();
+      List<String> locationOptions = ["All", ...locations];
+      String? chosenLocation;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      } else {
+        // ค้นหาจากชื่อ location
+        for (var location in locationOptions) {
+          if (location.toLowerCase().contains(opt)) {
+            chosenLocation = location;
+            break;
+          }
+        }
+      }
+
+      if (index != null && index >= 0 && index < locationOptions.length) {
+        chosenLocation = locationOptions[index];
+      }
+
+      if (chosenLocation != null) {
+        // เรียก API เพื่อดึงข้อมูลร้านอาหารตาม cuisine, region (ถ้ามี) และ location
+        final restaurants = await fetchRestaurantsByCuisineAndLocation(
+          cuisine: selectedCuisine,
+          region: selectedRegion,
+          location: chosenLocation == "All" ? null : chosenLocation,
+        );
+
+        if (restaurants.isNotEmpty) {
+          content =
+              "🍽 Restaurants Found:\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
+              "Cuisine: ${selectedCuisine ?? 'All'}\n"
+              "${selectedRegion != null ? 'Region: $selectedRegion\n' : ''}"
+              "Location: ${chosenLocation ?? 'All'}\n"
+              "+ + + + + + + + + + + + + + + + + + \n";
+
+          int index = 1;
+          for (var r in restaurants) {
+            String numberIcon = "${index}️⃣";
+            content += "━━━━━━━━━━━━━━━━━━━━\n";
+            content += "$numberIcon ${r['restaurant_name']}\n";
+            content += "Location: ${r['location']}\n";
+            content += "Category: ${r['category']}\n";
+            content += "Cuisine: ${r['cuisine_by_nation']}\n";
+            if (r['region'] != null) content += "Region: ${r['region']}\n";
+            content +=
+                "Rating: ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
+            content += "Hours: ${r['operating_hours'] ?? 'Not specified'}\n";
+            content += "Phone: ${r['phone_number'] ?? 'Not provided'}\n";
+            index++;
+          }
+          content += " + + + + + + + + + + + + + + + + + + ";
+        } else {
+          content += "⚠️ No restaurants found for the selected criteria.\n";
+          content += "+ + + + + + + + + + + + + + + + + + \n";
+        }
+
+        // รีเซ็ต state หลังจากแสดงผล
+        content +=
+            "💬 You can type commands like:\n"
+            "1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n"
+            "4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n"
+            "Type the number or name of the information you want to see."
+            "\n + + + + + + + + + + + + + + + + + + \n";
+        awaitingCuisineLocationChoice = false;
+        selectedCuisine = null;
+        selectedRegion = null;
+        awaitingRestaurantChoice = true; // ออกจากโหมด restaurant
+      } else {
+        content =
+            "⚠️ Invalid location."
+                "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Please choose a valid option:\n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Type the number or name of the information you want to see.";
+      }
+    }
     // ------------------ Category Selection ------------------
-    if (awaitingCategoryChoice) {
+    else if (awaitingCategoryChoice) {
       final categories = await fetchCategories();
-      List<String> categoryOptions = ["All", ...categories]; // เพิ่ม All
+      List<String> categoryOptions = ["All", ...categories];
 
       String? chosenCategory;
       int? index;
@@ -614,27 +1499,34 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         index = emojis.indexOf(opt);
       } else if (int.tryParse(opt) != null) {
         index = int.parse(opt) - 1;
+      } else {
+        for (var category in categoryOptions) {
+          if (category.toLowerCase().contains(opt)) {
+            chosenCategory = category;
+            break;
+          }
+        }
       }
 
       if (index != null && index >= 0 && index < categoryOptions.length) {
         chosenCategory = categoryOptions[index];
-      } else if (categoryOptions.contains(opt)) {
-        chosenCategory = opt;
       }
 
       if (chosenCategory != null) {
         selectedCategory = chosenCategory == "All" ? null : chosenCategory;
 
         final locations = await fetchLocations();
-        List<String> locationOptions = ["All", ...locations]; // เพิ่ม All
+        List<String> locationOptions = ["All", ...locations];
         content =
-            "📍 Locations:\n\n" +
+            "📍 Please Choose Locations:\n"
+                "+ + + + + + + + + + + + + + + + + + \n" +
             locationOptions
                 .asMap()
                 .entries
                 .map((e) => "${emojis[e.key]} ${e.value}")
                 .join("\n") +
-            "\n\nPlease type the location name, number, or emoji.";
+            "\n+ + + + + + + + + + + + + + + + + + \n"
+                "Type the number or name of the location.";
         awaitingCategoryChoice = false;
         awaitingLocationChoice = true;
       } else {
@@ -647,10 +1539,10 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
                 .join("\n");
       }
     }
-    // ------------------ Location Selection ------------------
+    // ------------------ Location Selection (สำหรับ Category) ------------------
     else if (awaitingLocationChoice) {
       final locations = await fetchLocations();
-      List<String> locationOptions = ["All", ...locations]; // เพิ่ม All
+      List<String> locationOptions = ["All", ...locations];
       String? chosenLocation;
       int? index;
 
@@ -658,61 +1550,61 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         index = emojis.indexOf(opt);
       } else if (int.tryParse(opt) != null) {
         index = int.parse(opt) - 1;
+      } else {
+        for (var location in locationOptions) {
+          if (location.toLowerCase().contains(opt)) {
+            chosenLocation = location;
+            break;
+          }
+        }
       }
 
       if (index != null && index >= 0 && index < locationOptions.length) {
         chosenLocation = locationOptions[index];
-      } else if (locationOptions.contains(opt)) {
-        chosenLocation = opt;
       }
 
       if (chosenLocation != null) {
         final restaurants = await fetchRestaurants2(
-          selectedCategory, // null = All category
-          chosenLocation == "All"
-              ? null
-              : chosenLocation, // null = All locations
+          selectedCategory,
+          chosenLocation == "All" ? null : chosenLocation,
         );
 
         if (restaurants.isNotEmpty) {
           content =
-              "🍽 Restaurants in ${chosenLocation ?? 'All Locations'} (${selectedCategory ?? 'All Categories'}):\n\n";
+              "🍽 Total Restaurants:\n"
+              "+ + + + + + + + + + + + + + + + + + \n"
+              "Location: ${chosenLocation ?? 'All Locations'}\n"
+              "Category: ${selectedCategory ?? 'All Categories'}\n"
+              "+ + + + + + + + + + + + + + + + + + \n";
+
+          int index = 1;
           for (var r in restaurants) {
+            String numberIcon = "${index}️⃣";
             content += "━━━━━━━━━━━━━━━━━━━━\n";
-            content += "🏠 ${r['restaurant_name']}\n";
-            content += "Location : ${r['location']}\n";
+            content += "$numberIcon ${r['restaurant_name']}\n";
+            content += "Location: ${r['location']}\n";
             content +=
-                "Overall Rating : ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
-            content += " ${r['operating_hours'] ?? 'Not specified'}\n";
-            content += "📞 ${r['phone_number'] ?? 'Not provided'}\n";
+                "Rating: ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
+            content += "Hours: ${r['operating_hours'] ?? 'Not specified'}\n";
+            content += "Phone: ${r['phone_number'] ?? 'Not provided'}\n";
+            index++;
           }
-          content += "━━━━━━━━━━━━━━━━━━━━";
-          content += "🍽 Restaurant Information Commands:\n\n";
-          content += "1️⃣ Category\n";
-          content += "2️⃣ Cuisine by Nation\n";
-          content += "3️⃣ Diet Type\n";
-          content += "4️⃣ Restaurant Type\n";
-          content += "5️⃣ Service Type\n";
-          content += "6️⃣ Exit\n\n";
-          content +=
-              "Type the number or name of the information you want to see.";
+          content += "\n + + + + + + + + + + + + + + + + + + ";
         } else {
-          content +=
-              "⚠️ No restaurants found for ${selectedCategory ?? 'All Categories'} at ${chosenLocation ?? 'All Locations'}.";
-          content += "━━━━━━━━━━━━━━━━━━━━";
-          content += "🍽 Restaurant Information Commands:\n\n";
-          content += "1️⃣ Category\n";
-          content += "2️⃣ Cuisine by Nation\n";
-          content += "3️⃣ Diet Type\n";
-          content += "4️⃣ Restaurant Type\n";
-          content += "5️⃣ Service Type\n";
-          content += "6️⃣ Exit\n\n";
-          content +=
-              "Type the number or name of the information you want to see.";
+          content += "⚠️ No restaurants found.\n";
+          content += " + + + + + + + + + + + + + + + + + +\n ";
         }
+
+        content +=
+            "💬 You can type commands like:\n"
+            "1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n"
+            "4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n"
+            " + + + + + + + + + + + + + + + + + +\n "
+            "Type the number or name of the information you want to see.";
 
         awaitingLocationChoice = false;
         selectedCategory = null;
+        awaitingRestaurantChoice = true;
       } else {
         content =
             "⚠️ Invalid location. Please choose a valid option:\n\n" +
@@ -723,77 +1615,256 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
                 .join("\n");
       }
     }
-    // ------------------ Menu Options ------------------
-    else if (RegExp(r'^1$').hasMatch(opt) ||
-        opt.toLowerCase().contains('category')) {
+    // ------------------ Menu Options หลัก ------------------
+    else if (RegExp(r'^1$').hasMatch(opt) || opt.contains('category')) {
       final categories = await fetchCategories();
       content =
-          "📂 Categories:\n\n" +
+          "📂 Please choose Categories:\n"
+              "+ + + + + + + + + + + + + + + + + + \n" +
           ["All", ...categories]
               .asMap()
               .entries
               .map((e) => "${emojis[e.key]} ${e.value}")
               .join("\n") +
-          "\n\nPlease type the category name, number, or emoji you're interested in.";
+          "\n+ + + + + + + + + + + + + + + + + + \n"
+              "Type the number or name of the category.";
       awaitingCategoryChoice = true;
-    } else if (RegExp(r'^2$').hasMatch(opt) ||
-        opt.toLowerCase().contains('cuisine')) {
+    } else if (RegExp(r'^2$').hasMatch(opt) || opt.contains('cuisine')) {
+      List<String> cuisines = [
+        "THAI",
+        "CHINESE",
+        "JAPANESE",
+        "KOREAN",
+        "INDIAN",
+        "ITALIAN",
+        "FRENCH",
+        "MEXICAN",
+        "AMERICAN",
+        "VIETNAMESE",
+        "OTHER",
+      ];
       content =
-          "🌏 Cuisine by Nation:\n- Thai\n- Japanese\n- Italian\n- Chinese\n- Indian";
-    } else if (RegExp(r'^3$').hasMatch(opt) ||
-        opt.toLowerCase().contains('diet')) {
+          "🌏 Please choose Cuisine Nation:\n"
+              "+ + + + + + + + + + + + + + + + + + \n" +
+          cuisines
+              .asMap()
+              .entries
+              .map((e) => "${emojis[e.key]} ${e.value}")
+              .join("\n") +
+          "\n+ + + + + + + + + + + + + + + + + + \n"
+              "Type the number or name of the cuisine.";
+      awaitingCuisineChoice = true;
+    } else if (RegExp(r'^3$').hasMatch(opt) || opt.contains('diet')) {
+      List<String> dietTypes = ["HALAL", "VEGETARIAN", "GENERAL"];
       content =
-          "🥗 Diet Types:\n- Vegetarian\n- Vegan\n- Gluten-Free\n- Halal\n- Kosher";
+          "🥗 Please choose Diet Type:\n"
+              "+ + + + + + + + + + + + + + + + + + \n" +
+          dietTypes
+              .asMap()
+              .entries
+              .map((e) => "${emojis[e.key]} ${e.value}")
+              .join("\n") +
+          "\n+ + + + + + + + + + + + + + + + + + \n"
+              "Type the number or name of the diet type.";
+      awaitingDietTypeChoice = true;
     } else if (RegExp(r'^4$').hasMatch(opt) ||
-        opt.toLowerCase().contains('restaurant type')) {
+        opt.contains('restaurant type')) {
+      List<String> restaurantTypes = [
+        "Cafeteria",
+        "Mini-Mart",
+        "Cafe",
+        "Restaurant",
+      ];
       content =
-          "🏢 Restaurant Types:\n- Dine-in\n- Takeaway\n- Food Truck\n- Pop-up\n- Franchise";
-    } else if (RegExp(r'^5$').hasMatch(opt) ||
-        opt.toLowerCase().contains('service')) {
+          "🏢Choose Restaurant Type:\n"
+              "+ + + + + + + + + + + + + + + + + + \n" +
+          restaurantTypes
+              .asMap()
+              .entries
+              .map((e) => "${emojis[e.key]} ${e.value}")
+              .join("\n") +
+          "\n+ + + + + + + + + + + + + + + + + + \n"
+              "Type the number or name of the restaurant type.";
+      awaitingRestaurantTypeChoice = true;
+    } else if (RegExp(r'^5$').hasMatch(opt) || opt.contains('service')) {
+      List<String> serviceTypes = ["Delivery", "Dine-in", "All"];
       content =
-          "🛎 Service Types:\n- Self Service\n- Table Service\n- Delivery\n- Drive-Thru";
-    } else if (RegExp(r'^6$').hasMatch(opt) ||
-        opt.toLowerCase().contains('exit')) {
+          "🛎 Please choose Service Type:\n"
+              "+ + + + + + + + + + + + + + + + + + \n" +
+          serviceTypes
+              .asMap()
+              .entries
+              .map((e) => "${emojis[e.key]} ${e.value}")
+              .join("\n") +
+          "\n+ + + + + + + + + + + + + + + + + + \n"
+              "Type the number or name of the service type.";
+      awaitingServiceTypeChoice = true;
+    } else if (RegExp(r'^6$').hasMatch(opt) || opt.contains('exit')) {
       content =
-          "💬 You can type commands like:\n1️⃣ User Profile\n2️⃣ Restaurants\n3️⃣ Threads\n\nAsk me anytime!";
+          " + + + + + + + + + + + + + + + + + + \n"
+          "You can type commands like:\n"
+          "1️⃣ User Information\n"
+          "2️⃣ Restaurant Recommendetion\n"
+          "3️⃣ Dashboard Overview\n"
+          " + + + + + + + + + + + + + + + + + +  \n"
+          "   For other questions outside your account or the app, please use the Atlas model.";
       awaitingRestaurantChoice = false;
     } else {
       content =
-          "⚠️ Invalid option. Please type a valid number, emoji, or command name.";
+          "⚠️ Please select a valid option.\n"
+          "+ + + + + + + + + + + + + + + + + + \n"
+          "💬 You can type commands like:\n"
+          "1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n"
+          "4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n"
+          "+ + + + + + + + + + + + + + + + + + \n"
+          "Type the number or name of the information you want to see.";
     }
 
     setState(() {
       _messages.add({
         "role": "bot",
         "content": content,
-        // (awaitingRestaurantChoice
-        //     ? "\n\n🍽 Restaurant Information Commands:\n1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n\nType the number, emoji, or name of the information you want to see."
-        //     : ""),
         "timestamp": DateTime.now().toString(),
         "shouldAnimate": true,
       });
       _isLoading = false;
+      _isBotTyping = false;
     });
+
     WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
   }
 
-  // else if (message.toLowerCase().contains('nexus') ||
-  //     message.toLowerCase() == 'ทั่วไป') {
-  //   setState(() {
-  //     _messages.add({
-  //       "role": "bot",
-  //       "content":
-  //           "Nexus model is Use Nowyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
-  //       "timestamp": DateTime.now().toString(),
-  //       "shouldAnimate": true, // เพิ่ม field นี้
-  //     });
-  //     _isLoading = false;
-  //   });
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     scrollToBottom();
-  //   });
-  // }
-  // ตรวจสอบว่าผู้ใช้พิมพ์คำว่า "dashboard" หรือไม่
+  // เพิ่มฟังก์ชัน API สำหรับดึงข้อมูลตาม Restaurant Type
+  Future<List<dynamic>> fetchRestaurantsByRestaurantTypeAndLocation({
+    required String? restaurantType,
+    required String? location,
+  }) async {
+    try {
+      String url =
+          "http://172.22.173.39:8080/restaurants/restaurant_type/search?";
+
+      if (restaurantType != null && restaurantType != "All") {
+        url += "restaurant_type=$restaurantType&";
+      }
+      if (location != null && location != "All") {
+        url += "location=$location&";
+      }
+
+      if (url.endsWith('&')) {
+        url = url.substring(0, url.length - 1);
+      }
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load restaurants: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching restaurants by restaurant type: $e');
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> fetchRestaurantsByDietAndLocation({
+    required String? dietType,
+    required String? location,
+  }) async {
+    try {
+      String url = "http://172.22.173.39:8080/restaurants/diet-types/search?";
+
+      if (dietType != null && dietType != "All") {
+        url += "diet=$dietType&";
+      }
+      if (location != null && location != "All") {
+        url += "location=$location&";
+      }
+
+      if (url.endsWith('&')) {
+        url = url.substring(0, url.length - 1);
+      }
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load restaurants: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching restaurants by diet: $e');
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> fetchRestaurantsByServiceTypeAndLocation({
+    required String? serviceType,
+    required String? location,
+  }) async {
+    try {
+      String url = "http://172.22.173.39:8080/restaurants/service-type/search?";
+
+      if (serviceType != null) {
+        url += "servicetype=$serviceType&";
+      }
+      if (location != null && location != "All") {
+        url += "location=$location&";
+      }
+
+      if (url.endsWith('&')) {
+        url = url.substring(0, url.length - 1);
+      }
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load restaurants: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching restaurants by diet: $e');
+      return [];
+    }
+  }
+
+  // ฟังก์ชันสำหรับดึงข้อมูลร้านอาหารตาม cuisine, region และ location
+  Future<List<dynamic>> fetchRestaurantsByCuisineAndLocation({
+    required String? cuisine,
+    required String? region,
+    required String? location,
+  }) async {
+    try {
+      String url = "http://172.22.173.39:8080/restaurants/cuisine/search?";
+
+      if (cuisine != null && cuisine != "All") {
+        url += "cuisine=$cuisine&";
+      }
+      if (region != null) {
+        url += "region=$region&";
+      }
+      if (location != null && location != "All") {
+        url += "location=$location&";
+      }
+
+      // ลบ & สุดท้ายถ้ามี
+      if (url.endsWith('&')) {
+        url = url.substring(0, url.length - 1);
+      }
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load restaurants: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching restaurants: $e');
+      return [];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -967,8 +2038,9 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
                           isUser: isUser,
                           onTextUpdate: scrollToBottom,
                           onTypingComplete: () {
+                            // ✅ รีเซ็ตสถานะการพิมพ์เมื่อพิมพ์เสร็จ
                             setState(() {
-                              _isBotTyping = false; // ตั้งค่าให้พิมพ์เสร็จแล้ว
+                              _isBotTyping = false;
                             });
                           }, // เรียก scrollToBottom เมื่อข้อความอัพเดต
                           isError: content.toLowerCase().contains('error'),
@@ -1268,6 +2340,17 @@ class _ChatBubbleState extends State<ChatBubble> {
     _typingComplete = !widget.shouldAnimate;
   }
 
+  void _handleTypingComplete() {
+    setState(() {
+      _typingComplete = true;
+    });
+
+    // ✅ แจ้งไปยัง parent ว่าพิมพ์เสร็จ
+    if (widget.onTypingComplete != null) {
+      widget.onTypingComplete!();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1397,11 +2480,8 @@ class _ChatBubbleState extends State<ChatBubble> {
                                     height: 1.5,
                                     fontWeight: FontWeight.w400,
                                   ),
-                                  onComplete: () {
-                                    setState(() {
-                                      _typingComplete = true;
-                                    });
-                                  },
+                                  onComplete: _handleTypingComplete,
+
                                   onTextUpdate:
                                       widget.onTextUpdate, // ส่ง callback ไป
                                   onTypingComplete: () {
@@ -1481,14 +2561,14 @@ class MessageInputField extends StatelessWidget {
   final bool isLoading;
   final int? userId;
   final FocusNode focusNode;
-  bool isBotTyping;
+  final bool isBotTyping; // เพิ่มพารามิเตอร์นี้
 
   MessageInputField({
     Key? key,
     required this.controller,
     required this.onSend,
     required this.isLoading,
-    required this.isBotTyping,
+    required this.isBotTyping, // รับค่า isBotTyping
     this.userId,
     required this.focusNode,
   }) : super(key: key);
@@ -1576,41 +2656,55 @@ class MessageInputField extends StatelessWidget {
                           fontSize: 16,
                         ),
                       ),
-                      onSubmitted: (_) => onSend(),
+                      onSubmitted: (_) {
+                        // ตรวจสอบว่า AI กำลังพิมพ์หรือไม่
+                        if (!isBotTyping && !isLoading) {
+                          onSend();
+                        }
+                      },
                       style: TextStyle(fontSize: 16),
+                      // ปิดกั้นการพิมพ์ขณะ AI กำลังทำงาน
+                      enabled: !isBotTyping && !isLoading,
                     ),
                   ),
-                  isLoading
-                      ? Padding(
-                          padding: EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFFB39D70),
-                              ),
-                            ),
+
+                  // แสดงตัวบ่งชี้ตามสถานะ
+                  if (isLoading)
+                    Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFFB39D70),
                           ),
-                        )
-                      : IconButton(
-                          icon: isBotTyping
-                              ? SizedBox(
-                                  width: 26,
-                                  height: 26,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.0,
-                                    color: Color(0xFFB39D70),
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.send_rounded,
-                                  color: Color(0xFFB39D70),
-                                  size: 26,
-                                ),
-                          onPressed: isBotTyping ? null : onSend,
                         ),
+                      ),
+                    )
+                  else if (isBotTyping)
+                    Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.0,
+                          color:
+                              Colors.grey[400], // สีเทาเพื่อแสดงว่าถูกปิดกั้น
+                        ),
+                      ),
+                    )
+                  else
+                    IconButton(
+                      icon: Icon(
+                        Icons.send_rounded,
+                        color: Color(0xFFB39D70),
+                        size: 26,
+                      ),
+                      onPressed: onSend,
+                    ),
                 ],
               ),
             ),

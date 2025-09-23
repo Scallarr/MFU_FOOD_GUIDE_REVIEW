@@ -1546,21 +1546,21 @@ class _ThreadsAdminPageState extends State<ThreadsAdminPage> {
                                     colors: [
                                       const Color.fromARGB(
                                         255,
-                                        227,
-                                        238,
-                                        248,
+                                        255,
+                                        246,
+                                        246,
                                       ), // ฟ้าอ่อน
                                       const Color.fromARGB(
                                         255,
-                                        241,
-                                        243,
-                                        245,
+                                        255,
+                                        255,
+                                        255,
                                       ), // ขาวนวล
                                       const Color.fromARGB(
                                         255,
-                                        218,
-                                        227,
-                                        236,
+                                        253,
+                                        242,
+                                        242,
                                       ), // // ฟ้าอ่อน
                                     ],
                                   ),

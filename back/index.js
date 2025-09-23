@@ -2483,6 +2483,7 @@ app.get('/profile-exchange/:userId', checkUserStatus,(req, res) => {
   p.Profile_Shop_ID,
   p.Profile_Name,
   p.Description,
+  
   p.Image_URL,
   p.Required_Coins,
   p.Created_At,
@@ -2509,7 +2510,7 @@ ORDER BY p.Created_At DESC;
 
 app.post('/purchase_profile', (req, res) => {
   const { user_id, profile_id, coins_spent, image_url } = req.body;
-
+console.log(" request " +  user_id,profile_id ,coins_spent );
   db.getConnection((err, connection) => {
     if (err) {
       console.error('Error getting connection:', err);
@@ -2524,13 +2525,13 @@ app.post('/purchase_profile', (req, res) => {
 
       // 1. ลบ coins จาก user
       connection.query(
-        'UPDATE User SET coins = coins - ? WHERE User_ID =   AND coins >= ?',
+        'UPDATE User SET coins = coins - ? WHERE User_ID = ?  AND coins >= ?',
         [coins_spent, user_id, coins_spent],
         (err, result) => {
           if (err || result.affectedRows === 0) {
             return connection.rollback(() => {
               connection.release();
-              return res.status(400).json({ error: 'Not enough coins or update failed' });
+              return res.status(401).json({ error: 'Not enough coins or update failed' });
             });
           }
 
@@ -5941,6 +5942,403 @@ app.post("/ai-query", async (req, res) => {
     if (connection) connection.release();
   }
 });
+
+
+
+// 📌 Get restaurants by Cuisine, Region, and Location
+app.get('/restaurants/cuisine', (req, res) => {
+  const { cuisine, region, location  } = req.query;
+
+  let sql = `
+    SELECT r.restaurant_id, r.restaurant_name, r.location, 
+           r.cuisine_by_nation, r.region, 
+           r.rating_overall_avg, r.operating_hours, r.phone_number
+    FROM Restaurant r
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (cuisine) {
+    sql += " AND r.cuisine_by_nation = ?";
+    params.push(cuisine);
+  }
+
+  if (region) {
+    sql += " AND r.region = ?";
+    params.push(region);
+  }
+
+  if (location) {
+    sql += " AND r.location = ?";
+    params.push(location);
+  }
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error("Error fetching restaurants:", err);
+      return res.status(500).json({ error: "Database query error" });
+    }
+    res.json(results);
+  });
+});
+
+app.get('/restaurants/cuisine/search', async (req, res) => {
+  const { cuisine, region, location, category } = req.query;
+  console.log(cuisine,region);
+
+  let connection;
+  try {
+    connection = await db.promise().getConnection();  // 👈 ต้อง await
+
+    let query = `
+      SELECT 
+          r.*,
+          COUNT(DISTINCT rv.review_id) as total_reviews_count,
+          AVG(rv.rating_overall) as rating_overall_avg,
+          AVG(rv.rating_hygiene) as rating_hygiene_avg,
+          AVG(rv.rating_flavor) as rating_flavor_avg,
+          AVG(rv.rating_service) as rating_service_avg
+      FROM Restaurant r
+      LEFT JOIN Review rv ON r.restaurant_id = rv.restaurant_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (cuisine && cuisine !== 'All') {
+      query += ' AND r.cuisine_by_nation = ?';
+      params.push(cuisine);
+    }
+    if (region && region !== 'All') {
+      query += ' AND r.region = ?';
+      params.push(region);
+    }
+    if (location && location !== 'All') {
+      query += ' AND r.location = ?';
+      params.push(location);
+    }
+    if (category && category !== 'All') {
+      query += ' AND r.category = ?';
+      params.push(category);
+    }
+
+    query += ' GROUP BY r.restaurant_id ORDER BY rating_overall_avg DESC';
+
+    const [results] = await connection.query(query, params);  // 👈 ใช้ await
+
+    const restaurants = results.map(restaurant => ({
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name,
+      location: restaurant.location,
+      operating_hours: restaurant.operating_hours,
+      phone_number: restaurant.phone_number,
+      photos: restaurant.photos,
+      category: restaurant.category,
+      cuisine_by_nation: restaurant.cuisine_by_nation,
+      region: restaurant.region,
+      diet_type: restaurant.diet_type,
+      restaurant_type: restaurant.restaurant_type,
+      service_type: restaurant.service_type,
+      rating_overall_avg: restaurant.rating_overall_avg ? parseFloat(restaurant.rating_overall_avg) : null,
+      rating_hygiene_avg: restaurant.rating_hygiene_avg ? parseFloat(restaurant.rating_hygiene_avg) : null,
+      rating_flavor_avg: restaurant.rating_flavor_avg ? parseFloat(restaurant.rating_flavor_avg) : null,
+      rating_service_avg: restaurant.rating_service_avg ? parseFloat(restaurant.rating_service_avg) : null,
+      total_reviews_count: restaurant.total_reviews_count || 0
+    }));
+
+    res.json(restaurants);
+  } catch (err) {
+    console.error('Error searching restaurants:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    if (connection) connection.release();  // ปล่อย connection
+  }
+});
+
+
+
+// API สำหรับดึง diet types ทั้งหมด
+app.get('/restaurants/diet-types', async (req, res) => {
+  try {
+    const [results] = await db.promise().query(
+      'SELECT DISTINCT diet_type FROM restaurants WHERE diet_type IS NOT NULL ORDER BY diet_type'
+    );
+
+    const dietTypes = results.map(row => row.diet_type);
+    res.json(dietTypes);
+  } catch (error) {
+    console.error('Error fetching diet types:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// อัปเดต API search ให้รองรับ diet type
+app.get('/restaurants/diet-types/search', async (req, res) => {
+  const { cuisine, region, location, category, diet } = req.query;
+  console.log(location,diet)
+
+  try {
+    let query = `
+      SELECT 
+          r.*,
+          COUNT(DISTINCT rv.review_id) as total_reviews_count,
+          AVG(rv.rating_overall) as rating_overall_avg,
+          AVG(rv.rating_hygiene) as rating_hygiene_avg,
+          AVG(rv.rating_flavor) as rating_flavor_avg,
+          AVG(rv.rating_service) as rating_service_avg
+      FROM restaurant r
+      LEFT JOIN review rv ON r.restaurant_id = rv.restaurant_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    if (cuisine && cuisine !== 'All') {
+      query += ' AND r.cuisine_by_nation = ?';
+      params.push(cuisine);
+    }
+
+    if (region && region !== 'All') {
+      query += ' AND r.region = ?';
+      params.push(region);
+    }
+
+    if (location && location !== 'All') {
+      query += ' AND r.location = ?';
+      params.push(location);
+    }
+
+    if (category && category !== 'All') {
+      query += ' AND r.category = ?';
+      params.push(category);
+    }
+
+    if (diet && diet !== 'All') {
+      query += ' AND r.diet_type = ?';
+      params.push(diet);
+    }
+
+    query += ' GROUP BY r.restaurant_id ORDER BY rating_overall_avg DESC';
+
+    const [results] = await db.promise().query(query, params);
+
+    const restaurants = results.map(restaurant => ({
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name,
+      location: restaurant.location,
+      operating_hours: restaurant.operating_hours,
+      phone_number: restaurant.phone_number,
+      photos: restaurant.photos,
+      category: restaurant.category,
+      cuisine_by_nation: restaurant.cuisine_by_nation,
+      region: restaurant.region,
+      diet_type: restaurant.diet_type,
+      restaurant_type: restaurant.restaurant_type,
+      service_type: restaurant.service_type,
+      rating_overall_avg: restaurant.rating_overall_avg ? parseFloat(restaurant.rating_overall_avg) : null,
+      rating_hygiene_avg: restaurant.rating_hygiene_avg ? parseFloat(restaurant.rating_hygiene_avg) : null,
+      rating_flavor_avg: restaurant.rating_flavor_avg ? parseFloat(restaurant.rating_flavor_avg) : null,
+      rating_service_avg: restaurant.rating_service_avg ? parseFloat(restaurant.rating_service_avg) : null,
+      total_reviews_count: restaurant.total_reviews_count || 0
+    }));
+
+    res.json(restaurants);
+  } catch (error) {
+    console.error('Error searching restaurants:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+// API สำหรับดึง restaurant types ทั้งหมด
+app.get('/restaurants/restaurant-types', async (req, res) => {
+  try {
+    const [results] = await db.promise().query(
+      'SELECT DISTINCT restaurant_type FROM restaurants WHERE restaurant_type IS NOT NULL ORDER BY restaurant_type'
+    );
+
+    const restaurantTypes = results.map(row => row.restaurant_type);
+    res.json(restaurantTypes);
+  } catch (error) {
+    console.error('Error fetching restaurant types:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// อัปเดต API search ให้รองรับ restaurant type
+app.get('/restaurants/restaurant_type/search', async (req, res) => {
+  const { cuisine, region, location, category, diet, restaurant_type } = req.query;
+  console.log(restaurant_type);
+
+  try {
+    let query = `
+      SELECT 
+          r.*,
+          COUNT(DISTINCT rv.review_id) as total_reviews_count,
+          AVG(rv.rating_overall) as rating_overall_avg,
+          AVG(rv.rating_hygiene) as rating_hygiene_avg,
+          AVG(rv.rating_flavor) as rating_flavor_avg,
+          AVG(rv.rating_service) as rating_service_avg
+      FROM restaurant r
+      LEFT JOIN review rv ON r.restaurant_id = rv.restaurant_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    if (cuisine && cuisine !== 'All') {
+      query += ' AND r.cuisine_by_nation = ?';
+      params.push(cuisine);
+    }
+
+    if (region && region !== 'All') {
+      query += ' AND r.region = ?';
+      params.push(region);
+    }
+
+    if (location && location !== 'All') {
+      query += ' AND r.location = ?';
+      params.push(location);
+    }
+
+    if (category && category !== 'All') {
+      query += ' AND r.category = ?';
+      params.push(category);
+    }
+
+    if (diet && diet !== 'All') {
+      query += ' AND r.diet_type = ?';
+      params.push(diet);
+    }
+
+    if (restaurant_type && restaurant_type !== 'All') {
+      query += ' AND r.restaurant_type = ?';
+      params.push(restaurant_type);
+    }
+
+    query += ' GROUP BY r.restaurant_id ORDER BY rating_overall_avg DESC';
+
+    const [results] = await db.promise().query(query, params);
+
+    const restaurants = results.map(restaurant => ({
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name,
+      location: restaurant.location,
+      operating_hours: restaurant.operating_hours,
+      phone_number: restaurant.phone_number,
+      photos: restaurant.photos,
+      category: restaurant.category,
+      cuisine_by_nation: restaurant.cuisine_by_nation,
+      region: restaurant.region,
+      diet_type: restaurant.diet_type,
+      restaurant_type: restaurant.restaurant_type,
+      service_type: restaurant.service_type,
+      rating_overall_avg: restaurant.rating_overall_avg ? parseFloat(restaurant.rating_overall_avg) : null,
+      rating_hygiene_avg: restaurant.rating_hygiene_avg ? parseFloat(restaurant.rating_hygiene_avg) : null,
+      rating_flavor_avg: restaurant.rating_flavor_avg ? parseFloat(restaurant.rating_flavor_avg) : null,
+      rating_service_avg: restaurant.rating_service_avg ? parseFloat(restaurant.rating_service_avg) : null,
+      total_reviews_count: restaurant.total_reviews_count || 0
+    }));
+
+    res.json(restaurants);
+  } catch (error) {
+    console.error('Error searching restaurants:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+// อัปเดต API search ให้รองรับ restaurant type
+app.get('/restaurants/service-type/search', async (req, res) => {
+  const { cuisine, region, location, category, diet,servicetype } = req.query;
+  console.log(servicetype);
+
+  try {
+    let query = `
+      SELECT 
+          r.*,
+          COUNT(DISTINCT rv.review_id) as total_reviews_count,
+          AVG(rv.rating_overall) as rating_overall_avg,
+          AVG(rv.rating_hygiene) as rating_hygiene_avg,
+          AVG(rv.rating_flavor) as rating_flavor_avg,
+          AVG(rv.rating_service) as rating_service_avg
+      FROM restaurant r
+      LEFT JOIN review rv ON r.restaurant_id = rv.restaurant_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    if (cuisine && cuisine !== 'All') {
+      query += ' AND r.cuisine_by_nation = ?';
+      params.push(cuisine);
+    }
+
+    if (region && region !== 'All') {
+      query += ' AND r.region = ?';
+      params.push(region);
+    }
+
+    if (location && location !== 'All') {
+      query += ' AND r.location = ?';
+      params.push(location);
+    }
+
+    if (category && category !== 'All') {
+      query += ' AND r.category = ?';
+      params.push(category);
+    }
+
+    if (diet && diet !== 'All') {
+      query += ' AND r.diet_type = ?';
+      params.push(diet);
+    }
+
+    if (servicetype && servicetype !== 'All2') {
+      query += ' AND r.service_type = ?';
+      params.push(servicetype);
+    }
+
+    query += ' GROUP BY r.restaurant_id ORDER BY rating_overall_avg DESC';
+
+    const [results] = await db.promise().query(query, params);
+
+    const restaurants = results.map(restaurant => ({
+      restaurant_id: restaurant.restaurant_id,
+      restaurant_name: restaurant.restaurant_name,
+      location: restaurant.location,
+      operating_hours: restaurant.operating_hours,
+      phone_number: restaurant.phone_number,
+      photos: restaurant.photos,
+      category: restaurant.category,
+      cuisine_by_nation: restaurant.cuisine_by_nation,
+      region: restaurant.region,
+      diet_type: restaurant.diet_type,
+      service_type: restaurant.service_type,
+      service_type: restaurant.service_type,
+      rating_overall_avg: restaurant.rating_overall_avg ? parseFloat(restaurant.rating_overall_avg) : null,
+      rating_hygiene_avg: restaurant.rating_hygiene_avg ? parseFloat(restaurant.rating_hygiene_avg) : null,
+      rating_flavor_avg: restaurant.rating_flavor_avg ? parseFloat(restaurant.rating_flavor_avg) : null,
+      rating_service_avg: restaurant.rating_service_avg ? parseFloat(restaurant.rating_service_avg) : null,
+      total_reviews_count: restaurant.total_reviews_count || 0
+    }));
+
+    res.json(restaurants);
+  } catch (error) {
+    console.error('Error searching restaurants:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+
+
+
+
+
+
 
 
   // ✅ Start Server

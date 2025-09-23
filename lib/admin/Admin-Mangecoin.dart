@@ -60,7 +60,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
       });
 
       final response = await http.get(
-        Uri.parse('http://172.27.112.167:8080/admin/search-users?query=$query'),
+        Uri.parse('http://172.22.173.39:8080/admin/search-users?query=$query'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -79,7 +79,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://172.27.112.167:8080/user/info/$userId');
+      final uri = Uri.parse('http://172.22.173.39:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -146,7 +146,7 @@ class _AdminCoinManagementPageState extends State<AdminCoinManagementPage> {
       }
 
       final response = await http.post(
-        Uri.parse('http://172.27.112.167:8080/admin/manage-coins'),
+        Uri.parse('http://172.22.173.39:8080/admin/manage-coins'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
