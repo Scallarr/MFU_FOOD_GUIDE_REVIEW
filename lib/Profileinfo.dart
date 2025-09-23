@@ -91,7 +91,7 @@ class _ProfilePageAdminState extends State<ProfilePageUser>
 
   Future<void> fetchUserData(int userId) async {
     try {
-      final url = Uri.parse('http://172.22.173.39:8080/user-profile/$userId');
+      final url = Uri.parse('http://172.27.112.167:8080/user-profile/$userId');
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -124,7 +124,7 @@ class _ProfilePageAdminState extends State<ProfilePageUser>
 
   Future<List<Map<String, dynamic>>> fetchProfilePictures(int userId) async {
     final url = Uri.parse(
-      'http://172.22.173.39:8080/user-profile-pictures/$userId',
+      'http://172.27.112.167:8080/user-profile-pictures/$userId',
     );
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -137,7 +137,7 @@ class _ProfilePageAdminState extends State<ProfilePageUser>
 
   Future<void> setActiveProfilePicture(int userId, int pictureId) async {
     final url = Uri.parse(
-      'http://172.22.173.39:8080/user-profile-pictures/set-active',
+      'http://172.27.112.167:8080/user-profile-pictures/set-active',
     );
     final response = await http.post(
       url,
@@ -161,7 +161,7 @@ class _ProfilePageAdminState extends State<ProfilePageUser>
     }
 
     final url = Uri.parse(
-      'http://172.22.173.39:8080/user-profile/update/$userId',
+      'http://172.27.112.167:8080/user-profile/update/$userId',
     );
 
     final response = await http.put(

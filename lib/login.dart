@@ -84,8 +84,8 @@ class _LoginScreenState extends State<LoginScreen>
       }
 
       final response = await http.post(
-        Uri.parse('http://172.22.173.39:8080/user/login'),
-        // Uri.parse('http://172.22.173.39:8080/user/login'),
+        Uri.parse('http://172.27.112.167:8080/user/login'),
+        // Uri.parse('http://172.27.112.167:8080/user/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'fullname': googleUser.displayName,
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen>
         print('dg' + userPhotoUrl.toString());
         // ดึงข้อมูล user เพิ่มเติมจาก API (เช่น role, bio, etc.)
         final userInfoResponse = await http.get(
-          Uri.parse('http://172.22.173.39:8080/user/info/$userId'),
+          Uri.parse('http://172.27.112.167:8080/user/info/$userId'),
           headers: {'Authorization': 'Bearer $token'},
         );
 

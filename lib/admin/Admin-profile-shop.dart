@@ -48,7 +48,9 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     final userId = prefs.getInt('user_id');
     final token = prefs.getString('jwt_token');
     print(userId);
-    final url = Uri.parse('http://172.22.173.39:8080/profile-exchange/$userId');
+    final url = Uri.parse(
+      'http://172.27.112.167:8080/profile-exchange/$userId',
+    );
 
     try {
       final response = await http.get(
@@ -227,7 +229,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     if (confirmed != true) return;
 
     final url = Uri.parse(
-      'http://172.22.173.39:8080/delete_profile/$profileId',
+      'http://172.27.112.167:8080/delete_profile/$profileId',
     );
 
     try {
@@ -260,7 +262,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
     }
 
     final url = Uri.parse(
-      'http://172.22.173.39:8080/purchase_profile',
+      'http://172.27.112.167:8080/purchase_profile',
     ); // เปลี่ยน URL
 
     final body = jsonEncode({
@@ -506,6 +508,8 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
                                                         profile['coins'],
                                                         profile['image'],
                                                       );
+                                                      print(profile['coins']);
+                                                      print(profile['user_ID']);
                                                     },
                                                     style: ElevatedButton.styleFrom(
                                                       backgroundColor: Colors
@@ -749,7 +753,7 @@ class _ProfileShopAdminPageState extends State<ProfileShopAdminPage> {
   Future<void> _deleteProfile(int profileId) async {
     try {
       final url = Uri.parse(
-        'http://172.22.173.39:8080/delete_profile/$profileId',
+        'http://172.27.112.167:8080/delete_profile/$profileId',
       );
 
       final response = await http.delete(url);

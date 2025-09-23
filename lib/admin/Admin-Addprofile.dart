@@ -501,7 +501,7 @@ class _AddProfilePageState extends State<AddProfilePage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://172.22.173.39:8080/Add/profiles'),
+        Uri.parse('http://172.27.112.167:8080/Add/profiles'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'profileName': _profileNameController.text,

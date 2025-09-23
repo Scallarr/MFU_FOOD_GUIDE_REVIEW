@@ -742,7 +742,7 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
 
 
 
-  app.get('/user-profile/:id',(req, res) => {
+app.get('/user-profile/:id', (req, res) => {
   const userId = parseInt(req.params.id, 10);
 
   if (!userId) {
@@ -750,24 +750,33 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
   }
 
   const sql = `
-    SELECT 
-      u.User_ID,
-      u.fullname,
-      u.username,
-      u.email,
-      u.google_id,
-      u.bio,
-      u.total_likes,
-      u.total_reviews,
-      u.coins,
-      u.role,
-      u.status,
-      p.picture_url
-    FROM User u
-    LEFT JOIN user_Profile_Picture p
-      ON u.User_ID = p.User_ID AND p.is_active = 1
-    WHERE u.User_ID = ?
-    LIMIT 1
+   SELECT 
+  u.User_ID,
+  ANY_VALUE(u.fullname) AS fullname,
+  ANY_VALUE(u.username) AS username,
+  ANY_VALUE(u.email) AS email,
+  ANY_VALUE(u.google_id) AS google_id,
+  ANY_VALUE(u.bio) AS bio,
+  ANY_VALUE(u.total_likes) AS total_likes,
+  ANY_VALUE(u.total_reviews) AS total_reviews,
+  ANY_VALUE(u.coins) AS coins,
+  ANY_VALUE(u.role) AS role,
+  ANY_VALUE(u.status) AS status,
+  ANY_VALUE(p.picture_url) AS picture_url,
+  r.Restaurant_ID,
+  r.restaurant_name,
+  r.location,
+  COUNT(rv.Review_ID) AS review_count
+FROM User u
+LEFT JOIN user_Profile_Picture p
+  ON u.User_ID = p.User_ID AND p.is_active = 1
+LEFT JOIN Review rv
+  ON u.User_ID = rv.User_ID
+LEFT JOIN Restaurant r
+  ON rv.Restaurant_ID = r.Restaurant_ID
+WHERE u.User_ID = ? and  rv.message_status='Posted'
+GROUP BY r.Restaurant_ID
+
   `;
 
   db.query(sql, [userId], (error, results) => {
@@ -777,14 +786,35 @@ app.post('/user-profile-pictures/set-active', (req, res) => {
     }
 
     if (results.length > 0) {
-      res.json(results[0]);
-      console.log(results);
+      // แยก user info กับ reviews
+      const userInfo = {
+        User_ID: results[0].User_ID,
+        fullname: results[0].fullname,
+        username: results[0].username,
+        email: results[0].email,
+        google_id: results[0].google_id,
+        bio: results[0].bio,
+        total_likes: results[0].total_likes,
+        total_reviews: results[0].total_reviews,
+        coins: results[0].coins,
+        role: results[0].role,
+        status: results[0].status,
+        picture_url: results[0].picture_url,
+        reviews: results.map(r => ({
+          Restaurant_ID: r.Restaurant_ID,
+          restaurant_name: r.restaurant_name,
+          location: r.location,
+          review_count: r.review_count
+        }))
+      };
+
+      res.json(userInfo);
     } else {
       res.status(404).json({ error: 'User not found' });
     }
   });
-  
 });
+
 
 app.get('/restaurant/:id', checkUserStatus, (req, res) => {
   const restaurantId = parseInt(req.params.id);
@@ -2494,7 +2524,7 @@ app.post('/purchase_profile', (req, res) => {
 
       // 1. ลบ coins จาก user
       connection.query(
-        'UPDATE User SET coins = coins - ? WHERE User_ID = ? AND coins >= ?',
+        'UPDATE User SET coins = coins - ? WHERE User_ID =   AND coins >= ?',
         [coins_spent, user_id, coins_spent],
         (err, result) => {
           if (err || result.affectedRows === 0) {
@@ -2613,7 +2643,7 @@ async function checkCommentAI(comment) {
     const profanityScore = scores.PROFANITY ? scores.PROFANITY.summaryScore.value : 0;
 
     // ตั้งเกณฑ์คะแนนที่พิจารณาว่า "ไม่เหมาะสม"
-    const threshold = 0.4;
+    const threshold = 0.3;
 
     console.log('Toxicity:', toxicityScore, 'Profanity:', profanityScore);
 
@@ -5391,8 +5421,8 @@ async function checkAndAutoUnban() {
 }
 
 // กำหนด schedule ด้วย node-cron
-// ตรวจสอบทุก30 วิ)
-cron.schedule('*/60 * * * * *', async () => {
+// ตรวจสอบทุก30 วิ)*/60 * * * * *  
+cron.schedule('00 00  * * *', async () => {
   console.log('เริ่มการตรวจสอบปลดแบนอัตโนมัติตาม schedule...');
   await checkAndAutoUnban();
 }, {
@@ -5746,10 +5776,171 @@ app.get('/Usermanagement/users/Ban-Admin', (req, res) => {
   });
 });
 
+// ------------------- Categories -------------------
+app.get('/restaurants/categories', async (req, res) => {
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+    const [rows] = await connection.execute("SELECT DISTINCT category FROM Restaurant");
+    res.json(rows.map(r => r.category)); // ["Main_dish", "Snack", "Drinks"]
+  } catch (err) {
+    console.error("DB Error (categories):", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// ------------------- Locations -------------------
+app.get('/restaurants/locations', async (req, res) => {
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+    const [rows] = await connection.execute("SELECT DISTINCT location FROM Restaurant");
+    res.json(rows.map(r => r.location));
+  } catch (err) {
+    console.error("DB Error (locations):", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// ------------------- Search Restaurants -------------------
+// รองรับ category, location และ "All" หรือ null
+app.get('/restaurants/search', async (req, res) => {
+  let { category, location, limit, offset } = req.query;
+
+  category = !category || category.toLowerCase() === 'null' ? 'All' : category;
+  location = !location || location.toLowerCase() === 'null' ? 'All' : location;
+  limit = limit ? parseInt(limit) : 50;
+  offset = offset ? parseInt(offset) : 0;
+
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+
+    let sql = `SELECT Restaurant_ID, restaurant_name, location, operating_hours, phone_number, rating_overall_avg 
+               FROM Restaurant`;
+    const params = [];
+
+    const conditions = [];
+    if (category !== 'All') conditions.push("category = ?");
+    if (location !== 'All') conditions.push("location = ?");
+    if (conditions.length > 0) {
+      sql += " WHERE " + conditions.join(" AND ");
+      if (category !== 'All') params.push(category);
+      if (location !== 'All') params.push(location);
+    }
+
+    // LIMIT / OFFSET ใส่ตรง ๆ
+    sql += ` LIMIT ${limit} OFFSET ${offset}`;
+
+    const [rows] = await connection.execute(sql, params);
+    res.json(rows);
+  } catch (err) {
+    console.error("DB Error (search):", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
+  }
+});
 
 
 
+// // ดึงร้านตาม filter + location
+// app.get('/restaurants/filter', async (req, res) => {
+//   const { type, value, location } = req.query;
+//   console.log(req.body);
+//   let sql = `SELECT * FROM Restaurant WHERE ${type} = ?`;
+//   let params = [value];
 
+//   if (location && location !== 'ALL') {
+//     sql += " AND location = ?";
+//     params.push(location);
+//   }
+
+//   try {
+//     const connection= await db.promise().getConnection();
+//    await connection.beginTransaction();
+//     const [rows] = await connection.query(sql, params);
+//     res.json(rows);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+app.post("/ai-query", async (req, res) => {
+  const { question } = req.body;
+
+  let connection;
+  try {
+    connection = await db.promise().getConnection();
+
+    // 1️⃣ วิเคราะห์คำถามเบื้องต้น -> filter จากฐานข้อมูล
+    let category = null;
+    let location = null;
+
+    if (question.toLowerCase().includes("ไทย")) category = "THAI";
+    if (question.toLowerCase().includes("lamduan")) location = "LAMDUAN";
+
+    // 2️⃣ ดึงข้อมูลจาก DB
+    let sql = `
+      SELECT Restaurant_ID, restaurant_name, location, category, cuisine_by_nation, service_type
+      FROM Restaurant
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (category && category !== "All") {
+      sql += " AND cuisine_by_nation = ?";
+      params.push(category);
+    }
+    if (location && location !== "All") {
+      sql += " AND location = ?";
+      params.push(location);
+    }
+
+    sql += " LIMIT 10"; // ลดจำนวน rows เพื่อไม่ให้ prompt ใหญ่เกินไป
+    const [rows] = await connection.execute(sql, params);
+
+    // 3️⃣ สร้าง prompt สำหรับ AI
+    const prompt = `คุณคือผู้ช่วยตอบคำถามเกี่ยวกับร้านอาหารในฐานข้อมูล ให้ตอบเป็นภาษาธรรมชาติ
+ข้อมูลร้านอาหาร: ${JSON.stringify(rows)}
+คำถามผู้ใช้: "${question}"
+ตอบให้สั้น กระชับ และเป็นมิตร`;
+
+    const apiKey = "jg9xhX0cMSv6eZxA9VWLYed39ADtKjenJuWyIYgs"; // เปลี่ยนเป็น key ของคุณ
+
+    // 4️⃣ ส่งไป Cohere
+    const response = await axios.post(
+      "https://api.cohere.com/v1/chat",
+      {
+        model: "command-a-03-2025",
+        message: prompt
+      },
+      {
+        headers: { 
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    // 5️⃣ ส่งคำตอบกลับ Flutter
+    if (response.data && response.data.output && response.data.output.length > 0) {
+      res.json({ answer: response.data.output[0] });
+    } else {
+      res.json({ answer: "ขอโทษครับ ไม่พบคำตอบสำหรับคำถามนี้" });
+    }
+
+  } catch (err) {
+    console.error("AI Query Error:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
+  }
+});
 
 
   // ✅ Start Server

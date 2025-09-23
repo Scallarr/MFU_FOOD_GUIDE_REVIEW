@@ -85,7 +85,7 @@ class Restaurant {
 Future<String?> fetchProfilePicture(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
+      Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -105,7 +105,7 @@ Future<String?> fetchProfilePicture(int userId) async {
 Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
+      Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
     );
 
     if (response.statusCode == 200) {
@@ -124,7 +124,7 @@ Future<Map<String, dynamic>?> fetchUserProfile(int userId) async {
 Future<List<Restaurant>> fetchRestaurants() async {
   try {
     final response = await http.get(
-      Uri.parse('http://172.22.173.39:8080/restaurants'),
+      Uri.parse('http://172.27.112.167:8080/restaurants'),
     );
 
     if (response.statusCode == 200) {
@@ -147,7 +147,7 @@ class userChatbot2Screen extends StatefulWidget {
 class _ChatbotScreenState extends State<userChatbot2Screen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
   String? profileImageUrl;
@@ -157,6 +157,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
   late Animation<double> _typingAnimation;
   FocusNode _focusNode = FocusNode();
   bool _showAppBar = true;
+  bool _isBotTyping = false; // เพิ่มตัวแปรนี้
   Map<String, dynamic>? userProfile;
   String _currentModel = 'Nexus'; // โมเดลเริ่มต้น
   bool _showModelSelector = false;
@@ -230,6 +231,51 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
     }
   }
 
+  bool awaitingCategoryChoice = false;
+  bool awaitingLocationChoice = false;
+  String? selectedCategory;
+
+  // ✅ fetch categories
+  Future<List<String>> fetchCategories() async {
+    final res = await http.get(
+      Uri.parse("http://172.27.112.167:8080/restaurants/categories"),
+    );
+    if (res.statusCode == 200) {
+      return List<String>.from(json.decode(res.body));
+    } else {
+      throw Exception("Failed to load categories");
+    }
+  }
+
+  // ✅ fetch locations
+  Future<List<String>> fetchLocations() async {
+    final res = await http.get(
+      Uri.parse("http://172.27.112.167:8080/restaurants/locations"),
+    );
+    if (res.statusCode == 200) {
+      return List<String>.from(json.decode(res.body));
+    } else {
+      throw Exception("Failed to load locations");
+    }
+  }
+
+  // ✅ fetch restaurants by category + location
+  Future<List<dynamic>> fetchRestaurants2(
+    String? category,
+    String? location,
+  ) async {
+    final res = await http.get(
+      Uri.parse(
+        "http://172.27.112.167:8080/restaurants/search?category=$category&location=$location",
+      ),
+    );
+    if (res.statusCode == 200) {
+      return json.decode(res.body);
+    } else {
+      throw Exception("Failed to load restaurants");
+    }
+  }
+
   Future<void> loadUserIdAndFetchProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final storedUserId = prefs.getInt('user_id');
@@ -252,9 +298,14 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
   void _addWelcomeMessage() {
     final welcomeMessage =
         "👋 Hello!\n"
-        "I'm Nexus, your assistant in the MFU Food Guide & Review app 🥘✨\n\n"
+        "I'm Nexus, your assistant in the MFU Food Guide & Review app \n\n"
         "I can help you with restaurants, reviews, profiles, coins, "
         "and other app services 💡\n"
+        "Ask me anytime! \n\n "
+        "💬 You can type commands like:\n"
+        "1️⃣ User Profile Information \n"
+        "2️⃣ Restaurants  Information \n"
+        "3️⃣ Threads  \n\n"
         "Ask me anytime!";
 
     setState(() {
@@ -262,6 +313,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
         "role": "bot",
         "content": welcomeMessage,
         "timestamp": DateTime.now().toString(),
+        "shouldAnimate": false, // เพิ่ม field นี้
       });
     });
 
@@ -271,382 +323,477 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
     });
   }
 
-  // ฟังก์ชันสร้างคำตอบเกี่ยวกับร้านอาหาร
-  String _generateRestaurantResponse(String userMessage) {
-    userMessage = userMessage.toLowerCase();
-
-    // ค้นหาร้านอาหารโดยชื่อ
-    if (userMessage.contains('ชื่อ') || userMessage.contains('name')) {
-      final regex = RegExp(r'ชื่อ(.+)|name(.+)');
-      final match = regex.firstMatch(userMessage);
-      if (match != null) {
-        final searchTerm = (match.group(1) ?? match.group(2))?.trim();
-        if (searchTerm != null && searchTerm.isNotEmpty) {
-          final foundRestaurants = allRestaurants
-              .where(
-                (restaurant) => restaurant.restaurantName
-                    .toLowerCase()
-                    .contains(searchTerm),
-              )
-              .toList();
-
-          if (foundRestaurants.isNotEmpty) {
-            if (foundRestaurants.length == 1) {
-              final restaurant = foundRestaurants.first;
-              return "🍽️ พบร้านอาหาร: ${restaurant.restaurantName}\n"
-                  "📍 ตำแหน่ง: ${restaurant.location}\n"
-                  "⭐ คะแนนรวม: ${restaurant.ratingOverallAvg?.toStringAsFixed(1) ?? 'N/A'}\n"
-                  "🕒 เวลาเปิด: ${restaurant.operatingHours ?? 'ไม่ระบุ'}\n"
-                  "📞 โทร: ${restaurant.phoneNumber ?? 'ไม่ระบุ'}\n"
-                  "📝 มีรีวิวทั้งหมด: ${restaurant.totalReviewsCount} รีวิว";
-            } else {
-              String response = "🍽️ พบร้านอาหารที่ตรงกับ \"$searchTerm\":\n\n";
-              for (var restaurant in foundRestaurants.take(5)) {
-                response +=
-                    "• ${restaurant.restaurantName} (⭐ ${restaurant.ratingOverallAvg?.toStringAsFixed(1) ?? 'N/A'})\n";
-              }
-              if (foundRestaurants.length > 5) {
-                response += "\nและอีก ${foundRestaurants.length - 5} ร้าน...";
-              }
-              return response;
-            }
-          } else {
-            return "ขออภัย ไม่พบร้านอาหารที่ชื่อ中包含 \"$searchTerm\"";
-          }
-        }
-      }
-    }
-
-    // แนะนำร้านอาหารที่มีคะแนนสูง
-    if (userMessage.contains('ดี') ||
-        userMessage.contains('recommend') ||
-        userMessage.contains('แนะนำ') ||
-        userMessage.contains('สูง')) {
-      final highRatedRestaurants =
-          allRestaurants.where((r) => r.ratingOverallAvg != null).toList()
-            ..sort(
-              (a, b) =>
-                  (b.ratingOverallAvg ?? 0).compareTo(a.ratingOverallAvg ?? 0),
-            );
-
-      if (highRatedRestaurants.isNotEmpty) {
-        String response = "🏆 ร้านอาหารที่มีคะแนนสูงสุด:\n\n";
-        for (var i = 0; i < min(3, highRatedRestaurants.length); i++) {
-          final restaurant = highRatedRestaurants[i];
-          response +=
-              "${i + 1}. ${restaurant.restaurantName} - ⭐ ${restaurant.ratingOverallAvg?.toStringAsFixed(1)}\n"
-              "   📍 ${restaurant.location}\n\n";
-        }
-        return response;
-      }
-    }
-
-    // นับจำนวนร้านอาหารทั้งหมด
-    if (userMessage.contains('กี่ร้าน') ||
-        userMessage.contains('ทั้งหมด') ||
-        userMessage.contains('total')) {
-      return "🍽️ มีร้านอาหารทั้งหมด ${allRestaurants.length} ร้านในระบบ";
-    }
-
-    // แสดงร้านอาหารทั้งหมด (จำกัดจำนวน)
-    if
-    // (userMessage.contains('ทั้งหมด') ||
-    (userMessage.contains('all') || userMessage.contains('list')) {
-      String response = "📋 รายการร้านอาหารทั้งหมด (แสดง 10 ร้านแรก):\n\n";
-      for (var i = 0; i < min(10, allRestaurants.length); i++) {
-        final restaurant = allRestaurants[i];
-        response +=
-            "• ${restaurant.restaurantName} (⭐ ${restaurant.ratingOverallAvg?.toStringAsFixed(1) ?? 'N/A'})\n";
-      }
-      if (allRestaurants.length > 10) {
-        response += "\nและอีก ${allRestaurants.length - 10} ร้าน...";
-      }
-      return response;
-    }
-
-    // คำตอบเริ่มต้นเกี่ยวกับร้านอาหาร
-    return "🍽️ ฉันสามารถช่วยคุณเกี่ยวกับร้านอาหารได้!\n\n"
-        "คุณสามารถถามฉันเกี่ยวกับ:\n"
-        "• ร้านอาหารที่มีคะแนนสูง\n"
-        "• ร้านอาหารตามชื่อ\n"
-        "• จำนวนร้านอาหารทั้งหมด\n"
-        "• รายการร้านอาหาร\n\n"
-        "ลองถามเช่น:\n"
-        "- \"ร้านอาหารที่มีคะแนนสูงสุด\"\n"
-        "- \"ร้านชื่อว่า [ชื่อร้าน]\"\n"
-        "- \"มีร้านอาหารทั้งหมดกี่ร้าน\"";
-  }
+  bool awaitingUserChoice = false; // อยู่ระดับ class
+  bool awaitingRestaurantChoice = false; // ระดับ class
+  // สมมติ awaitingUserChoice, awaitingRestaurantChoice อยู่ระดับ class
+  // และตัวแปรอื่นๆ เช่น _messages, _isLoading, _isBotTyping, userProfile มีอยู่แล้ว
 
   void sendMessage() async {
-    final message = _controller.text.trim();
-    if (message.isEmpty) return;
+    final raw = _controller.text;
+    final message = raw.trim();
+    if (message.isEmpty || _isBotTyping) return;
 
+    // add user message
     setState(() {
       _messages.add({
         "role": "user",
         "content": message,
         "timestamp": DateTime.now().toString(),
+        "shouldAnimate": false,
       });
       _controller.clear();
+      _isBotTyping = true;
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      scrollToBottom();
-    });
+    final msgLower = message.toLowerCase();
 
-    // ตรวจสอบคำถามเกี่ยวกับ coins
-    if (message.toLowerCase().contains('coin') ||
-        message.toLowerCase().contains('coins') ||
-        message.toLowerCase().contains('เหรียญ') ||
-        message.toLowerCase().contains('คะแนน')) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // รอสักครู่เพื่อแสดงการโหลด
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (userProfile != null) {
-        final coins = userProfile!['coins'] ?? 0;
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": "You have $coins coins",
-            "timestamp": DateTime.now().toString(),
-          });
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            scrollToBottom();
-          });
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": "ไม่สามารถโหลดข้อมูล coins ได้",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          scrollToBottom();
-        });
-      }
+    // 1) ถ้ากำลังรอ User Profile choice -> handle นั่นก่อน (priority)
+    if (awaitingUserChoice) {
+      await _handleUserProfileChoice(msgLower);
+      setState(() => _isBotTyping = false);
+      return;
     }
-    // ตรวจสอบคำถามเกี่ยวกับร้านอาหาร
-    else if (message.toLowerCase().contains('restaurant') ||
-        message.toLowerCase().contains('ร้าน') ||
-        message.toLowerCase().contains('อาหาร') ||
-        message.toLowerCase().contains('กิน') ||
-        message.toLowerCase().contains('recommend') ||
-        message.toLowerCase().contains('แนะนำ')) {
-      setState(() {
-        _isLoading = true;
-      });
 
-      // รอสักครู่เพื่อแสดงการโหลด
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (allRestaurants.isNotEmpty) {
-        String response = _generateRestaurantResponse(message);
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": response,
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": "ขออภัย ยังไม่สามารถโหลดข้อมูลร้านอาหารได้ในขณะนี้",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-      }
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        scrollToBottom();
-      });
-    } else if (message.toLowerCase().contains('username') ||
-        message.toLowerCase() == 'user' ||
-        message.toLowerCase().contains('my username') ||
-        message.toLowerCase().contains('ชื่อผู้ใช้')) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // รอสักครู่เพื่อแสดงการโหลด
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (userProfile != null) {
-        final username = userProfile!['username'] ?? 0;
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": " Hello, $username ",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          scrollToBottom();
-        });
-      } else {
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": "ไม่สามารถโหลดข้อมูล coins ได้",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-      }
-    } else if (message.toLowerCase().contains('mail') ||
-        message.toLowerCase() == 'email' ||
-        message.toLowerCase().contains('gmail') ||
-        message.toLowerCase().contains('เมล') ||
-        message.toLowerCase().contains('อีเมล')) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // รอสักครู่เพื่อแสดงการโหลด
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (userProfile != null) {
-        final username = userProfile!['email'] ?? 0;
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": " Your Email is, $username ",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          scrollToBottom();
-        });
-      } else {
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": "ไม่สามารถโหลดข้อมูล coins ได้",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-      }
-    } else if (message.toLowerCase().contains('nexus') ||
-        message.toLowerCase() == 'ทั่วไป') {
-      setState(() {
-        _messages.add({
-          "role": "bot",
-          "content": "Nexus model is Use Now",
-          "timestamp": DateTime.now().toString(),
-        });
-        _isLoading = false;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        scrollToBottom();
-      });
-    } else if (message.toLowerCase().contains('fullname') ||
-        message.toLowerCase().contains('full name') ||
-        message.toLowerCase().contains('ชื่อจริง') ||
-        message.toLowerCase().contains('นามสกุล') ||
-        message.toLowerCase().contains('ชื่อ-นามสกุล')) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      // รอสักครู่เพื่อแสดงการโหลด
-      await Future.delayed(Duration(milliseconds: 500));
-
-      if (userProfile != null) {
-        final fullname = userProfile!['fullname'] ?? 0;
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": " Your Fullname is, $fullname ",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          scrollToBottom();
-        });
-      } else {
-        setState(() {
-          _messages.add({
-            "role": "bot",
-            "content": "ไม่สามารถโหลดข้อมูล coins ได้",
-            "timestamp": DateTime.now().toString(),
-          });
-          _isLoading = false;
-        });
-      }
+    // 2) ถ้ากำลังรอ Restaurant choice -> handle นั่นก่อน
+    if (awaitingRestaurantChoice) {
+      await _handleRestaurantChoice(msgLower);
+      setState(() => _isBotTyping = false);
+      return;
     }
-    // ตรวจสอบว่าผู้ใช้พิมพ์คำว่า "dashboard" หรือไม่
-    else if (message.toLowerCase().contains('dashboard') ||
-        message.toLowerCase().contains('แดชบอร์ด') ||
-        (message.toLowerCase().contains('ภาพรวม'))) {
-      // แสดงข้อความตอบรับก่อนนำทาง
-      setState(() {
-        _messages.add({
-          "role": "bot",
-          "content": "Redirect To Dashboard...",
-          "timestamp": DateTime.now().toString(),
-        });
-      });
 
-      // รอสักครู่แล้วนำทางไปยังหน้า Dashboard
-      Future.delayed(Duration(milliseconds: 1500), () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => Dashboard()),
-        );
-      });
-    } else {
-      // สำหรับข้อความอื่นๆ ให้แสดงข้อความตอบกลับคงที่
-      setState(() {
-        _isLoading = true;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        scrollToBottom();
-      });
-      // จำลองการโหลดข้อมูล
-      await Future.delayed(Duration(seconds: 1));
-
+    // 3) ถ้าไม่มี awaiting flags ให้ตรวจว่าผู้ใช้เรียกเมนูไหน
+    if (RegExp(r'^1$').hasMatch(message) ||
+        msgLower == 'profile' ||
+        msgLower == 'user profile' ||
+        msgLower.contains('user profile')) {
+      // show user profile menu
       setState(() {
         _messages.add({
           "role": "bot",
           "content":
-              "⚠️ Your command is not valid.\n"
-              "You can ask about:\n"
-              "- Coins / Points\n"
-              "- Username\n"
-              "- Email\n"
-              "- Fullname\n"
-              "- Restaurants / Food recommendations\n"
-              "- Dashboard / Overview\n"
-              "\n"
-              "💡 For other questions outside your account or the app, please use the Atlas model.",
-
+              "📄 User Information Commands:\n\n"
+              "1️⃣ View Full Name\n"
+              "2️⃣ View Username\n"
+              "3️⃣ View Email\n"
+              "4️⃣ View Dashboard\n"
+              "5️⃣ View Total Reviews\n"
+              "6️⃣ View Coins\n"
+              "7️⃣ View Role\n"
+              "8️⃣ Exit\n\n"
+              "Type the number or name of the information you want to see.",
           "timestamp": DateTime.now().toString(),
+          "shouldAnimate": true,
         });
+        awaitingUserChoice = true;
         _isLoading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        scrollToBottom();
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+      setState(() => _isBotTyping = false);
+      return;
     }
+
+    if (RegExp(r'^2$').hasMatch(message) ||
+        msgLower == 'restaurant' ||
+        msgLower == 'restaurants' ||
+        msgLower.contains('restaurant')) {
+      // show restaurant menu
+      setState(() {
+        _messages.add({
+          "role": "bot",
+          "content":
+              "🍽 Restaurant Information Commands:\n\n"
+              "1️⃣ Category\n"
+              "2️⃣ Cuisine by Nation\n"
+              "3️⃣ Diet Type\n"
+              "4️⃣ Restaurant Type\n"
+              "5️⃣ Service Type\n"
+              "6️⃣ Exit\n\n"
+              "Type the number or name of the information you want to see.",
+          "timestamp": DateTime.now().toString(),
+          "shouldAnimate": true,
+        });
+        awaitingRestaurantChoice = true;
+        _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+      setState(() => _isBotTyping = false);
+      return;
+    }
+
+    // 4) default fallback
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.delayed(Duration(milliseconds: 800));
+    setState(() {
+      _messages.add({
+        "role": "bot",
+        "content":
+            "⚠️ Your command is not valid.\n\n"
+            "💬 You can type commands like:\n"
+            "1️⃣ User Profile\n"
+            "2️⃣ Restaurants\n"
+            "3️⃣ Threads\n"
+            "4️⃣ Dashboard Overview\n\n"
+            "💡 For other questions outside your account or the app, please use the Atlas model.",
+        "timestamp": DateTime.now().toString(),
+        "shouldAnimate": false,
+      });
+      _isLoading = false;
+      _isBotTyping = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
   }
+
+  // ----------------- helper: user profile choices -----------------
+  Future<void> _handleUserProfileChoice(String option) async {
+    setState(() => _isLoading = true);
+    await Future.delayed(Duration(milliseconds: 400));
+
+    String content = '';
+    final opt = option.trim();
+
+    switch (option) {
+      case "1":
+      case "fullname":
+      case "full":
+        content =
+            "📝 Your Fullname is\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️ ${userProfile!['fullname'] ?? 'Not set'}\n"
+            "+ + + + + + + + + + + + + + + + + +";
+        break;
+
+      case "2":
+      case "username":
+      case "user":
+        content =
+            "📝 Your Username is\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️ ${userProfile!['username'] ?? 'Not set'}\n"
+            "+ + + + + + + + + + + + + + + + + +";
+        break;
+
+      case "3":
+      case "email":
+        content =
+            "📝 Your Email That Registered is\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "${userProfile!['email'] ?? 'Not set'}\n"
+            "+ + + + + + + + + + + + + + + + + +";
+        break;
+
+      case "4":
+        content = "Redirect To Dashboard...";
+
+        // setState(() {
+        //   _messages.add({
+        //     "role": "bot",
+        //     "content": "Redirect To Dashboard...",
+        //     "timestamp": DateTime.now().toString(),
+        //   });
+        // });
+
+        // รอสักครู่แล้วนำทางไปยังหน้า Dashboard
+        Future.delayed(Duration(milliseconds: 1000), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => Dashboard()),
+          );
+        });
+        break;
+
+      case "5":
+      case "total reviews":
+        int totalReviews = userProfile!['total_reviews'] ?? 0;
+        final reviews = userProfile!['reviews'] as List<dynamic>? ?? [];
+
+        String reviewSummary = "";
+        if (reviews.isNotEmpty) {
+          for (var r in reviews) {
+            reviewSummary +=
+                """
+━━━━━━━━━━━━━━━━━━━━
+ ${r['restaurant_name']}
+ Location: ${r['location']}
+ Reviews: ${r['review_count']}
+""";
+          }
+          reviewSummary += "━━━━━━━━━━━━━━━━━━━━";
+        } else {
+          reviewSummary = "You haven't reviewed any restaurants yet.";
+        }
+
+        content =
+            "📝 Review Summary \n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️ $totalReviews reviews\n"
+            "+ + + + + + + + + + + + + + + + + + \n\n"
+            "$reviewSummary";
+        break;
+
+      case "6":
+      case "coins":
+        content =
+            "💰 Coins \n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️ ${userProfile!['coins'] ?? 0} coins\n"
+            "+ + + + + + + + + + + + + + + + + +";
+        break;
+
+      case "7":
+      case "role":
+        content =
+            "🎭 Role\n"
+            "+ + + + + + + + + + + + + + + + + + \n"
+            "➡️ ${userProfile!['role'] ?? 'Not set'}\n"
+            "+ + + + + + + + + + + + + + + + + +";
+        break;
+
+      case "8":
+      case "exit":
+        content =
+            "💬 You can type commands like:\n"
+            "1️⃣ User Profile \n"
+            "2️⃣ Restaurants \n"
+            "3️⃣ Threads \n\n"
+            "Ask me anytime!";
+        awaitingUserChoice = false;
+        break;
+
+      default:
+        content = "⚠️ Invalid option. Please type 1-8 or the command name.";
+    }
+
+    setState(() {
+      _messages.add({
+        "role": "bot",
+        "content":
+            content +
+            (awaitingUserChoice
+                ? "\n\n📄 User Information Commands:\n1️⃣ View Full Name\n2️⃣ View Username\n3️⃣ View Email\n4️⃣ View Dashboard\n5️⃣ View Total Reviews\n6️⃣ View Coins\n7️⃣ View Role\n8️⃣ Exit\n\nType the number or name of the information you want to see."
+                : ""),
+        "timestamp": DateTime.now().toString(),
+        "shouldAnimate": true,
+      });
+      _isLoading = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+  }
+
+  Future<void> _handleRestaurantChoice(String option) async {
+    setState(() => _isLoading = true);
+    await Future.delayed(Duration(milliseconds: 400));
+
+    List<String> emojis = [
+      "1️⃣",
+      "2️⃣",
+      "3️⃣",
+      "4️⃣",
+      "5️⃣",
+      "6️⃣",
+      "7️⃣",
+      "8️⃣",
+      "9️⃣",
+      "🔟",
+    ];
+
+    String content = '';
+    final opt = option.trim();
+
+    // ------------------ Category Selection ------------------
+    if (awaitingCategoryChoice) {
+      final categories = await fetchCategories();
+      List<String> categoryOptions = ["All", ...categories]; // เพิ่ม All
+
+      String? chosenCategory;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      }
+
+      if (index != null && index >= 0 && index < categoryOptions.length) {
+        chosenCategory = categoryOptions[index];
+      } else if (categoryOptions.contains(opt)) {
+        chosenCategory = opt;
+      }
+
+      if (chosenCategory != null) {
+        selectedCategory = chosenCategory == "All" ? null : chosenCategory;
+
+        final locations = await fetchLocations();
+        List<String> locationOptions = ["All", ...locations]; // เพิ่ม All
+        content =
+            "📍 Locations:\n\n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n") +
+            "\n\nPlease type the location name, number, or emoji.";
+        awaitingCategoryChoice = false;
+        awaitingLocationChoice = true;
+      } else {
+        content =
+            "⚠️ Invalid category. Please choose a valid option:\n\n" +
+            categoryOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n");
+      }
+    }
+    // ------------------ Location Selection ------------------
+    else if (awaitingLocationChoice) {
+      final locations = await fetchLocations();
+      List<String> locationOptions = ["All", ...locations]; // เพิ่ม All
+      String? chosenLocation;
+      int? index;
+
+      if (emojis.contains(opt)) {
+        index = emojis.indexOf(opt);
+      } else if (int.tryParse(opt) != null) {
+        index = int.parse(opt) - 1;
+      }
+
+      if (index != null && index >= 0 && index < locationOptions.length) {
+        chosenLocation = locationOptions[index];
+      } else if (locationOptions.contains(opt)) {
+        chosenLocation = opt;
+      }
+
+      if (chosenLocation != null) {
+        final restaurants = await fetchRestaurants2(
+          selectedCategory, // null = All category
+          chosenLocation == "All"
+              ? null
+              : chosenLocation, // null = All locations
+        );
+
+        if (restaurants.isNotEmpty) {
+          content =
+              "🍽 Restaurants in ${chosenLocation ?? 'All Locations'} (${selectedCategory ?? 'All Categories'}):\n\n";
+          for (var r in restaurants) {
+            content += "━━━━━━━━━━━━━━━━━━━━\n";
+            content += "🏠 ${r['restaurant_name']}\n";
+            content += "Location : ${r['location']}\n";
+            content +=
+                "Overall Rating : ${r['rating_overall_avg'] != null ? double.tryParse(r['rating_overall_avg'].toString())?.toStringAsFixed(1) ?? 'N/A' : 'N/A'}\n";
+            content += " ${r['operating_hours'] ?? 'Not specified'}\n";
+            content += "📞 ${r['phone_number'] ?? 'Not provided'}\n";
+          }
+          content += "━━━━━━━━━━━━━━━━━━━━";
+          content += "🍽 Restaurant Information Commands:\n\n";
+          content += "1️⃣ Category\n";
+          content += "2️⃣ Cuisine by Nation\n";
+          content += "3️⃣ Diet Type\n";
+          content += "4️⃣ Restaurant Type\n";
+          content += "5️⃣ Service Type\n";
+          content += "6️⃣ Exit\n\n";
+          content +=
+              "Type the number or name of the information you want to see.";
+        } else {
+          content +=
+              "⚠️ No restaurants found for ${selectedCategory ?? 'All Categories'} at ${chosenLocation ?? 'All Locations'}.";
+          content += "━━━━━━━━━━━━━━━━━━━━";
+          content += "🍽 Restaurant Information Commands:\n\n";
+          content += "1️⃣ Category\n";
+          content += "2️⃣ Cuisine by Nation\n";
+          content += "3️⃣ Diet Type\n";
+          content += "4️⃣ Restaurant Type\n";
+          content += "5️⃣ Service Type\n";
+          content += "6️⃣ Exit\n\n";
+          content +=
+              "Type the number or name of the information you want to see.";
+        }
+
+        awaitingLocationChoice = false;
+        selectedCategory = null;
+      } else {
+        content =
+            "⚠️ Invalid location. Please choose a valid option:\n\n" +
+            locationOptions
+                .asMap()
+                .entries
+                .map((e) => "${emojis[e.key]} ${e.value}")
+                .join("\n");
+      }
+    }
+    // ------------------ Menu Options ------------------
+    else if (RegExp(r'^1$').hasMatch(opt) ||
+        opt.toLowerCase().contains('category')) {
+      final categories = await fetchCategories();
+      content =
+          "📂 Categories:\n\n" +
+          ["All", ...categories]
+              .asMap()
+              .entries
+              .map((e) => "${emojis[e.key]} ${e.value}")
+              .join("\n") +
+          "\n\nPlease type the category name, number, or emoji you're interested in.";
+      awaitingCategoryChoice = true;
+    } else if (RegExp(r'^2$').hasMatch(opt) ||
+        opt.toLowerCase().contains('cuisine')) {
+      content =
+          "🌏 Cuisine by Nation:\n- Thai\n- Japanese\n- Italian\n- Chinese\n- Indian";
+    } else if (RegExp(r'^3$').hasMatch(opt) ||
+        opt.toLowerCase().contains('diet')) {
+      content =
+          "🥗 Diet Types:\n- Vegetarian\n- Vegan\n- Gluten-Free\n- Halal\n- Kosher";
+    } else if (RegExp(r'^4$').hasMatch(opt) ||
+        opt.toLowerCase().contains('restaurant type')) {
+      content =
+          "🏢 Restaurant Types:\n- Dine-in\n- Takeaway\n- Food Truck\n- Pop-up\n- Franchise";
+    } else if (RegExp(r'^5$').hasMatch(opt) ||
+        opt.toLowerCase().contains('service')) {
+      content =
+          "🛎 Service Types:\n- Self Service\n- Table Service\n- Delivery\n- Drive-Thru";
+    } else if (RegExp(r'^6$').hasMatch(opt) ||
+        opt.toLowerCase().contains('exit')) {
+      content =
+          "💬 You can type commands like:\n1️⃣ User Profile\n2️⃣ Restaurants\n3️⃣ Threads\n\nAsk me anytime!";
+      awaitingRestaurantChoice = false;
+    } else {
+      content =
+          "⚠️ Invalid option. Please type a valid number, emoji, or command name.";
+    }
+
+    setState(() {
+      _messages.add({
+        "role": "bot",
+        "content": content,
+        // (awaitingRestaurantChoice
+        //     ? "\n\n🍽 Restaurant Information Commands:\n1️⃣ Category\n2️⃣ Cuisine by Nation\n3️⃣ Diet Type\n4️⃣ Restaurant Type\n5️⃣ Service Type\n6️⃣ Exit\n\nType the number, emoji, or name of the information you want to see."
+        //     : ""),
+        "timestamp": DateTime.now().toString(),
+        "shouldAnimate": true,
+      });
+      _isLoading = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => scrollToBottom());
+  }
+
+  // else if (message.toLowerCase().contains('nexus') ||
+  //     message.toLowerCase() == 'ทั่วไป') {
+  //   setState(() {
+  //     _messages.add({
+  //       "role": "bot",
+  //       "content":
+  //           "Nexus model is Use Nowyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+  //       "timestamp": DateTime.now().toString(),
+  //       "shouldAnimate": true, // เพิ่ม field นี้
+  //     });
+  //     _isLoading = false;
+  //   });
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     scrollToBottom();
+  //   });
+  // }
+  // ตรวจสอบว่าผู้ใช้พิมพ์คำว่า "dashboard" หรือไม่
 
   @override
   Widget build(BuildContext context) {
@@ -794,49 +941,62 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
                     colors: [const Color(0xFFF7F4EF), const Color(0xFFF7F4EF)],
                   ),
                 ),
-                child: ListView(
+                child: SingleChildScrollView(
                   controller: _scrollController,
                   padding: EdgeInsets.only(bottom: 8, top: 16),
-                  children: [
-                    // แสดงการ์ดข้อมูลผู้ใช้หากมีข้อมูล
-                    if (userProfile != null)
-                      UserProfileCard(
-                        userProfile: userProfile!,
-                        profileImageUrl: profileImageUrl,
-                      ),
+                  child: Column(
+                    children: [
+                      // แสดงการ์ดข้อมูลผู้ใช้หากมีข้อมูล
+                      if (userProfile != null)
+                        UserProfileCard(
+                          userProfile: userProfile!,
+                          profileImageUrl: profileImageUrl,
+                        ),
 
-                    // แสดงข้อความแชท
-                    ..._messages.map((msg) {
-                      final isUser = msg['role'] == 'user';
-                      final content = msg['content'] ?? '';
-                      final timestamp = msg['timestamp'] ?? '';
+                      // แสดงข้อความแชท
+                      ..._messages.map((msg) {
+                        final isUser = msg['role'] == 'user';
+                        final content = msg['content'] ?? '';
+                        final timestamp = msg['timestamp'] ?? '';
+                        final shouldAnimate =
+                            (msg['shouldAnimate'] ?? false)
+                                as bool; // ดึงค่า shouldAnimate
 
-                      return ChatBubble(
-                        message: content,
-                        isUser: isUser,
-                        isError: content.toLowerCase().contains('error'),
-                        timestamp: timestamp,
-                        userId: userId,
-                        showModelSelector: _showModelSelector,
-                        onToggleModelSelector: (value) {
-                          setState(() {
-                            _showModelSelector = value;
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              scrollToBottom();
-                            }); // Update state from parent
-                          });
-                        },
-                        current_model: _currentModel,
-                      );
-                    }).toList(),
+                        return ChatBubble(
+                          message: content,
+                          isUser: isUser,
+                          onTextUpdate: scrollToBottom,
+                          onTypingComplete: () {
+                            setState(() {
+                              _isBotTyping = false; // ตั้งค่าให้พิมพ์เสร็จแล้ว
+                            });
+                          }, // เรียก scrollToBottom เมื่อข้อความอัพเดต
+                          isError: content.toLowerCase().contains('error'),
+                          timestamp: timestamp,
+                          userId: userId,
+                          showModelSelector: _showModelSelector,
+                          onToggleModelSelector: (value) {
+                            setState(() {
+                              _showModelSelector = value;
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                scrollToBottom();
+                              }); // Update state from parent
+                            });
+                          },
+                          current_model: _currentModel,
+                          shouldAnimate:
+                              shouldAnimate, // ส่งค่าไปยัง ChatBubble
+                        );
+                      }).toList(),
 
-                    // แสดงตัวบ่งชี้การพิมพ์หากกำลังโหลด
-                    if (_isLoading)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: TypingIndicator(),
-                      ),
-                  ],
+                      // แสดงตัวบ่งชี้การพิมพ์หากกำลังโหลด
+                      if (_isLoading)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: TypingIndicator(),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -848,6 +1008,7 @@ class _ChatbotScreenState extends State<userChatbot2Screen>
             isLoading: _isLoading,
             userId: userId,
             focusNode: _focusNode,
+            isBotTyping: _isBotTyping, // ส่งค่าไป
           ),
         ],
       ),
@@ -1058,7 +1219,16 @@ String _formatDate(DateTime date) {
   }
 }
 
-class ChatBubble extends StatelessWidget {
+String _formatTime(String timestamp) {
+  try {
+    final dateTime = DateTime.parse(timestamp);
+    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  } catch (e) {
+    return '';
+  }
+}
+
+class ChatBubble extends StatefulWidget {
   final String message;
   final bool isUser;
   final bool isError;
@@ -1067,6 +1237,9 @@ class ChatBubble extends StatelessWidget {
   final bool showModelSelector; // Add this
   final Function(bool) onToggleModelSelector; // Add this
   final String current_model;
+  final bool shouldAnimate; // เพิ่มพารามิเตอร์นี้
+  final VoidCallback? onTextUpdate; // เพิ่ม callback ใหม่
+  final VoidCallback? onTypingComplete; // เพิ่ม callback ใหม่
 
   const ChatBubble({
     Key? key,
@@ -1078,44 +1251,45 @@ class ChatBubble extends StatelessWidget {
     required this.showModelSelector, // Add this
     required this.onToggleModelSelector, // Add this
     required this.current_model, // Add this
+    this.onTextUpdate,
+    this.onTypingComplete, // เพิ่มพารามิเตอร์นี้
+    this.shouldAnimate = false, // ค่าเริ่มต้นเป็น false
   }) : super(key: key);
 
-  String _formatTime(String timestamp) {
-    try {
-      final dateTime = DateTime.parse(timestamp);
-      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } catch (e) {
-      return '';
-    }
-  }
+  _ChatBubbleState createState() => _ChatBubbleState();
+}
+
+class _ChatBubbleState extends State<ChatBubble> {
+  bool _typingComplete = false;
 
   @override
-  // ใน Widget ChatBubble
+  void initState() {
+    super.initState();
+    _typingComplete = !widget.shouldAnimate;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
       child: Column(
-        crossAxisAlignment: isUser
+        crossAxisAlignment: widget.isUser
             ? CrossAxisAlignment.end
             : CrossAxisAlignment.start,
         children: [
-          // ข้อความแชท
           Stack(
-            clipBehavior: Clip.none, // อนุญาตให้ dropdown โผล่ออกนอกกรอบได้
+            clipBehavior: Clip.none,
             children: [
               Row(
-                mainAxisAlignment: isUser
+                mainAxisAlignment: widget.isUser
                     ? MainAxisAlignment.end
                     : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Avatar สำหรับบอท (ด้านซ้าย)
-                  if (!isUser && !isError)
+                  if (!widget.isUser && !widget.isError)
                     GestureDetector(
                       onTap: () {
-                        // เปิด/ปิดตัวเลือกโมเดลเมื่อกดที่ Avatar AI
-                        onToggleModelSelector(!showModelSelector);
+                        widget.onToggleModelSelector(!widget.showModelSelector);
                       },
                       child: Container(
                         width: 40,
@@ -1147,10 +1321,9 @@ class ChatBubble extends StatelessWidget {
                       ),
                     ),
 
-                  // ข้อความและเวลา
                   Flexible(
                     child: Column(
-                      crossAxisAlignment: isUser
+                      crossAxisAlignment: widget.isUser
                           ? CrossAxisAlignment.end
                           : CrossAxisAlignment.start,
                       children: [
@@ -1163,67 +1336,96 @@ class ChatBubble extends StatelessWidget {
                             vertical: 14,
                           ),
                           decoration: BoxDecoration(
-                            color: isError
+                            color: widget.isError
                                 ? Colors.red[100]?.withOpacity(0.9)
-                                : isUser
-                                ? Color(0xFF4A5568) // สีเทาอมน้ำเงินดูPremium
+                                : widget.isUser
+                                ? Color(0xFF4A5568)
                                 : Colors.white,
                             borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(20),
                               topRight: Radius.circular(20),
-                              bottomLeft: isUser
+                              bottomLeft: widget.isUser
                                   ? Radius.circular(20)
                                   : Radius.circular(8),
-                              bottomRight: isUser
+                              bottomRight: widget.isUser
                                   ? Radius.circular(8)
                                   : Radius.circular(20),
                             ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(
-                                  isUser ? 0.3 : 0.1,
+                                  widget.isUser ? 0.3 : 0.1,
                                 ),
                                 blurRadius: 12,
                                 offset: const Offset(0, 3),
                                 spreadRadius: 0.5,
                               ),
                             ],
-                            border: isUser
+                            border: widget.isUser
                                 ? null
                                 : Border.all(
                                     color: Colors.grey[200]!,
                                     width: 1,
                                   ),
                           ),
-                          child: Text(
-                            message,
-                            style: TextStyle(
-                              color: isError
-                                  ? Colors.red[900]
-                                  : isUser
-                                  ? Colors.white
-                                  : Color(
-                                      0xFF2D3748,
-                                    ), // สีข้อความเข้มขึ้นนิดหน่อย
-                              fontSize: 14,
-                              height: 1.5,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
+                          child:
+                              widget.isUser ||
+                                  _typingComplete ||
+                                  !widget.shouldAnimate
+                              ? Text(
+                                  widget.message,
+                                  style: TextStyle(
+                                    color: widget.isError
+                                        ? Colors.red[900]
+                                        : widget.isUser
+                                        ? Colors.white
+                                        : Color(0xFF2D3748),
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                )
+                              : TypewriterText(
+                                  text: widget.message,
+                                  style: TextStyle(
+                                    color: widget.isError
+                                        ? Colors.red[900]
+                                        : widget.isUser
+                                        ? Colors.white
+                                        : Color(0xFF2D3748),
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  onComplete: () {
+                                    setState(() {
+                                      _typingComplete = true;
+                                    });
+                                  },
+                                  onTextUpdate:
+                                      widget.onTextUpdate, // ส่ง callback ไป
+                                  onTypingComplete: () {
+                                    // แจ้งไปยัง parent ว่าพิมพ์เสร็จ
+                                    if (widget.onTypingComplete != null) {
+                                      widget.onTypingComplete!();
+                                    }
+                                  },
+                                  typingSpeed:
+                                      20, // ตั้งค่าให้ช้าลง (ค่ามาก = ช้าลง)
+                                ),
                         ),
 
-                        // เวลาอยู่ใต้ข้อความ
                         Padding(
                           padding: EdgeInsets.only(
                             top: 6,
-                            right: isUser ? 8 : 0,
-                            left: isUser ? 0 : 8,
+                            right: widget.isUser ? 8 : 0,
+                            left: widget.isUser ? 0 : 8,
                           ),
                           child: Text(
-                            _formatTime(timestamp),
+                            _formatTime(widget.timestamp),
                             style: TextStyle(
-                              fontSize: 10, // เล็กกว่านิดหน่อย
-                              color: Colors.grey[500], // สีอ่อนลง
+                              fontSize: 10,
+                              color: Colors.grey[500],
                               fontWeight: FontWeight.w400,
                               letterSpacing: 0.2,
                             ),
@@ -1233,30 +1435,16 @@ class ChatBubble extends StatelessWidget {
                     ),
                   ),
 
-                  // ระยะห่างสำหรับ user
-                  if (isUser) SizedBox(width: 10),
+                  if (widget.isUser) SizedBox(width: 10),
 
-                  // Avatar สำหรับ user (ด้านขวา)
-                  if (isUser && !isError)
+                  if (widget.isUser && !widget.isError)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8, left: 6),
                       child: FutureBuilder<String?>(
-                        future: userId != null
-                            ? fetchProfilePicture(userId!)
+                        future: widget.userId != null
+                            ? fetchProfilePicture(widget.userId!)
                             : Future.value(null),
                         builder: (context, snapshot) {
-                          // if (snapshot.connectionState == ConnectionState.waiting) {
-                          //   return CircleAvatar(
-                          //     radius: 22,
-                          //     backgroundColor: Colors.grey.shade300,
-                          //     child: const CircularProgressIndicator(
-                          //       strokeWidth: 2,
-                          //       valueColor: AlwaysStoppedAnimation<Color>(
-                          //         Colors.white,
-                          //       ),
-                          //     ),
-                          //   );
-                          // } else
                           if (snapshot.hasError || snapshot.data == null) {
                             return CircleAvatar(
                               radius: 22,
@@ -1279,12 +1467,6 @@ class ChatBubble extends StatelessWidget {
                     ),
                 ],
               ),
-              // if (showModelSelector && !isUser && !isError)
-              //   Positioned(
-              //     top: 200, // โผล่เหนือข้อความ
-              //     left: 50, // ชิดซ้าย avatar
-              //     child: _buildModelSelector(context),
-              //   ),
             ],
           ),
         ],
@@ -1299,12 +1481,14 @@ class MessageInputField extends StatelessWidget {
   final bool isLoading;
   final int? userId;
   final FocusNode focusNode;
+  bool isBotTyping;
 
-  const MessageInputField({
+  MessageInputField({
     Key? key,
     required this.controller,
     required this.onSend,
     required this.isLoading,
+    required this.isBotTyping,
     this.userId,
     required this.focusNode,
   }) : super(key: key);
@@ -1411,12 +1595,21 @@ class MessageInputField extends StatelessWidget {
                           ),
                         )
                       : IconButton(
-                          icon: Icon(
-                            Icons.send_rounded,
-                            color: Color(0xFFB39D70),
-                            size: 26,
-                          ),
-                          onPressed: onSend,
+                          icon: isBotTyping
+                              ? SizedBox(
+                                  width: 26,
+                                  height: 26,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.0,
+                                    color: Color(0xFFB39D70),
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.send_rounded,
+                                  color: Color(0xFFB39D70),
+                                  size: 26,
+                                ),
+                          onPressed: isBotTyping ? null : onSend,
                         ),
                 ],
               ),
@@ -1637,5 +1830,99 @@ class UserProfileCard extends StatelessWidget {
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
+  }
+}
+
+// เพิ่มคลาส TypewriterText สำหรับแสดงข้อความทีละตัวอักษร
+class TypewriterText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  final VoidCallback onComplete;
+  final VoidCallback? onTypingComplete; // เพิ่ม callback ใหม่
+  final VoidCallback? onTextUpdate; // เพิ่มพารามิเตอร์นี้
+  final int typingSpeed; // เพิ่มพารามิเตอร์ความเร็ว
+
+  const TypewriterText({
+    Key? key,
+    required this.text,
+    required this.style,
+    required this.onComplete,
+    this.onTypingComplete, // เพิ่มพารามิเตอร์นี้
+    this.onTextUpdate,
+    this.typingSpeed = 20, // ค่าเริ่มต้น 50 milliseconds ต่อตัวอักษร (ช้าลง)
+  }) : super(key: key);
+
+  @override
+  _TypewriterTextState createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<TypewriterText>
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  late AnimationController _controller;
+  String _displayText = '';
+  int _currentIndex = 0;
+
+  bool get wantKeepAlive => true; // ต้องการรักษาสถานะ
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(
+        milliseconds: widget.typingSpeed,
+      ), // ความเร็วในการพิมพ์
+      vsync: this,
+    )..addListener(_updateText);
+
+    _startTyping();
+  }
+
+  void _updateText() {
+    if (_currentIndex < widget.text.length) {
+      // ใช้เทคนิค batch update
+      _displayText += widget.text[_currentIndex];
+      _currentIndex++;
+
+      // อัพเดท UI ทุก 3 ตัวอักษร (ลด frequency)
+      if (_currentIndex % 1 == 0 || _currentIndex >= widget.text.length) {
+        setState(() {});
+      }
+
+      if (widget.onTextUpdate != null && _currentIndex % 5 == 0) {
+        widget.onTextUpdate!(); // ลดความถี่ของการ scroll
+      }
+    } else {
+      _controller.stop();
+      widget.onComplete();
+      if (widget.onTypingComplete != null) {
+        widget.onTypingComplete!();
+      }
+    }
+  }
+
+  void _startTyping() {
+    _controller.repeat();
+  }
+
+  // void _updateText() {
+  //   if (_currentIndex < widget.text.length) {
+  //     setState(() {
+  //       _displayText += widget.text[_currentIndex];
+  //       _currentIndex++;
+  //     });
+  //   } else {
+  //     _controller.stop();
+  //     widget.onComplete();
+  //   }
+  // }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_displayText, style: widget.style);
   }
 }

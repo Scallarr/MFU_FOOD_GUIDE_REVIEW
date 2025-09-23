@@ -93,7 +93,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
   Future<void> fetchPendingThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/threads/pending'),
+        Uri.parse('http://172.27.112.167:8080/threads/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -118,7 +118,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
   Future<void> fetchPendingRepliedThreadsCount() async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/threads-replied/pending'),
+        Uri.parse('http://172.27.112.167:8080/threads-replied/pending'),
       );
 
       if (response.statusCode == 200) {
@@ -174,7 +174,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
   Future<void> fetchProfilePicture(int userId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/user-profile/$userId'),
+        Uri.parse('http://172.27.112.167:8080/user-profile/$userId'),
       );
 
       if (response.statusCode == 200) {
@@ -346,7 +346,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://172.22.173.39:8080/threads/reject'),
+        Uri.parse('http://172.27.112.167:8080/threads/reject'),
         headers: {'Content-Type': 'application/json'},
         // headers: {'Authorization': 'Bearer $token'},
         body: json.encode({
@@ -375,7 +375,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      final uri = Uri.parse('http://172.22.173.39:8080/user/info/$userId');
+      final uri = Uri.parse('http://172.27.112.167:8080/user/info/$userId');
 
       final response = await http.get(
         uri,
@@ -567,7 +567,9 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
       final int threadId = int.parse(thread['Thread_ID'].toString());
       final rejectionReason = reason.isEmpty ? 'Inappropriate message' : reason;
       final response = await http.post(
-        Uri.parse('http://172.22.173.39:8080/threads/AdminManual-check/reject'),
+        Uri.parse(
+          'http://172.27.112.167:8080/threads/AdminManual-check/reject',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'threadId': threadId,
@@ -596,7 +598,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
     final token = prefs.getString('jwt_token');
     if (userId == null) return;
     final response = await http.get(
-      Uri.parse('http://172.22.173.39:8080/all_threads/$userId'),
+      Uri.parse('http://172.27.112.167:8080/all_threads/$userId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -706,7 +708,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
     final response = await http.post(
-      Uri.parse('http://172.22.173.39:8080/like_thread'),
+      Uri.parse('http://172.27.112.167:8080/like_thread'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'User_ID': userId,
@@ -727,7 +729,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
 
     try {
       final response = await http.get(
-        Uri.parse('http://172.22.173.39:8080/user_profile_picture/$userId'),
+        Uri.parse('http://172.27.112.167:8080/user_profile_picture/$userId'),
       );
       setState(() => isSending = true);
       if (response.statusCode == 200) {
@@ -749,7 +751,7 @@ class _ThreadsAdminPageState extends State<ThreadsUserPage>
     try {
       setState(() => isSending = true);
       final response = await http.post(
-        Uri.parse('http://172.22.173.39:8080/create_thread'),
+        Uri.parse('http://172.27.112.167:8080/create_thread'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'User_ID': userId, 'message': message}),
       );
